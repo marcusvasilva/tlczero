@@ -1,0 +1,285 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "createdAt": "2024-12-19T00:00:00.000Z",
+    "updatedAt": "2025-01-01T13:00:00.000Z",
+    "projectName": "TLC Zero - Controle de Pragas PWA",
+    "description": "Aplicativo PWA para controle e gestão de pragas (moscas) com atrativos, QR codes e relatórios"
+  },
+  "tags": {
+    "master": {
+      "name": "master",
+      "description": "Tarefas principais do projeto TLC Zero",
+      "createdAt": "2024-12-19T00:00:00.000Z",
+      "tasks": [
+        {
+          "id": 1,
+          "title": "Estrutura Base do Projeto React",
+          "description": "Inicializar projeto React com Vite, TypeScript, configurar Shadcn/ui e estrutura de pastas",
+          "status": "completed",
+          "priority": "high",
+          "dependencies": [],
+          "subtasks": [
+            "Criar projeto com Vite + React + TypeScript",
+            "Configurar Shadcn/ui com tema personalizado",
+            "Instalar dependências principais (Recharts, QRCode, jsPDF)",
+            "Configurar estrutura de pastas padrão",
+            "Configurar ESLint e Prettier",
+            "Configurar path aliases (@/components, @/lib, etc)"
+          ],
+          "estimatedHours": 4,
+          "tags": ["setup", "frontend"],
+          "createdAt": "2024-12-19T00:00:00.000Z",
+          "completedAt": "2025-01-01T13:00:00.000Z"
+        },
+        {
+          "id": 2,
+          "title": "Dados Mockados e Interfaces TypeScript",
+          "description": "Criar interfaces TypeScript e dados simulados para desenvolvimento frontend",
+          "status": "completed",
+          "priority": "high",
+          "dependencies": [1],
+          "subtasks": [
+            "Definir interfaces para Client, Space, Collection, Operator",
+            "Criar dados mockados realistas para cada entidade",
+            "Implementar utilitários de formatação e validação",
+            "Configurar constantes da aplicação",
+            "Criar helpers para geração de QR codes e IDs"
+          ],
+          "estimatedHours": 3,
+          "tags": ["typescript", "data"],
+          "createdAt": "2024-12-19T00:00:00.000Z",
+          "completedAt": "2025-01-01T13:00:00.000Z"
+        },
+        {
+          "id": 3,
+          "title": "Layout e Navegação Principal",
+          "description": "Implementar layout base da aplicação com navegação responsiva",
+          "status": "pending",
+          "priority": "high",
+          "dependencies": [2],
+          "subtasks": [
+            "Criar componente de layout principal",
+            "Implementar sidebar responsiva",
+            "Configurar navegação entre páginas",
+            "Criar header com breadcrumbs",
+            "Implementar theme toggle (claro/escuro)",
+            "Adicionar loading states globais"
+          ],
+          "estimatedHours": 6,
+          "tags": ["layout", "navigation", "ui"],
+          "createdAt": "2024-12-19T00:00:00.000Z"
+        },
+        {
+          "id": 4,
+          "title": "Hooks Customizados para Gerenciamento de Estado",
+          "description": "Criar hooks customizados para gerenciar dados mockados com CRUD completo",
+          "status": "pending",
+          "priority": "high",
+          "dependencies": [2],
+          "subtasks": [
+            "Implementar useClients com CRUD completo",
+            "Implementar useSpaces com vinculação a clientes",
+            "Implementar useCollections com filtros",
+            "Implementar useOperators para gestão de usuários",
+            "Criar hook useLocalStorage para persistência",
+            "Adicionar loading e error states"
+          ],
+          "estimatedHours": 5,
+          "tags": ["hooks", "state-management"],
+          "createdAt": "2024-12-19T00:00:00.000Z"
+        },
+        {
+          "id": 5,
+          "title": "Telas de Cadastro de Clientes (UI)",
+          "description": "Implementar CRUD completo de clientes com interface responsiva",
+          "status": "pending",
+          "priority": "medium",
+          "dependencies": [3, 4],
+          "subtasks": [
+            "Criar página de listagem de clientes",
+            "Implementar formulário de cadastro/edição",
+            "Adicionar validação com React Hook Form + Zod",
+            "Criar modal de confirmação para exclusão",
+            "Implementar busca e filtros",
+            "Adicionar paginação para grandes listas"
+          ],
+          "estimatedHours": 8,
+          "tags": ["crud", "forms", "clients"],
+          "createdAt": "2024-12-19T00:00:00.000Z"
+        },
+        {
+          "id": 6,
+          "title": "Telas de Cadastro de Espaços (UI)",
+          "description": "Implementar CRUD de espaços vinculados aos clientes com geração de QR codes",
+          "status": "pending",
+          "priority": "medium",
+          "dependencies": [5],
+          "subtasks": [
+            "Criar página de listagem de espaços por cliente",
+            "Implementar formulário de cadastro de espaços",
+            "Adicionar geração automática de QR codes",
+            "Criar visualização e download de QR codes",
+            "Implementar filtros por cliente e status",
+            "Adicionar mapa de localização (opcional)"
+          ],
+          "estimatedHours": 7,
+          "tags": ["crud", "qr-codes", "spaces"],
+          "createdAt": "2024-12-19T00:00:00.000Z"
+        },
+        {
+          "id": 7,
+          "title": "Interface Web de Apontamento (UI)",
+          "description": "Criar página mobile-first para registro de coletas via QR code",
+          "status": "pending",
+          "priority": "high",
+          "dependencies": [6],
+          "subtasks": [
+            "Criar página de apontamento mobile-first",
+            "Implementar upload de foto com preview",
+            "Adicionar campos de peso e observações",
+            "Implementar validação em tempo real",
+            "Criar confirmação de envio com resumo",
+            "Adicionar modo offline básico"
+          ],
+          "estimatedHours": 8,
+          "tags": ["mobile", "forms", "collections"],
+          "createdAt": "2024-12-19T00:00:00.000Z"
+        },
+        {
+          "id": 8,
+          "title": "Dashboard Principal (UI)",
+          "description": "Implementar dashboard com métricas, gráficos e resumos usando dados mockados",
+          "status": "pending",
+          "priority": "medium",
+          "dependencies": [4],
+          "subtasks": [
+            "Criar cards de métricas principais",
+            "Implementar gráficos com Recharts",
+            "Adicionar filtros por período",
+            "Criar lista de atividades recentes",
+            "Implementar comparações temporais",
+            "Adicionar widgets configuráveis"
+          ],
+          "estimatedHours": 10,
+          "tags": ["dashboard", "charts", "metrics"],
+          "createdAt": "2024-12-19T00:00:00.000Z"
+        },
+        {
+          "id": 9,
+          "title": "Sistema de Relatórios (UI)",
+          "description": "Criar interface para geração e visualização de relatórios com exportação PDF",
+          "status": "pending",
+          "priority": "medium",
+          "dependencies": [8],
+          "subtasks": [
+            "Criar página de relatórios com filtros avançados",
+            "Implementar visualizações em tabelas e gráficos",
+            "Adicionar exportação em PDF com jsPDF",
+            "Criar templates de relatório personalizáveis",
+            "Implementar agendamento de relatórios",
+            "Adicionar compartilhamento de relatórios"
+          ],
+          "estimatedHours": 9,
+          "tags": ["reports", "pdf", "export"],
+          "createdAt": "2024-12-19T00:00:00.000Z"
+        },
+        {
+          "id": 10,
+          "title": "Gestão de Operadores (UI)",
+          "description": "Implementar CRUD de operadores com histórico de apontamentos",
+          "status": "pending",
+          "priority": "low",
+          "dependencies": [7],
+          "subtasks": [
+            "Criar página de listagem de operadores",
+            "Implementar formulário de cadastro/edição",
+            "Adicionar histórico de apontamentos por operador",
+            "Criar métricas de performance individual",
+            "Implementar status ativo/inativo",
+            "Adicionar filtros e busca"
+          ],
+          "estimatedHours": 6,
+          "tags": ["crud", "operators", "history"],
+          "createdAt": "2024-12-19T00:00:00.000Z"
+        },
+        {
+          "id": 11,
+          "title": "Configuração PWA e Otimizações",
+          "description": "Configurar Progressive Web App com service workers e otimizações",
+          "status": "pending",
+          "priority": "medium",
+          "dependencies": [9, 10],
+          "subtasks": [
+            "Configurar Web App Manifest",
+            "Implementar Service Workers básicos",
+            "Adicionar cache de recursos estáticos",
+            "Configurar modo offline para apontamentos",
+            "Otimizar bundle size e performance",
+            "Implementar lazy loading de rotas"
+          ],
+          "estimatedHours": 7,
+          "tags": ["pwa", "performance", "offline"],
+          "createdAt": "2024-12-19T00:00:00.000Z"
+        },
+        {
+          "id": 12,
+          "title": "Setup Inicial do Supabase",
+          "description": "Configurar estrutura de dados no Supabase com tabelas, autenticação e storage",
+          "status": "pending",
+          "priority": "high",
+          "dependencies": [11],
+          "subtasks": [
+            "Criar projeto no Supabase",
+            "Configurar tabelas (clients, spaces, collections, operators)",
+            "Implementar Row Level Security (RLS)",
+            "Configurar Storage para fotos",
+            "Configurar autenticação básica",
+            "Criar Edge Functions para relatórios"
+          ],
+          "estimatedHours": 6,
+          "tags": ["backend", "database", "setup"],
+          "createdAt": "2024-12-19T00:00:00.000Z"
+        },
+        {
+          "id": 13,
+          "title": "Integração Frontend-Backend",
+          "description": "Substituir dados mockados por integração real com Supabase",
+          "status": "pending",
+          "priority": "high",
+          "dependencies": [12],
+          "subtasks": [
+            "Configurar cliente Supabase no frontend",
+            "Substituir hooks mockados por queries reais",
+            "Implementar upload de imagens",
+            "Configurar sincronização em tempo real",
+            "Implementar autenticação no frontend",
+            "Adicionar tratamento de erros robusto"
+          ],
+          "estimatedHours": 8,
+          "tags": ["integration", "api", "real-data"],
+          "createdAt": "2024-12-19T00:00:00.000Z"
+        },
+        {
+          "id": 14,
+          "title": "Testes e Deploy",
+          "description": "Implementar testes essenciais e fazer deploy da aplicação",
+          "status": "pending",
+          "priority": "medium",
+          "dependencies": [13],
+          "subtasks": [
+            "Configurar testes unitários com Vitest",
+            "Implementar testes de componentes críticos",
+            "Configurar CI/CD pipeline",
+            "Deploy no Vercel/Netlify",
+            "Configurar domínio personalizado",
+            "Implementar monitoramento básico"
+          ],
+          "estimatedHours": 6,
+          "tags": ["testing", "deploy", "ci-cd"],
+          "createdAt": "2024-12-19T00:00:00.000Z"
+        }
+      ]
+    }
+  }
+} 

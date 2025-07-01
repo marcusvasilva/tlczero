@@ -1,0 +1,199 @@
+# TLC Zero - Product Requirements Document
+
+## Overview
+
+O TLC Zero é um aplicativo PWA (Progressive Web App) que visa facilitar o controle e a gestão de pragas, especificamente moscas, utilizando atrativos para captura e monitoramento. O aplicativo permite registro simples dos apontamentos por operadores, oferece relatórios claros e acessíveis para auditorias e acompanhamento dos resultados, sendo especialmente projetado para operadores com pouco conhecimento técnico.
+
+## Core Features
+
+### 1. Cadastro de Clientes e Espaços
+- Permite registrar informações básicas do cliente e locais específicos onde os atrativos serão instalados
+- Essencial para organizar o controle dos pontos e gestão eficiente das coletas
+- Geração automática de QR Codes que direcionam ao apontamento via link web
+
+### 2. Apontamento via Web (QR Code)
+- Interface mobile-first otimizada para smartphones
+- Acesso direto via QR Code sem necessidade de login ou instalação
+- Campos simples: foto do atrativo, peso coletado, observações opcionais
+- Validação automática de dados obrigatórios
+
+### 3. Dashboard Principal
+- Visão geral das métricas de captura
+- Gráficos de performance por período
+- Comparação entre espaços e clientes
+- Indicadores de eficiência dos atrativos
+
+### 4. Sistema de Relatórios
+- Geração automática de relatórios em PDF
+- Filtros por cliente, espaço, período
+- Gráficos e tabelas com dados consolidados
+- Exportação para auditorias e apresentações
+
+### 5. Gestão de Operadores
+- Cadastro básico de operadores de campo
+- Histórico de apontamentos por operador
+- Controle de qualidade dos registros
+
+## Technical Architecture
+
+### Frontend (React + TypeScript)
+- **Framework**: React 18 com TypeScript
+- **Build Tool**: Vite para desenvolvimento rápido
+- **UI Library**: Shadcn/ui + Tailwind CSS
+- **Charts**: Recharts para visualizações
+- **QR Codes**: qrcode.js para geração
+- **PDF**: jsPDF para relatórios
+- **PWA**: Service Workers + Web App Manifest
+
+### Backend (Supabase)
+- **Database**: PostgreSQL com Row Level Security
+- **Authentication**: Supabase Auth
+- **Storage**: Supabase Storage para fotos
+- **Real-time**: Subscriptions para atualizações
+- **Edge Functions**: Para processamento de relatórios
+
+### Data Model
+
+#### Tabela: clients
+- id (uuid, primary key)
+- name (text, not null)
+- email (text)
+- phone (text)
+- address (text)
+- created_at (timestamp)
+- updated_at (timestamp)
+
+#### Tabela: spaces
+- id (uuid, primary key)
+- client_id (uuid, foreign key)
+- name (text, not null)
+- description (text)
+- qr_code (text, unique)
+- location (text)
+- created_at (timestamp)
+- updated_at (timestamp)
+
+#### Tabela: operators
+- id (uuid, primary key)
+- name (text, not null)
+- email (text)
+- phone (text)
+- active (boolean, default true)
+- created_at (timestamp)
+
+#### Tabela: collections
+- id (uuid, primary key)
+- space_id (uuid, foreign key)
+- operator_id (uuid, foreign key)
+- weight (decimal, not null)
+- photo_url (text)
+- observations (text)
+- collected_at (timestamp, not null)
+- created_at (timestamp)
+
+## User Stories
+
+### Administrador
+- Como administrador, quero cadastrar clientes para organizar os pontos de coleta
+- Como administrador, quero criar espaços e gerar QR codes para facilitar o acesso
+- Como administrador, quero visualizar dashboards para acompanhar a performance
+- Como administrador, quero gerar relatórios para apresentar aos clientes
+
+### Operador de Campo
+- Como operador, quero acessar rapidamente via QR code sem complicações
+- Como operador, quero registrar o peso e foto de forma simples
+- Como operador, quero adicionar observações quando necessário
+- Como operador, quero confirmar o envio dos dados
+
+### Cliente Final
+- Como cliente, quero receber relatórios claros sobre o controle de pragas
+- Como cliente, quero visualizar a evolução dos resultados ao longo do tempo
+- Como cliente, quero ter acesso aos dados via dashboard web
+
+## Development Roadmap
+
+### Fase 1: Frontend com Dados Mockados (2-3 semanas)
+1. **Setup Inicial**
+   - Configuração Vite + React + TypeScript
+   - Instalação e configuração Shadcn/ui
+   - Estrutura de pastas e arquivos
+
+2. **Componentes Base**
+   - Layout principal com navegação
+   - Componentes de formulário
+   - Componentes de tabela e cards
+
+3. **Páginas Principais**
+   - Dashboard com métricas simuladas
+   - CRUD de clientes
+   - CRUD de espaços
+   - Página de apontamento mobile
+
+4. **Dados Mockados**
+   - Interfaces TypeScript
+   - Dados simulados para desenvolvimento
+   - Hooks customizados para gerenciamento
+
+### Fase 2: Backend e Integração (2-3 semanas)
+1. **Supabase Setup**
+   - Configuração do projeto
+   - Criação das tabelas
+   - Configuração de RLS
+
+2. **Integração**
+   - Substituição de dados mockados
+   - Implementação de CRUD real
+   - Upload de imagens
+
+3. **Autenticação**
+   - Sistema de login
+   - Proteção de rotas
+   - Gerenciamento de sessão
+
+4. **PWA e Deploy**
+   - Configuração PWA
+   - Service Workers
+   - Deploy em produção
+
+## Success Metrics
+
+### Usabilidade
+- Tempo médio para completar um apontamento < 2 minutos
+- Taxa de erro em apontamentos < 5%
+- Satisfação do operador > 4.5/5
+
+### Performance
+- Carregamento inicial < 3 segundos
+- Funcionamento offline básico
+- Sincronização automática quando online
+
+### Negócio
+- Redução de 50% no tempo de coleta de dados
+- Aumento de 30% na precisão dos relatórios
+- Economia de 40% no tempo de geração de relatórios
+
+## Technical Requirements
+
+### Performance
+- First Contentful Paint < 2s
+- Largest Contentful Paint < 3s
+- Cumulative Layout Shift < 0.1
+
+### Compatibility
+- Chrome/Edge 90+
+- Safari 14+
+- Firefox 88+
+- iOS Safari 14+
+- Android Chrome 90+
+
+### Security
+- HTTPS obrigatório
+- Autenticação segura
+- Validação de dados
+- Row Level Security no banco
+
+### Accessibility
+- WCAG 2.1 AA compliance
+- Navegação por teclado
+- Screen reader support
+- Alto contraste disponível 
