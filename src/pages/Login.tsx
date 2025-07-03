@@ -177,10 +177,10 @@ export function Login() {
                 value={values.email}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${
+                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors text-gray-900 placeholder-gray-500 ${
                   errors.email && touched.email
                     ? 'border-red-300 bg-red-50'
-                    : 'border-gray-300'
+                    : 'border-gray-300 bg-white'
                 }`}
                 placeholder="seu@email.com"
               />
@@ -206,10 +206,10 @@ export function Login() {
                   value={values.password}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className={`w-full px-3 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${
+                  className={`w-full px-3 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors text-gray-900 placeholder-gray-500 ${
                     errors.password && touched.password
                       ? 'border-red-300 bg-red-50'
-                      : 'border-gray-300'
+                      : 'border-gray-300 bg-white'
                   }`}
                   placeholder="Sua senha"
                 />

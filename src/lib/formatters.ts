@@ -75,10 +75,7 @@ export const formatPercentage = (value: number, decimals = 1): string => {
   return `${value.toFixed(decimals)}%`
 }
 
-// Formatação de temperatura
-export const formatTemperature = (temp: number): string => {
-  return `${temp}°C`
-}
+
 
 // Geração de QR Code ID
 export const generateQRCode = (spaceId: string, spaceName: string): string => {

@@ -2,6 +2,8 @@
 export * from './common/DataTable'
 export * from './common/ConfirmDialog'
 export * from './common/MultiSelect'
+export * from './common/ThemeToggle'
+export * from './common/GlobalLoading'
 
 // Formulários
 export * from './forms/ClientForm'

@@ -6,8 +6,6 @@ export interface Collection {
   photoUrl?: string
   observations?: string
   collectedAt: Date
-  weatherCondition?: 'ensolarado' | 'nublado' | 'chuvoso' | 'ventoso'
-  temperature?: number
   createdAt: Date
   updatedAt: Date
 }
@@ -19,8 +17,6 @@ export interface CreateCollectionData {
   photoUrl?: string
   observations?: string
   collectedAt: Date
-  weatherCondition?: 'ensolarado' | 'nublado' | 'chuvoso' | 'ventoso'
-  temperature?: number
 }
 
 export interface UpdateCollectionData extends Partial<CreateCollectionData> {}

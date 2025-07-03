@@ -74,7 +74,7 @@
           "id": 4,
           "title": "Hooks Customizados para Gerenciamento de Estado",
           "description": "Criar hooks customizados para gerenciar dados mockados com CRUD completo",
-          "status": "pending",
+          "status": "completed",
           "priority": "high",
           "dependencies": [2],
           "subtasks": [
@@ -87,13 +87,14 @@
           ],
           "estimatedHours": 5,
           "tags": ["hooks", "state-management"],
-          "createdAt": "2024-12-19T00:00:00.000Z"
+          "createdAt": "2024-12-19T00:00:00.000Z",
+          "completedAt": "2025-01-01T21:00:00.000Z"
         },
         {
           "id": 5,
           "title": "Telas de Cadastro de Clientes (UI)",
           "description": "Implementar CRUD completo de clientes com interface responsiva",
-          "status": "pending",
+          "status": "completed",
           "priority": "medium",
           "dependencies": [3, 4],
           "subtasks": [
@@ -106,13 +107,14 @@
           ],
           "estimatedHours": 8,
           "tags": ["crud", "forms", "clients"],
-          "createdAt": "2024-12-19T00:00:00.000Z"
+          "createdAt": "2024-12-19T00:00:00.000Z",
+          "completedAt": "2025-01-01T22:00:00.000Z"
         },
         {
           "id": 6,
           "title": "Telas de Cadastro de Espaços (UI)",
           "description": "Implementar CRUD de espaços vinculados aos clientes com geração de QR codes",
-          "status": "pending",
+          "status": "completed",
           "priority": "medium",
           "dependencies": [5],
           "subtasks": [
@@ -125,13 +127,14 @@
           ],
           "estimatedHours": 7,
           "tags": ["crud", "qr-codes", "spaces"],
-          "createdAt": "2024-12-19T00:00:00.000Z"
+          "createdAt": "2024-12-19T00:00:00.000Z",
+          "completedAt": "2025-01-01T23:00:00.000Z"
         },
         {
           "id": 7,
           "title": "Interface Web de Apontamento (UI)",
           "description": "Criar página mobile-first para registro de coletas via QR code",
-          "status": "pending",
+          "status": "completed",
           "priority": "high",
           "dependencies": [6],
           "subtasks": [
@@ -144,13 +147,14 @@
           ],
           "estimatedHours": 8,
           "tags": ["mobile", "forms", "collections"],
-          "createdAt": "2024-12-19T00:00:00.000Z"
+          "createdAt": "2024-12-19T00:00:00.000Z",
+          "completedAt": "2025-01-02T00:00:00.000Z"
         },
         {
           "id": 8,
           "title": "Dashboard Principal (UI)",
           "description": "Implementar dashboard com métricas, gráficos e resumos usando dados mockados",
-          "status": "pending",
+          "status": "completed",
           "priority": "medium",
           "dependencies": [4],
           "subtasks": [
@@ -163,7 +167,8 @@
           ],
           "estimatedHours": 10,
           "tags": ["dashboard", "charts", "metrics"],
-          "createdAt": "2024-12-19T00:00:00.000Z"
+          "createdAt": "2024-12-19T00:00:00.000Z",
+          "completedAt": "2025-01-02T01:00:00.000Z"
         },
         {
           "id": 9,

@@ -37,12 +37,7 @@ export const QR_CODE_CONFIG = {
   }
 } as const
 
-export const WEATHER_CONDITIONS = [
-  { value: 'ensolarado', label: 'Ensolarado', icon: '☀️' },
-  { value: 'nublado', label: 'Nublado', icon: '☁️' },
-  { value: 'chuvoso', label: 'Chuvoso', icon: '🌧️' },
-  { value: 'ventoso', label: 'Ventoso', icon: '💨' }
-] as const
+
 
 export const OPERATOR_ROLES = [
   { value: 'operador', label: 'Operador' },

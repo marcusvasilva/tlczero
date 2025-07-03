@@ -21,8 +21,6 @@ export const mockCollections: Collection[] = [
     photoUrl: 'https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?w=400',
     observations: 'Coleta normal, boa quantidade capturada',
     collectedAt: getRandomDate(2),
-    weatherCondition: 'ensolarado',
-    temperature: 28,
     createdAt: getRandomDate(2),
     updatedAt: getRandomDate(2)
   },
@@ -34,8 +32,6 @@ export const mockCollections: Collection[] = [
     photoUrl: 'https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?w=400',
     observations: 'Maior concentração de moscas na área do açougue',
     collectedAt: getRandomDate(3),
-    weatherCondition: 'ensolarado',
-    temperature: 26,
     createdAt: getRandomDate(3),
     updatedAt: getRandomDate(3)
   },
@@ -47,8 +43,6 @@ export const mockCollections: Collection[] = [
     photoUrl: 'https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?w=400',
     observations: 'Coleta realizada após limpeza da cozinha',
     collectedAt: getRandomDate(1),
-    weatherCondition: 'nublado',
-    temperature: 24,
     createdAt: getRandomDate(1),
     updatedAt: getRandomDate(1)
   },
@@ -60,8 +54,6 @@ export const mockCollections: Collection[] = [
     photoUrl: 'https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?w=400',
     observations: 'Área externa com menor incidência',
     collectedAt: getRandomDate(4),
-    weatherCondition: 'ventoso',
-    temperature: 22,
     createdAt: getRandomDate(4),
     updatedAt: getRandomDate(4)
   },
@@ -73,8 +65,6 @@ export const mockCollections: Collection[] = [
     photoUrl: 'https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?w=400',
     observations: 'Produção de pães atraiu mais moscas',
     collectedAt: getRandomDate(2),
-    weatherCondition: 'ensolarado',
-    temperature: 30,
     createdAt: getRandomDate(2),
     updatedAt: getRandomDate(2)
   },
@@ -86,8 +76,6 @@ export const mockCollections: Collection[] = [
     photoUrl: 'https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?w=400',
     observations: 'Vitrine bem vedada, pouca incidência',
     collectedAt: getRandomDate(5),
-    weatherCondition: 'nublado',
-    temperature: 25,
     createdAt: getRandomDate(5),
     updatedAt: getRandomDate(5)
   },
@@ -99,8 +87,6 @@ export const mockCollections: Collection[] = [
     photoUrl: 'https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?w=400',
     observations: 'Restaurante com movimento normal',
     collectedAt: getRandomDate(3),
-    weatherCondition: 'ensolarado',
-    temperature: 27,
     createdAt: getRandomDate(3),
     updatedAt: getRandomDate(3)
   },
@@ -112,8 +98,6 @@ export const mockCollections: Collection[] = [
     photoUrl: 'https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?w=400',
     observations: 'Cozinha industrial com alta atividade',
     collectedAt: getRandomDate(1),
-    weatherCondition: 'ensolarado',
-    temperature: 29,
     createdAt: getRandomDate(1),
     updatedAt: getRandomDate(1)
   },
@@ -125,8 +109,6 @@ export const mockCollections: Collection[] = [
     photoUrl: 'https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?w=400',
     observations: 'Cafeteria com controle eficiente',
     collectedAt: getRandomDate(6),
-    weatherCondition: 'chuvoso',
-    temperature: 20,
     createdAt: getRandomDate(6),
     updatedAt: getRandomDate(6)
   },
@@ -137,8 +119,6 @@ export const mockCollections: Collection[] = [
     weight: 1.15,
     observations: 'Segunda coleta da semana na área de frios',
     collectedAt: getRandomDate(7),
-    weatherCondition: 'nublado',
-    temperature: 23,
     createdAt: getRandomDate(7),
     updatedAt: getRandomDate(7)
   },
@@ -151,8 +131,6 @@ export const mockCollections: Collection[] = [
     photoUrl: Math.random() > 0.3 ? 'https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?w=400' : undefined,
     observations: Math.random() > 0.5 ? 'Coleta de rotina' : undefined,
     collectedAt: getRandomDate(30),
-    weatherCondition: ['ensolarado', 'nublado', 'chuvoso', 'ventoso'][Math.floor(Math.random() * 4)] as 'ensolarado' | 'nublado' | 'chuvoso' | 'ventoso',
-    temperature: Math.floor(Math.random() * 15) + 18, // 18-32°C
     createdAt: getRandomDate(30),
     updatedAt: getRandomDate(30)
   }))

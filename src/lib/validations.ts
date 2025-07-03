@@ -3,93 +3,54 @@ import { WEIGHT_LIMITS, PHOTO_CONFIG } from './constants'
 
 // Validações para Cliente
 export const clientSchema = z.object({
-  name: z.string()
-    .min(2, 'Nome deve ter pelo menos 2 caracteres')
-    .max(100, 'Nome deve ter no máximo 100 caracteres'),
-  email: z.string()
-    .email('Email inválido')
-    .optional()
-    .or(z.literal('')),
-  phone: z.string()
-    .optional()
-    .or(z.literal('')),
-  address: z.string()
-    .optional()
-    .or(z.literal('')),
-  cnpj: z.string()
-    .optional()
-    .or(z.literal('')),
-  contactPerson: z.string()
-    .optional()
-    .or(z.literal(''))
+  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  email: z.string().email('Email inválido'),
+  phone: z.string().min(10, 'Telefone deve ter pelo menos 10 dígitos'),
+  cnpj: z.string().min(14, 'CNPJ deve ter 14 dígitos'),
+  address: z.string().min(5, 'Endereço deve ter pelo menos 5 caracteres'),
+  city: z.string().min(2, 'Cidade deve ter pelo menos 2 caracteres'),
+  state: z.string().min(2, 'Estado deve ter pelo menos 2 caracteres'),
+  zipCode: z.string().min(8, 'CEP deve ter 8 dígitos')
 })
 
 // Validações para Espaço
 export const spaceSchema = z.object({
-  clientId: z.string()
-    .min(1, 'Cliente é obrigatório'),
-  name: z.string()
-    .min(2, 'Nome deve ter pelo menos 2 caracteres')
-    .max(100, 'Nome deve ter no máximo 100 caracteres'),
-  description: z.string()
-    .optional()
-    .or(z.literal('')),
-  location: z.string()
-    .optional()
-    .or(z.literal('')),
-  attractiveType: z.enum(['moscas', 'outros']),
+  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  clientId: z.string().min(1, 'Cliente é obrigatório'),
+  location: z.string().min(2, 'Localização deve ter pelo menos 2 caracteres'),
+  type: z.enum(['moscas', 'baratas', 'formigas', 'outros'], {
+    errorMap: () => ({ message: 'Tipo de praga é obrigatório' })
+  }),
   installationDate: z.date({
-    required_error: 'Data de instalação é obrigatória'
-  })
+    errorMap: () => ({ message: 'Data de instalação é obrigatória' })
+  }),
+  lastMaintenanceDate: z.date().optional(),
+  observations: z.string().optional()
 })
 
 // Validações para Coleta
 export const collectionSchema = z.object({
-  spaceId: z.string()
-    .min(1, 'Espaço é obrigatório'),
-  operatorId: z.string()
-    .min(1, 'Operador é obrigatório'),
+  spaceId: z.string().min(1, 'Espaço é obrigatório'),
+  operatorId: z.string().min(1, 'Operador é obrigatório'),
   weight: z.number()
-    .min(WEIGHT_LIMITS.min, `Peso mínimo é ${WEIGHT_LIMITS.min}kg`)
-    .max(WEIGHT_LIMITS.max, `Peso máximo é ${WEIGHT_LIMITS.max}kg`),
-  photoUrl: z.string()
-    .url('URL da foto inválida')
-    .optional()
-    .or(z.literal('')),
-  observations: z.string()
-    .max(500, 'Observações devem ter no máximo 500 caracteres')
-    .optional()
-    .or(z.literal('')),
+    .min(0.01, 'Peso deve ser maior que 0')
+    .max(50, 'Peso não pode exceder 50kg'),
+  photoUrl: z.string().optional(),
+  observations: z.string().optional(),
   collectedAt: z.date({
-    required_error: 'Data da coleta é obrigatória'
-  }),
-  weatherCondition: z.enum(['ensolarado', 'nublado', 'chuvoso', 'ventoso'])
-    .optional(),
-  temperature: z.number()
-    .min(-10, 'Temperatura mínima é -10°C')
-    .max(50, 'Temperatura máxima é 50°C')
-    .optional()
+    errorMap: () => ({ message: 'Data e hora da coleta são obrigatórias' })
+  })
 })
 
 // Validações para Operador
 export const operatorSchema = z.object({
-  name: z.string()
-    .min(2, 'Nome deve ter pelo menos 2 caracteres')
-    .max(100, 'Nome deve ter no máximo 100 caracteres'),
-  email: z.string()
-    .email('Email inválido')
-    .optional()
-    .or(z.literal('')),
-  phone: z.string()
-    .optional()
-    .or(z.literal('')),
-  cpf: z.string()
-    .optional()
-    .or(z.literal('')),
-  role: z.enum(['operador', 'supervisor', 'admin']),
-  hireDate: z.date({
-    required_error: 'Data de contratação é obrigatória'
-  })
+  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  email: z.string().email('Email inválido'),
+  phone: z.string().min(10, 'Telefone deve ter pelo menos 10 dígitos'),
+  role: z.enum(['admin', 'supervisor', 'operador'], {
+    errorMap: () => ({ message: 'Função é obrigatória' })
+  }),
+  active: z.boolean().default(true)
 })
 
 // Funções de validação customizadas
@@ -182,4 +143,10 @@ export const validatePhone = (phone: string): boolean => {
   
   // Aceita telefones com 10 ou 11 dígitos
   return cleanPhone.length === 10 || cleanPhone.length === 11
-} 
+}
+
+// Tipos derivados dos schemas
+export type ClientFormData = z.infer<typeof clientSchema>
+export type SpaceFormData = z.infer<typeof spaceSchema>
+export type CollectionFormData = z.infer<typeof collectionSchema>
+export type OperatorFormData = z.infer<typeof operatorSchema> 
