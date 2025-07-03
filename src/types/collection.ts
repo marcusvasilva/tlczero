@@ -2,6 +2,7 @@ export interface Collection {
   id: string
   spaceId: string
   operatorId: string
+  clientId: string
   weight: number
   photoUrl?: string
   observations?: string
@@ -13,6 +14,7 @@ export interface Collection {
 export interface CreateCollectionData {
   spaceId: string
   operatorId: string
+  clientId: string
   weight: number
   photoUrl?: string
   observations?: string

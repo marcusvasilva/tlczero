@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { useLocalStorage } from './useLocalStorage'
 import { mockCollections } from '@/data/mockCollections'
+import { useAuthContext } from '@/contexts/AuthContext'
 import type { Collection, CreateCollectionData, UpdateCollectionData } from '@/types'
 
 interface UseCollectionsOptions {
@@ -71,6 +72,7 @@ export const useCollections = (options: UseCollectionsOptions = {}): UseCollecti
   const [error, setError] = useState<string | null>(null)
   const [spaceFilter, setSpaceFilter] = useState(options.spaceId || '')
   const [operatorFilter, setOperatorFilter] = useState(options.operatorId || '')
+  const [clientFilter, setClientFilter] = useState(options.clientId || '')
   const [dateRangeFilter, setDateRangeFilter] = useState(options.dateRange)
   const [weightRangeFilter, setWeightRangeFilter] = useState({
     min: options.minWeight,
@@ -109,11 +111,15 @@ export const useCollections = (options: UseCollectionsOptions = {}): UseCollecti
       if (!data.collectedAt) {
         throw new Error('Data da coleta é obrigatória')
       }
+      if (!data.clientId?.trim()) {
+        throw new Error('Cliente é obrigatório')
+      }
       
       const newCollection: Collection = {
         id: Date.now().toString(),
         spaceId: data.spaceId.trim(),
         operatorId: data.operatorId.trim(),
+        clientId: data.clientId.trim(),
         weight: data.weight,
         photoUrl: data.photoUrl?.trim() || undefined,
         observations: data.observations?.trim() || undefined,
@@ -278,6 +284,11 @@ export const useCollections = (options: UseCollectionsOptions = {}): UseCollecti
   const filteredCollections = useMemo(() => {
     let filtered = collections
 
+    // Apply client filter
+    if (clientFilter) {
+      filtered = filtered.filter(collection => collection.clientId === clientFilter)
+    }
+
     // Apply space filter
     if (spaceFilter) {
       filtered = filtered.filter(collection => collection.spaceId === spaceFilter)
@@ -333,7 +344,7 @@ export const useCollections = (options: UseCollectionsOptions = {}): UseCollecti
     })
 
     return filtered
-  }, [collections, spaceFilter, operatorFilter, dateRangeFilter, weightRangeFilter, sortBy, sortOrder])
+  }, [collections, clientFilter, spaceFilter, operatorFilter, dateRangeFilter, weightRangeFilter, sortBy, sortOrder])
 
   // Statistics
   const totalCollections = useMemo(() => collections.length, [collections])
@@ -460,4 +471,18 @@ export const useCollections = (options: UseCollectionsOptions = {}): UseCollecti
     weightThisWeek,
     weightThisMonth
   }
+}
+
+// Hook wrapper que aplica automaticamente filtro por cliente
+export const useClientCollections = (options: Omit<UseCollectionsOptions, 'clientId'> = {}) => {
+  const { userType, clientContext, user } = useAuthContext()
+  
+  // Para admin: não aplica filtro de cliente (vê todos)
+  // Para supervisor/operador: aplica filtro do cliente atual
+  const clientId = userType === 'admin' ? undefined : (clientContext || user?.clientId)
+  
+  return useCollections({
+    ...options,
+    clientId
+  })
 } 

@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useState, useMemo, useCallback } from 'react'
+import { useMemo, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { APP_CONFIG } from '@/lib/constants'
 import { useAuthContext } from '@/contexts/AuthContext'
+import { useSidebar } from './AppLayout'
 import { hasPermission } from '@/data'
 
 interface NavItem {
@@ -42,7 +43,8 @@ const navigationItems: NavItem[] = [
     icon: Users,
     description: 'Gestão de clientes',
     resource: 'clients',
-    action: 'read'
+    action: 'read',
+    allowedRoles: ['admin']
   },
   {
     title: 'Espaços',
@@ -67,7 +69,7 @@ const navigationItems: NavItem[] = [
     description: 'Equipe de campo',
     resource: 'operators',
     action: 'read',
-    allowedRoles: ['admin']
+    allowedRoles: ['admin', 'supervisor']
   },
   {
     title: 'Relatórios',
@@ -83,7 +85,7 @@ const navigationItems: NavItem[] = [
 export function AppSidebar() {
   const location = useLocation()
   const { user } = useAuthContext()
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const { isCollapsed, setIsCollapsed } = useSidebar()
 
   // Memoizar o cálculo dos itens visíveis
   const visibleItems = useMemo(() => {
@@ -116,8 +118,8 @@ export function AppSidebar() {
 
   // Memoizar o toggle da sidebar
   const toggleCollapsed = useCallback(() => {
-    setIsCollapsed(prev => !prev)
-  }, [])
+    setIsCollapsed(!isCollapsed)
+  }, [isCollapsed, setIsCollapsed])
 
   // Memoizar a verificação de permissão para configurações
   const canAccessSettings = useMemo(() => {
@@ -126,7 +128,7 @@ export function AppSidebar() {
 
   return (
     <div className={cn(
-      "relative bg-white border-r border-gray-200 transition-all duration-300 flex flex-col h-screen",
+      "fixed left-0 top-0 bg-white border-r border-gray-200 transition-all duration-300 flex flex-col h-screen z-40",
       isCollapsed ? "w-16" : "w-64"
     )}>
       {/* Header da Sidebar */}

@@ -75,6 +75,11 @@ export const formatPercentage = (value: number, decimals = 1): string => {
   return `${value.toFixed(decimals)}%`
 }
 
+// Formatação de números
+export const formatNumber = (value: number): string => {
+  return new Intl.NumberFormat('pt-BR').format(value)
+}
+
 
 
 // Geração de QR Code ID

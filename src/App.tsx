@@ -4,11 +4,12 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from './components/layout/AppLayout'
 import { GlobalLoading } from './components/common/GlobalLoading'
 import { Login } from './pages/Login'
-import { Dashboard } from './pages/Dashboard'
+import Dashboard from './pages/Dashboard'
 import { Clients } from './pages/Clients'
 import { Spaces } from './pages/Spaces'
 import { Collections } from './pages/Collections'
 import { Collect } from './pages/Collect'
+import { Operators } from './pages/Operators'
 
 // Página temporária para rotas não implementadas
 function ComingSoon({ title }: { title: string }) {
@@ -56,10 +57,10 @@ function App() {
             {/* Nova Coleta - página mobile para apontamentos */}
             <Route path="collect" element={<Collect />} />
             
-            {/* Operadores - apenas admin pode gerenciar */}
+            {/* Operadores - admin e supervisor podem gerenciar */}
             <Route path="operators" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <ComingSoon title="Operadores" />
+              <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                <Operators />
               </ProtectedRoute>
             } />
             

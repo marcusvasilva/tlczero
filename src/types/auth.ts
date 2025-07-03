@@ -8,6 +8,7 @@ export interface User {
   lastLogin?: Date
   createdAt: Date
   updatedAt: Date
+  clientId?: string
 }
 
 export interface LoginCredentials {
@@ -28,6 +29,9 @@ export interface AuthContextType extends AuthState {
   logout: () => void
   clearError: () => void
   updateUser: (userData: Partial<User>) => void
+  userType: 'admin' | 'client' | 'operator'
+  clientContext: string | null
+  setClientContext: (clientId: string | null) => void
 }
 
 export interface ProtectedRouteProps {

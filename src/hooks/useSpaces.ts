@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { useLocalStorage } from './useLocalStorage'
 import { mockSpaces } from '@/data/mockSpaces'
 import { generateQRCode } from '@/lib/formatters'
+import { useAuthContext } from '@/contexts/AuthContext'
 import type { Space, CreateSpaceData, UpdateSpaceData } from '@/types'
 
 interface UseSpacesOptions {
@@ -347,4 +348,18 @@ export const useSpaces = (options: UseSpacesOptions = {}): UseSpacesReturn => {
     inactiveSpaces,
     spacesByType
   }
+}
+
+// Hook wrapper que aplica automaticamente filtro por cliente
+export const useClientSpaces = (options: Omit<UseSpacesOptions, 'clientId'> = {}) => {
+  const { userType, clientContext, user } = useAuthContext()
+  
+  // Para admin: não aplica filtro de cliente (vê todos)
+  // Para supervisor/operador: aplica filtro do cliente atual
+  const clientId = userType === 'admin' ? undefined : (clientContext || user?.clientId)
+  
+  return useSpaces({
+    ...options,
+    clientId
+  })
 } 

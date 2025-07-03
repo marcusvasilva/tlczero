@@ -6,8 +6,8 @@ export { usePagination } from './usePagination'
 
 // Entity management hooks
 export { useClients } from './useClients'
-export { useSpaces } from './useSpaces'
-export { useCollections } from './useCollections'
+export { useSpaces, useClientSpaces } from './useSpaces'
+export { useCollections, useClientCollections } from './useCollections'
 export { useOperators } from './useOperators'
 
 // API hook

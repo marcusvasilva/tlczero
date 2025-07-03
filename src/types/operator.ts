@@ -7,6 +7,9 @@ export interface Operator {
   role: 'operador' | 'supervisor' | 'admin'
   active: boolean
   hireDate: Date
+  clientId?: string
+  avatar?: string
+  lastLogin?: Date
   createdAt: Date
   updatedAt: Date
 }

@@ -21,7 +21,8 @@ export const mockUsers: User[] = [
     active: true,
     lastLogin: new Date('2024-12-05T09:15:00'),
     createdAt: new Date('2024-01-15'),
-    updatedAt: new Date('2024-12-05T09:15:00')
+    updatedAt: new Date('2024-12-05T09:15:00'),
+    clientId: '1'
   },
   {
     id: '3',
@@ -32,7 +33,8 @@ export const mockUsers: User[] = [
     active: true,
     lastLogin: new Date('2024-12-05T08:45:00'),
     createdAt: new Date('2024-02-01'),
-    updatedAt: new Date('2024-12-05T08:45:00')
+    updatedAt: new Date('2024-12-05T08:45:00'),
+    clientId: '1'
   },
   {
     id: '4',
@@ -43,7 +45,8 @@ export const mockUsers: User[] = [
     active: true,
     lastLogin: new Date('2024-12-04T16:20:00'),
     createdAt: new Date('2024-02-15'),
-    updatedAt: new Date('2024-12-04T16:20:00')
+    updatedAt: new Date('2024-12-04T16:20:00'),
+    clientId: '2'
   },
   {
     id: '5',
@@ -54,7 +57,8 @@ export const mockUsers: User[] = [
     active: true,
     lastLogin: new Date('2024-12-04T14:10:00'),
     createdAt: new Date('2024-03-01'),
-    updatedAt: new Date('2024-12-04T14:10:00')
+    updatedAt: new Date('2024-12-04T14:10:00'),
+    clientId: '3'
   },
   {
     id: '6',
@@ -65,7 +69,8 @@ export const mockUsers: User[] = [
     active: false,
     lastLogin: new Date('2024-11-15T12:00:00'),
     createdAt: new Date('2024-01-20'),
-    updatedAt: new Date('2024-11-20T10:00:00')
+    updatedAt: new Date('2024-11-20T10:00:00'),
+    clientId: '1'
   }
 ]
 
@@ -92,10 +97,9 @@ export const rolePermissions: RolePermissions = {
   ],
   supervisor: [
     { resource: 'dashboard', actions: ['read'] },
-    { resource: 'clients', actions: ['create', 'read', 'update'] },
     { resource: 'spaces', actions: ['create', 'read', 'update'] },
     { resource: 'collections', actions: ['create', 'read', 'update', 'delete'] },
-    { resource: 'operators', actions: ['read'] },
+    { resource: 'operators', actions: ['create', 'read', 'update', 'delete'] },
     { resource: 'reports', actions: ['create', 'read'] }
   ],
   operador: [
