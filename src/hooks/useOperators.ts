@@ -81,30 +81,34 @@ export const useOperators = (options: UseOperatorsOptions = {}): UseOperatorsRet
       if (!data.name?.trim()) {
         throw new Error('Nome é obrigatório')
       }
-      if (!data.email?.trim()) {
-        throw new Error('Email é obrigatório')
-      }
       if (!data.role) {
         throw new Error('Função é obrigatória')
       }
+      if (!data.clientId?.trim()) {
+        throw new Error('Cliente é obrigatório')
+      }
       
-      // Check if email already exists
-      const emailExists = operators.some(operator => 
-        operator.email?.toLowerCase() === data.email?.toLowerCase()
-      )
-      if (emailExists) {
-        throw new Error('Email já está em uso')
+      // Check if email already exists (only if email is provided)
+      if (data.email?.trim()) {
+        const emailExists = operators.some(operator => 
+          operator.email?.toLowerCase() === data.email?.toLowerCase()
+        )
+        if (emailExists) {
+          throw new Error('Email já está em uso')
+        }
       }
       
       const newOperator: Operator = {
         id: Date.now().toString(),
         name: data.name.trim(),
-        email: data.email?.trim() || '',
-        phone: data.phone?.trim() || '',
-        cpf: data.cpf?.trim() || '',
+        email: data.email?.trim() || undefined,
+        phone: data.phone?.trim() || undefined,
+        cpf: data.cpf?.trim() || undefined,
         role: data.role,
-        active: true,
-        hireDate: data.hireDate || new Date(),
+        active: data.active,
+        hireDate: new Date(),
+        clientId: data.clientId,
+        avatar: data.avatar,
         createdAt: new Date(),
         updatedAt: new Date()
       }

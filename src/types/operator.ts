@@ -19,8 +19,10 @@ export interface CreateOperatorData {
   email?: string
   phone?: string
   cpf?: string
-  role: 'operador' | 'supervisor' | 'admin'
-  hireDate: Date
+  role: 'operador' | 'supervisor'
+  clientId: string
+  active: boolean
+  avatar?: string
 }
 
 export interface UpdateOperatorData extends Partial<CreateOperatorData> {

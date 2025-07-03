@@ -1,15 +1,15 @@
 {
   "metadata": {
-    "version": "1.0.0",
+    "version": "1.1.0",
     "createdAt": "2024-12-19T00:00:00.000Z",
-    "updatedAt": "2025-01-01T13:00:00.000Z",
+    "updatedAt": "2025-01-02T14:00:00.000Z",
     "projectName": "TLC Zero - Controle de Pragas PWA",
-    "description": "Aplicativo PWA para controle e gestão de pragas (moscas) com atrativos, QR codes e relatórios"
+    "description": "Aplicativo PWA para controle e gestão de pragas (moscas) com atrativos, QR codes e relatórios - Foco Client-Centric"
   },
   "tags": {
     "master": {
       "name": "master",
-      "description": "Tarefas principais do projeto TLC Zero",
+      "description": "Tarefas principais do projeto TLC Zero - Arquitetura Client-Centric",
       "createdAt": "2024-12-19T00:00:00.000Z",
       "tasks": [
         {
@@ -53,22 +53,25 @@
         },
         {
           "id": 3,
-          "title": "Layout e Navegação Principal",
-          "description": "Implementar layout base da aplicação com navegação responsiva",
-          "status": "pending",
+          "title": "Layout e Navegação Principal + Sistema de Permissões",
+          "description": "Layout responsivo com sidebar fixo + sistema de contexto por cliente implementado",
+          "status": "completed",
           "priority": "high",
           "dependencies": [2],
           "subtasks": [
-            "Criar componente de layout principal",
-            "Implementar sidebar responsiva",
-            "Configurar navegação entre páginas",
-            "Criar header com breadcrumbs",
-            "Implementar theme toggle (claro/escuro)",
-            "Adicionar loading states globais"
+            "✅ Criar componente de layout principal",
+            "✅ Implementar sidebar responsiva e fixa",
+            "✅ Configurar navegação entre páginas",
+            "✅ Criar header com breadcrumbs",
+            "✅ Implementar theme toggle (claro/escuro)",
+            "✅ Adicionar loading states globais",
+            "✅ Sistema de autenticação com contexto por cliente",
+            "✅ Navegação adaptativa por tipo de usuário"
           ],
           "estimatedHours": 6,
-          "tags": ["layout", "navigation", "ui"],
-          "createdAt": "2024-12-19T00:00:00.000Z"
+          "tags": ["layout", "navigation", "ui", "permissions"],
+          "createdAt": "2024-12-19T00:00:00.000Z",
+          "completedAt": "2025-01-02T14:00:00.000Z"
         },
         {
           "id": 4,
@@ -152,137 +155,182 @@
         },
         {
           "id": 8,
-          "title": "Dashboard Principal (UI)",
-          "description": "Implementar dashboard com métricas, gráficos e resumos usando dados mockados",
+          "title": "Dashboard Adaptativo com Contexto por Cliente",
+          "description": "Dashboard inteligente que se adapta ao tipo de usuário (Admin/Cliente/Operador)",
           "status": "completed",
-          "priority": "medium",
-          "dependencies": [4],
+          "priority": "high",
+          "dependencies": [4, 3],
           "subtasks": [
-            "Criar cards de métricas principais",
-            "Implementar gráficos com Recharts",
-            "Adicionar filtros por período",
-            "Criar lista de atividades recentes",
-            "Implementar comparações temporais",
-            "Adicionar widgets configuráveis"
+            "✅ Dashboard Admin: métricas globais, todos os clientes",
+            "✅ Dashboard Cliente: apenas dados do próprio cliente",
+            "✅ Gráficos com Recharts (área, pizza, barras)",
+            "✅ Filtros por período com comparações temporais",
+            "✅ Hooks com isolamento automático (useClientSpaces, useClientCollections)",
+            "✅ Cards de métricas adaptativas por contexto",
+            "✅ Lista de atividades recentes filtradas"
           ],
-          "estimatedHours": 10,
-          "tags": ["dashboard", "charts", "metrics"],
+          "estimatedHours": 12,
+          "tags": ["dashboard", "charts", "metrics", "client-centric"],
           "createdAt": "2024-12-19T00:00:00.000Z",
-          "completedAt": "2025-01-02T01:00:00.000Z"
+          "completedAt": "2025-01-02T14:00:00.000Z"
         },
         {
           "id": 9,
-          "title": "Sistema de Relatórios (UI)",
-          "description": "Criar interface para geração e visualização de relatórios com exportação PDF",
-          "status": "pending",
+          "title": "Gestão de Operadores com Isolamento por Cliente",
+          "description": "CRUD de operadores já implementado com isolamento automático por cliente",
+          "status": "completed",
           "priority": "medium",
-          "dependencies": [8],
+          "dependencies": [3, 8],
           "subtasks": [
-            "Criar página de relatórios com filtros avançados",
-            "Implementar visualizações em tabelas e gráficos",
-            "Adicionar exportação em PDF com jsPDF",
-            "Criar templates de relatório personalizáveis",
-            "Implementar agendamento de relatórios",
-            "Adicionar compartilhamento de relatórios"
+            "✅ Página de listagem de operadores filtrada por cliente",
+            "✅ Busca por nome e email",
+            "✅ Filtros: incluir inativos",
+            "✅ Ações: ativar/desativar, editar, excluir",
+            "✅ Estatísticas: total, ativos, inativos",
+            "✅ Isolamento automático: supervisor vê apenas seus operadores"
           ],
-          "estimatedHours": 9,
-          "tags": ["reports", "pdf", "export"],
-          "createdAt": "2024-12-19T00:00:00.000Z"
+          "estimatedHours": 6,
+          "tags": ["crud", "operators", "client-isolation"],
+          "createdAt": "2024-12-19T00:00:00.000Z",
+          "completedAt": "2025-01-02T14:00:00.000Z"
         },
         {
           "id": 10,
-          "title": "Gestão de Operadores (UI)",
-          "description": "Implementar CRUD de operadores com histórico de apontamentos",
-          "status": "pending",
-          "priority": "low",
-          "dependencies": [7],
+          "title": "Formulários de Operadores e Validações Avançadas",
+          "description": "Implementar formulários completos para CRUD de operadores com validações",
+          "status": "completed",
+          "priority": "medium",
+          "dependencies": [9],
           "subtasks": [
-            "Criar página de listagem de operadores",
-            "Implementar formulário de cadastro/edição",
-            "Adicionar histórico de apontamentos por operador",
-            "Criar métricas de performance individual",
-            "Implementar status ativo/inativo",
-            "Adicionar filtros e busca"
+            "✅ Criar OperatorForm.tsx com React Hook Form + Zod",
+            "✅ Implementar validações: CPF, email, telefone",
+            "✅ Adicionar upload de avatar para operadores",
+            "✅ Criar modal de confirmação para exclusão",
+            "✅ Implementar integração com página de operadores",
+            "✅ Adicionar isolamento por cliente no formulário"
           ],
           "estimatedHours": 6,
-          "tags": ["crud", "operators", "history"],
-          "createdAt": "2024-12-19T00:00:00.000Z"
+          "tags": ["forms", "validation", "operators"],
+          "createdAt": "2025-01-02T14:00:00.000Z",
+          "completedAt": "2025-01-02T15:00:00.000Z"
         },
         {
           "id": 11,
-          "title": "Configuração PWA e Otimizações",
-          "description": "Configurar Progressive Web App com service workers e otimizações",
+          "title": "Sistema de Relatórios Client-Centric",
+          "description": "Relatórios focados na experiência do cliente final com exportação PDF",
           "status": "pending",
-          "priority": "medium",
-          "dependencies": [9, 10],
+          "priority": "high",
+          "dependencies": [8, 10],
           "subtasks": [
-            "Configurar Web App Manifest",
-            "Implementar Service Workers básicos",
-            "Adicionar cache de recursos estáticos",
-            "Configurar modo offline para apontamentos",
-            "Otimizar bundle size e performance",
-            "Implementar lazy loading de rotas"
+            "Criar página de relatórios com filtros por cliente",
+            "Implementar relatório de eficácia do mata-moscas",
+            "Adicionar gráficos de evolução e tendências",
+            "Criar template PDF personalizado por cliente",
+            "Implementar comparação antes/depois do tratamento",
+            "Adicionar relatório de performance por espaço",
+            "Criar dashboard executivo para clientes"
           ],
-          "estimatedHours": 7,
-          "tags": ["pwa", "performance", "offline"],
-          "createdAt": "2024-12-19T00:00:00.000Z"
+          "estimatedHours": 10,
+          "tags": ["reports", "pdf", "client-focus", "analytics"],
+          "createdAt": "2025-01-02T14:00:00.000Z"
         },
         {
           "id": 12,
-          "title": "Setup Inicial do Supabase",
-          "description": "Configurar estrutura de dados no Supabase com tabelas, autenticação e storage",
+          "title": "Melhorias na Experiência do Cliente",
+          "description": "Funcionalidades específicas para maximizar valor percebido pelo cliente",
           "status": "pending",
           "priority": "high",
           "dependencies": [11],
           "subtasks": [
-            "Criar projeto no Supabase",
-            "Configurar tabelas (clients, spaces, collections, operators)",
-            "Implementar Row Level Security (RLS)",
-            "Configurar Storage para fotos",
-            "Configurar autenticação básica",
-            "Criar Edge Functions para relatórios"
+            "Implementar alertas automáticos de baixa eficácia",
+            "Criar cronograma de aplicações recomendadas",
+            "Adicionar comparativo com período anterior",
+            "Implementar metas de redução de pragas",
+            "Criar notificações para supervisores",
+            "Adicionar insights automáticos baseados nos dados"
           ],
-          "estimatedHours": 6,
-          "tags": ["backend", "database", "setup"],
-          "createdAt": "2024-12-19T00:00:00.000Z"
+          "estimatedHours": 8,
+          "tags": ["ux", "client-value", "notifications", "insights"],
+          "createdAt": "2025-01-02T14:00:00.000Z"
         },
         {
           "id": 13,
-          "title": "Integração Frontend-Backend",
-          "description": "Substituir dados mockados por integração real com Supabase",
+          "title": "Configuração PWA e Otimizações Mobile",
+          "description": "PWA otimizado para operadores em campo com modo offline robusto",
           "status": "pending",
-          "priority": "high",
+          "priority": "medium",
           "dependencies": [12],
           "subtasks": [
-            "Configurar cliente Supabase no frontend",
-            "Substituir hooks mockados por queries reais",
-            "Implementar upload de imagens",
-            "Configurar sincronização em tempo real",
-            "Implementar autenticação no frontend",
-            "Adicionar tratamento de erros robusto"
+            "Configurar Web App Manifest para instalação",
+            "Implementar Service Workers para cache inteligente",
+            "Adicionar modo offline para coletas com sincronização",
+            "Otimizar performance para dispositivos móveis",
+            "Implementar lazy loading de rotas e componentes",
+            "Adicionar PWA install prompt customizado"
           ],
-          "estimatedHours": 8,
-          "tags": ["integration", "api", "real-data"],
-          "createdAt": "2024-12-19T00:00:00.000Z"
+          "estimatedHours": 7,
+          "tags": ["pwa", "performance", "offline", "mobile"],
+          "createdAt": "2025-01-02T14:00:00.000Z"
         },
         {
           "id": 14,
-          "title": "Testes e Deploy",
-          "description": "Implementar testes essenciais e fazer deploy da aplicação",
+          "title": "Setup Supabase com Isolamento Multi-Tenant",
+          "description": "Configurar backend com isolamento rigoroso por cliente usando RLS",
           "status": "pending",
-          "priority": "medium",
+          "priority": "high",
           "dependencies": [13],
           "subtasks": [
-            "Configurar testes unitários com Vitest",
-            "Implementar testes de componentes críticos",
-            "Configurar CI/CD pipeline",
-            "Deploy no Vercel/Netlify",
-            "Configurar domínio personalizado",
-            "Implementar monitoramento básico"
+            "Criar projeto Supabase com estrutura multi-tenant",
+            "Implementar Row Level Security (RLS) por cliente",
+            "Configurar tabelas: clients, spaces, collections, operators",
+            "Implementar Storage com isolamento por cliente",
+            "Configurar autenticação com JWT e roles",
+            "Criar Edge Functions para relatórios complexos",
+            "Implementar audit log para rastreabilidade"
+          ],
+          "estimatedHours": 8,
+          "tags": ["backend", "database", "security", "multi-tenant"],
+          "createdAt": "2025-01-02T14:00:00.000Z"
+        },
+        {
+          "id": 15,
+          "title": "Integração Frontend-Backend com Segurança",
+          "description": "Substituir dados mockados mantendo isolamento e segurança por cliente",
+          "status": "pending",
+          "priority": "high",
+          "dependencies": [14],
+          "subtasks": [
+            "Configurar cliente Supabase com autenticação",
+            "Migrar hooks para queries reais com RLS",
+            "Implementar upload seguro de imagens por cliente",
+            "Configurar sincronização em tempo real",
+            "Implementar tratamento de erros e fallbacks",
+            "Adicionar validação de permissões no frontend",
+            "Testar isolamento rigoroso entre clientes"
+          ],
+          "estimatedHours": 10,
+          "tags": ["integration", "api", "security", "real-data"],
+          "createdAt": "2025-01-02T14:00:00.000Z"
+        },
+        {
+          "id": 16,
+          "title": "Testes de Segurança e Deploy",
+          "description": "Testes focados em isolamento por cliente e deploy seguro",
+          "status": "pending",
+          "priority": "medium",
+          "dependencies": [15],
+          "subtasks": [
+            "Implementar testes de isolamento por cliente",
+            "Testar cenários de tentativa de acesso cruzado",
+            "Configurar CI/CD com testes de segurança",
+            "Deploy no Vercel com variáveis de ambiente",
+            "Configurar domínio personalizado com SSL",
+            "Implementar monitoramento de segurança",
+            "Criar documentação de segurança para clientes"
           ],
           "estimatedHours": 6,
-          "tags": ["testing", "deploy", "ci-cd"],
-          "createdAt": "2024-12-19T00:00:00.000Z"
+          "tags": ["testing", "security", "deploy", "monitoring"],
+          "createdAt": "2025-01-02T14:00:00.000Z"
         }
       ]
     }

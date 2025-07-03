@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Plus, Search, Filter, Edit2, Trash2, UserCheck, UserX } from 'lucide-react'
+import { Plus, Search, Filter, Edit2, Trash2, UserCheck, UserX, X } from 'lucide-react'
 import { useOperators } from '@/hooks/useOperators'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { formatDate } from '@/lib/formatters'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
-import type { Operator } from '@/types'
+import OperatorForm from '@/components/forms/OperatorForm'
+import type { Operator, CreateOperatorData } from '@/types'
 
 // Componentes UI simples
 function Button({ children, variant = 'default', size = 'default', onClick, className = '' }: {
@@ -67,6 +68,28 @@ function Badge({ children, variant = 'default' }: { children: React.ReactNode; v
   )
 }
 
+// Modal Component
+function Modal({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: React.ReactNode }) {
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onClose} />
+        <div className="relative bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10"
+          >
+            <X className="h-6 w-6" />
+          </button>
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function Operators() {
   const { userType, clientContext, user } = useAuthContext()
   const { 
@@ -75,6 +98,7 @@ export function Operators() {
     isDeleting,
     deleteOperator,
     updateOperator,
+    createOperator,
     error,
     clearError 
   } = useOperators()
@@ -84,6 +108,9 @@ export function Operators() {
   const [selectedOperator, setSelectedOperator] = useState<Operator | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [operatorToDelete, setOperatorToDelete] = useState<Operator | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [editingOperator, setEditingOperator] = useState<Operator | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Filtrar operadores baseado no contexto do cliente
   const filteredOperators = operators.filter(operator => {
@@ -129,6 +156,39 @@ export function Operators() {
     }
   }
 
+  const handleCreateOperator = () => {
+    setEditingOperator(null)
+    setShowForm(true)
+  }
+
+  const handleEditOperator = (operator: Operator) => {
+    setEditingOperator(operator)
+    setShowForm(true)
+  }
+
+  const handleFormSubmit = async (data: CreateOperatorData) => {
+    setIsSubmitting(true)
+    try {
+      if (editingOperator) {
+        await updateOperator(editingOperator.id, data)
+      } else {
+        await createOperator(data)
+      }
+      setShowForm(false)
+      setEditingOperator(null)
+    } catch (error) {
+      console.error('Erro ao salvar operador:', error)
+      throw error
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleFormCancel = () => {
+    setShowForm(false)
+    setEditingOperator(null)
+  }
+
   const stats = {
     total: filteredOperators.length,
     active: filteredOperators.filter(o => o.active).length,
@@ -148,7 +208,7 @@ export function Operators() {
             }
           </p>
         </div>
-        <Button>
+        <Button onClick={handleCreateOperator}>
           <Plus className="h-4 w-4 mr-2" />
           Novo Operador
         </Button>
@@ -201,141 +261,200 @@ export function Operators() {
               />
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant={showInactive ? "default" : "outline"}
-              onClick={() => setShowInactive(!showInactive)}
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              {showInactive ? 'Todos' : 'Incluir Inativos'}
-            </Button>
+          
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm text-gray-600">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={(e) => setShowInactive(e.target.checked)}
+                className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+              />
+              Incluir inativos
+            </label>
           </div>
         </div>
       </Card>
 
       {/* Error Message */}
       {error && (
-        <Card className="p-4 border-red-200 bg-red-50">
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
           <div className="flex justify-between items-center">
             <p className="text-red-800">{error}</p>
-            <Button variant="outline" size="sm" onClick={clearError}>
-              Fechar
-            </Button>
+            <button
+              onClick={clearError}
+              className="text-red-600 hover:text-red-800"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-        </Card>
+        </div>
       )}
 
-      {/* Operators List */}
+      {/* Operators Table */}
       <Card>
-        <div className="p-6">
-          <h3 className="text-lg font-semibold mb-4">
-            Lista de Operadores ({filteredOperators.length})
-          </h3>
-          
-          {isLoading ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="flex items-center space-x-4 p-4 border rounded-lg">
-                    <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                      <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-                    </div>
-                    <div className="w-20 h-6 bg-gray-200 rounded"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : filteredOperators.length === 0 ? (
-            <div className="text-center py-12">
-              <UserX className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">Nenhum operador encontrado</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {searchTerm 
-                  ? 'Tente ajustar os filtros de busca'
-                  : 'Comece criando um novo operador'
-                }
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredOperators.map((operator) => (
-                <div key={operator.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
-                      {operator.avatar ? (
-                        <img src={operator.avatar} alt={operator.name} className="w-12 h-12 rounded-full" />
-                      ) : (
-                        <span className="text-white font-medium">
-                          {operator.name.charAt(0).toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900">{operator.name}</h4>
-                      <p className="text-sm text-gray-500">{operator.email || 'Email não informado'}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant={operator.active ? "default" : "secondary"}>
-                          {operator.active ? 'Ativo' : 'Inativo'}
-                        </Badge>
-                        {operator.lastLogin && (
-                          <span className="text-xs text-gray-500">
-                            Último acesso: {formatDate(operator.lastLogin)}
-                          </span>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Operador
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Função
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Contato
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Último Login
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Ações
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                    Carregando operadores...
+                  </td>
+                </tr>
+              ) : filteredOperators.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                    {searchTerm || !showInactive 
+                      ? 'Nenhum operador encontrado com os filtros aplicados'
+                      : 'Nenhum operador cadastrado'
+                    }
+                  </td>
+                </tr>
+              ) : (
+                filteredOperators.map((operator) => (
+                  <tr key={operator.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          {operator.avatar ? (
+                            <img 
+                              className="h-10 w-10 rounded-full object-cover" 
+                              src={operator.avatar} 
+                              alt={operator.name}
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                              <span className="text-sm font-medium text-gray-700">
+                                {operator.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {operator.name}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            ID: {operator.id}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Badge variant={operator.role === 'supervisor' ? 'default' : 'secondary'}>
+                        {operator.role === 'supervisor' ? 'Supervisor' : 'Operador'}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div>
+                        {operator.email && (
+                          <div className="text-sm text-gray-900">{operator.email}</div>
+                        )}
+                        {operator.phone && (
+                          <div className="text-sm text-gray-500">{operator.phone}</div>
+                        )}
+                        {!operator.email && !operator.phone && (
+                          <span className="text-gray-400">-</span>
                         )}
                       </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggleStatus(operator)}
-                    >
-                      {operator.active ? 'Desativar' : 'Ativar'}
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedOperator(operator)}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setOperatorToDelete(operator)
-                        setShowDeleteDialog(true)
-                      }}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Badge variant={operator.active ? 'default' : 'secondary'}>
+                        {operator.active ? 'Ativo' : 'Inativo'}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {operator.lastLogin ? formatDate(operator.lastLogin) : 'Nunca'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleStatus(operator)}
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          {operator.active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditOperator(operator)}
+                          className="text-green-600 hover:text-green-700"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setOperatorToDelete(operator)
+                            setShowDeleteDialog(true)
+                          }}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </Card>
+
+      {/* Form Modal */}
+      <Modal isOpen={showForm} onClose={handleFormCancel}>
+        <OperatorForm
+          operator={editingOperator || undefined}
+          onSubmit={handleFormSubmit}
+          onCancel={handleFormCancel}
+          isLoading={isSubmitting}
+        />
+      </Modal>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={showDeleteDialog}
+        onConfirm={() => operatorToDelete && handleDeleteOperator(operatorToDelete)}
+        onCancel={() => {
+          setShowDeleteDialog(false)
+          setOperatorToDelete(null)
+        }}
         title="Excluir Operador"
         message={`Tem certeza que deseja excluir o operador "${operatorToDelete?.name}"? Esta ação não pode ser desfeita.`}
-        onConfirm={() => operatorToDelete && handleDeleteOperator(operatorToDelete)}
-        onCancel={() => setShowDeleteDialog(false)}
-        isLoading={isDeleting}
         confirmText="Excluir"
         cancelText="Cancelar"
+        isLoading={isDeleting}
         variant="danger"
       />
     </div>
   )
-} 
+}
+
+export default Operators 

@@ -9,6 +9,7 @@ export * from './common/GlobalLoading'
 export * from './forms/ClientForm'
 export * from './forms/SpaceForm'
 export * from './forms/CollectionForm'
+export { default as OperatorForm } from './forms/OperatorForm'
 
 // Layout
 export * from './layout/SimpleLayout'
