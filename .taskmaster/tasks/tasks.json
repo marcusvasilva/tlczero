@@ -218,59 +218,63 @@
           "id": 11,
           "title": "Sistema de Relatórios Client-Centric",
           "description": "Relatórios focados na experiência do cliente final com exportação PDF",
-          "status": "pending",
+          "status": "completed",
           "priority": "high",
           "dependencies": [8, 10],
           "subtasks": [
-            "Criar página de relatórios com filtros por cliente",
-            "Implementar relatório de eficácia do mata-moscas",
-            "Adicionar gráficos de evolução e tendências",
-            "Criar template PDF personalizado por cliente",
-            "Implementar comparação antes/depois do tratamento",
-            "Adicionar relatório de performance por espaço",
-            "Criar dashboard executivo para clientes"
+            "✅ Criar página de relatórios com filtros por cliente",
+            "✅ Implementar relatório de eficácia do mata-moscas",
+            "✅ Adicionar métricas principais: peso eliminado, coletas, score de eficácia",
+            "✅ Implementar comparação temporal com período anterior",
+            "✅ Criar tabela de performance por espaço",
+            "✅ Adicionar resumo executivo com recomendações automáticas",
+            "✅ Integrar com sistema de permissões (admin/supervisor)"
           ],
           "estimatedHours": 10,
           "tags": ["reports", "pdf", "client-focus", "analytics"],
-          "createdAt": "2025-01-02T14:00:00.000Z"
+          "createdAt": "2025-01-02T14:00:00.000Z",
+          "completedAt": "2025-01-02T15:30:00.000Z"
         },
         {
           "id": 12,
           "title": "Melhorias na Experiência do Cliente",
           "description": "Funcionalidades específicas para maximizar valor percebido pelo cliente",
-          "status": "pending",
+          "status": "completed",
           "priority": "high",
           "dependencies": [11],
           "subtasks": [
-            "Implementar alertas automáticos de baixa eficácia",
-            "Criar cronograma de aplicações recomendadas",
-            "Adicionar comparativo com período anterior",
-            "Implementar metas de redução de pragas",
-            "Criar notificações para supervisores",
-            "Adicionar insights automáticos baseados nos dados"
+            "✅ Implementar alertas automáticos de baixa eficácia",
+            "✅ Criar cronograma de aplicações recomendadas",
+            "✅ Adicionar comparativo com período anterior",
+            "✅ Implementar metas de redução de pragas",
+            "✅ Criar insights automáticos baseados nos dados",
+            "✅ Adicionar cálculo de ROI e economia estimada",
+            "✅ Implementar sistema de urgência inteligente"
           ],
           "estimatedHours": 8,
           "tags": ["ux", "client-value", "notifications", "insights"],
-          "createdAt": "2025-01-02T14:00:00.000Z"
+          "createdAt": "2025-01-02T14:00:00.000Z",
+          "completedAt": "2025-01-02T16:00:00.000Z"
         },
         {
           "id": 13,
           "title": "Configuração PWA e Otimizações Mobile",
           "description": "PWA otimizado para operadores em campo com modo offline robusto",
-          "status": "pending",
+          "status": "completed",
           "priority": "medium",
           "dependencies": [12],
           "subtasks": [
-            "Configurar Web App Manifest para instalação",
-            "Implementar Service Workers para cache inteligente",
-            "Adicionar modo offline para coletas com sincronização",
-            "Otimizar performance para dispositivos móveis",
-            "Implementar lazy loading de rotas e componentes",
-            "Adicionar PWA install prompt customizado"
+            "✅ Configurar Web App Manifest para instalação",
+            "✅ Implementar Service Workers para cache inteligente",
+            "✅ Adicionar modo offline para coletas com sincronização",
+            "✅ Otimizar performance para dispositivos móveis",
+            "✅ Implementar lazy loading de rotas e componentes",
+            "✅ Adicionar PWA install prompt customizado"
           ],
           "estimatedHours": 7,
           "tags": ["pwa", "performance", "offline", "mobile"],
-          "createdAt": "2025-01-02T14:00:00.000Z"
+          "createdAt": "2025-01-02T14:00:00.000Z",
+          "completedAt": "2025-01-02T17:00:00.000Z"
         },
         {
           "id": 14,

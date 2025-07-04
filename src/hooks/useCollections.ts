@@ -72,7 +72,7 @@ export const useCollections = (options: UseCollectionsOptions = {}): UseCollecti
   const [error, setError] = useState<string | null>(null)
   const [spaceFilter, setSpaceFilter] = useState(options.spaceId || '')
   const [operatorFilter, setOperatorFilter] = useState(options.operatorId || '')
-  const [clientFilter, setClientFilter] = useState(options.clientId || '')
+  const [clientFilter] = useState(options.clientId || '')
   const [dateRangeFilter, setDateRangeFilter] = useState(options.dateRange)
   const [weightRangeFilter, setWeightRangeFilter] = useState({
     min: options.minWeight,

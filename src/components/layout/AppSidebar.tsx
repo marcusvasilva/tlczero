@@ -10,7 +10,8 @@ import {
   Settings,
   ChevronLeft,
   Menu,
-  MapPin
+  MapPin,
+  Smartphone
 } from 'lucide-react'
 import { APP_CONFIG } from '@/lib/constants'
 import { useAuthContext } from '@/contexts/AuthContext'
@@ -79,6 +80,13 @@ const navigationItems: NavItem[] = [
     resource: 'reports',
     action: 'read',
     allowedRoles: ['admin', 'supervisor']
+  },
+  {
+    title: 'PWA Demo',
+    href: '/pwa-demo',
+    icon: Smartphone,
+    description: 'Demonstração PWA',
+    badge: 'Novo'
   }
 ]
 

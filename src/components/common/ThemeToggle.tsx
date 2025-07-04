@@ -10,7 +10,7 @@ import {
 import { Button } from '../../../@/components/ui/button'
 
 export const ThemeToggle: React.FC = () => {
-  const { theme, actualTheme, setTheme } = useTheme()
+  const { theme, setTheme } = useTheme()
 
   const themeOptions = [
     {

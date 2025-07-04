@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Search, Filter, Edit2, Trash2, UserCheck, UserX, X } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, UserCheck, UserX, X } from 'lucide-react'
 import { useOperators } from '@/hooks/useOperators'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { formatDate } from '@/lib/formatters'
@@ -105,7 +105,6 @@ export function Operators() {
   
   const [searchTerm, setSearchTerm] = useState('')
   const [showInactive, setShowInactive] = useState(false)
-  const [selectedOperator, setSelectedOperator] = useState<Operator | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [operatorToDelete, setOperatorToDelete] = useState<Operator | null>(null)
   const [showForm, setShowForm] = useState(false)

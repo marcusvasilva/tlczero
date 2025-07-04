@@ -3,8 +3,7 @@ import {
   Users, 
   Building2, 
   Bug, 
-  TrendingUp, 
-  TrendingDown,
+  TrendingUp,
   Download,
   RefreshCw,
   MapPin,
@@ -14,8 +13,6 @@ import {
   Target
 } from 'lucide-react'
 import {
-  AreaChart,
-  Area,
   BarChart,
   Bar,
   PieChart as RechartsPieChart,

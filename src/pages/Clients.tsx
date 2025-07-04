@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useClients, usePagination } from '@/hooks'
 import { formatPhone, formatCNPJ, formatDateTime } from '@/lib/formatters'
 import { ClientForm } from '@/components/forms/ClientForm'
@@ -14,7 +14,6 @@ import {
   UserX,
   RefreshCw,
   Download,
-  Eye,
   Edit2,
   Trash2
 } from 'lucide-react'

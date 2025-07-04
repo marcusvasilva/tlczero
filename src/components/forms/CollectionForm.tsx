@@ -2,8 +2,6 @@ import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { X, Camera, Upload, Scale, User, Building2, Calendar, FileText } from 'lucide-react'
 import { useForm } from '@/hooks'
 import { collectionSchema } from '@/lib/validations'
-import { formatWeight, formatDateTime } from '@/lib/formatters'
-import { WEIGHT_LIMITS } from '@/lib/constants'
 import type { Collection, CreateCollectionData, Space, Operator, Client } from '@/types'
 
 interface CollectionFormProps {
@@ -43,8 +41,12 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
     isValid
   } = useForm<CreateCollectionData>({
     initialValues: {
+
+
+
       spaceId: selectedSpaceId || '',
       operatorId: '',
+      clientId: '',
       weight: 0,
       photoUrl: '',
       observations: '',
@@ -73,6 +75,7 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
       setFieldValue('photoUrl', initialData.photoUrl || '')
       setFieldValue('observations', initialData.observations || '')
       setFieldValue('collectedAt', initialData.collectedAt)
+      setFieldValue('clientId', initialData.clientId)
       setPhotoPreview(initialData.photoUrl || null)
     } else {
       reset()
@@ -105,7 +108,6 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
 
   const selectedSpace = spacesMap[values.spaceId]
   const selectedOperator = operators.find(operator => operator.id === values.operatorId)
-  const selectedClient = selectedSpace ? clientsMap[selectedSpace.clientId] : null
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

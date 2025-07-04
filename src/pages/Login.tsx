@@ -16,8 +16,7 @@ export function Login() {
     touched,
     handleChange,
     handleBlur,
-    setError,
-    clearError: clearFormError
+    setError
   } = useForm<LoginCredentials>({
     initialValues: {
       email: '',
@@ -46,7 +45,6 @@ export function Login() {
   // Limpar erros quando o componente montar
   useEffect(() => {
     clearError()
-    // clearFormError não precisa de parâmetros, mas vamos usar clearErrors
   }, [clearError])
 
   // Redirecionar se já autenticado (DEPOIS de todos os hooks)

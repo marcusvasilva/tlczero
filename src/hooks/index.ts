@@ -11,4 +11,7 @@ export { useCollections, useClientCollections } from './useCollections'
 export { useOperators } from './useOperators'
 
 // API hook
-export { useApi } from './useApi' 
+export { useApi } from './useApi'
+
+// New hooks
+export * from './useOfflineSync' 

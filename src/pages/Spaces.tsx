@@ -1,25 +1,21 @@
-import React, { useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useSpaces, useClients, usePagination } from '@/hooks'
-import { formatDate, formatDateTime } from '@/lib/formatters'
+import { formatDate } from '@/lib/formatters'
 import { SpaceForm } from '@/components/forms/SpaceForm'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { 
   Plus, 
   Search, 
-  Filter, 
   SortAsc, 
   SortDesc, 
   Building2,
   MapPin,
   QrCode,
   Users,
-  UserCheck,
-  UserX,
   RefreshCw,
   Download,
   Edit2,
   Trash2,
-  Eye,
   Calendar,
   Target,
   Zap,
@@ -51,8 +47,7 @@ export function Spaces() {
     clearError,
     totalSpaces,
     activeSpaces,
-    inactiveSpaces,
-    getSpacesByClient
+    // getSpacesByClient
   } = useSpaces()
 
   const {

@@ -33,11 +33,11 @@ export function useApi<T = any>(
         
         if (response.success) {
           setState({
-            data: response.data,
+            data: response.data || null,
             loading: false,
             error: null,
           })
-          return response.data
+          return response.data || null || null || null
         } else {
           setState({
             data: null,
@@ -129,7 +129,7 @@ export function useMultipleApi<T extends Record<string, any>>(
         results.forEach(({ key, response }) => {
           if (response.success) {
             newStates[key] = {
-              data: response.data,
+              data: response.data || null,
               loading: false,
               error: null,
             }
@@ -163,12 +163,12 @@ export function useMultipleApi<T extends Record<string, any>>(
           setStates(prev => ({
             ...prev,
             [key]: {
-              data: response.data,
+              data: response.data || null,
               loading: false,
               error: null,
             }
           }))
-          return response.data
+          return response.data || null || null || null
         } else {
           setStates(prev => ({
             ...prev,

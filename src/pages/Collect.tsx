@@ -8,7 +8,6 @@ import {
   Scale, 
   MessageSquare, 
   Check, 
-  X, 
   Upload, 
   AlertCircle,
   ArrowLeft,
@@ -228,7 +227,8 @@ export function Collect() {
         weight: parseFloat(formData.weight.replace(',', '.')),
         photoUrl: formData.photo ? URL.createObjectURL(formData.photo) : undefined,
         observations: formData.observations,
-        collectedAt: new Date()
+        collectedAt: new Date(),
+        clientId: space?.clientId || ''
       }
 
       await createCollection(collectionData)
