@@ -1,15 +1,24 @@
-import React, { useEffect, useRef } from 'react'
-import { X, MapPin, Calendar, Building2, QrCode } from 'lucide-react'
+import React, { useRef, useEffect } from 'react'
 import { useForm } from '@/hooks'
-import { spaceSchema } from '@/lib/validations'
-import type { Space, CreateSpaceData, Client } from '@/types'
+import { z } from 'zod'
+import type { Space, CreateSpaceData } from '@/types'
+import { X, Building2 } from 'lucide-react'
+
+// Schema de validação
+const spaceSchema = z.object({
+  clientId: z.string().min(1, 'Cliente é obrigatório'),
+  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  description: z.string().optional(),
+  areaSize: z.number().positive('Área deve ser positiva').optional(),
+  environmentType: z.enum(['indoor', 'outdoor', 'mixed']).optional()
+})
 
 interface SpaceFormProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: CreateSpaceData) => void
-  initialData?: Space | null
-  clients: Client[]
+  onSubmit: (data: CreateSpaceData) => Promise<void>
+  initialData?: Space
+  clients: Array<{ id: string; company_name: string; cnpj?: string; contact_person?: string; phone?: string; address?: string; status: string }>
   isLoading?: boolean
 }
 
@@ -36,9 +45,8 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({
       clientId: '',
       name: '',
       description: '',
-      location: '',
-      attractiveType: 'moscas',
-      installationDate: new Date()
+      areaSize: undefined,
+      environmentType: 'indoor'
     },
     validate: (values) => {
       const result = spaceSchema.safeParse(values)
@@ -61,16 +69,15 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({
       setFieldValue('clientId', initialData.clientId)
       setFieldValue('name', initialData.name)
       setFieldValue('description', initialData.description || '')
-      setFieldValue('location', initialData.location || '')
-      setFieldValue('attractiveType', initialData.attractiveType)
-      setFieldValue('installationDate', initialData.installationDate)
+      setFieldValue('areaSize', initialData.areaSize)
+      setFieldValue('environmentType', initialData.environmentType || 'indoor')
     } else if (!initialData && previousInitialDataRef.current) {
       previousInitialDataRef.current = null
       reset()
     }
   }, [initialData]) // Removido setFieldValue e reset das dependências
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     // Validar usando schema
@@ -83,7 +90,13 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({
       return
     }
 
-    onSubmit(values)
+    console.log('🚀 Iniciando criação de espaço:', values)
+    try {
+      await onSubmit(values)
+      console.log('✅ Espaço criado com sucesso')
+    } catch (error) {
+      console.error('❌ Erro ao criar espaço:', error)
+    }
   }
 
   const handleInputChange = (field: keyof CreateSpaceData, value: any) => {
@@ -131,7 +144,7 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({
             <select
               value={values.clientId}
               onChange={(e) => handleInputChange('clientId', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 bg-white ${
                 errors.clientId && touched.clientId
                   ? 'border-red-300 bg-red-50'
                   : 'border-gray-300'
@@ -139,10 +152,10 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({
             >
               <option value="">Selecione um cliente</option>
               {clients
-                .filter(client => client.active)
+                .filter(client => client.status === 'active')
                 .map((client) => (
                   <option key={client.id} value={client.id}>
-                    {client.name}
+                    {client.company_name}
                   </option>
                 ))
               }
@@ -153,13 +166,13 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({
             {selectedClient && (
               <div className="mt-2 p-3 bg-gray-50 rounded-md">
                 <p className="text-sm text-gray-600">
-                  <strong>CNPJ:</strong> {selectedClient.cnpj}
+                  <strong>CNPJ:</strong> {selectedClient.cnpj || 'Não informado'}
                 </p>
                 <p className="text-sm text-gray-600">
-                  <strong>Contato:</strong> {selectedClient.contactPerson} - {selectedClient.phone}
+                  <strong>Contato:</strong> {selectedClient.contact_person || 'Não informado'} - {selectedClient.phone || 'Não informado'}
                 </p>
                 <p className="text-sm text-gray-600">
-                  <strong>Endereço:</strong> {selectedClient.address}
+                  <strong>Endereço:</strong> {selectedClient.address || 'Não informado'}
                 </p>
               </div>
             )}
@@ -175,7 +188,7 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({
               value={values.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
               placeholder="Ex: Área de Estoque, Cozinha Principal, Depósito A"
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 bg-white placeholder-gray-400 ${
                 errors.name && touched.name
                   ? 'border-red-300 bg-red-50'
                   : 'border-gray-300'
@@ -186,142 +199,75 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({
             )}
           </div>
 
-          {/* Localização */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <MapPin className="w-4 h-4 inline mr-1" />
-              Localização *
-            </label>
-            <input
-              type="text"
-              value={values.location}
-              onChange={(e) => handleInputChange('location', e.target.value)}
-              placeholder="Descrição específica da localização"
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                errors.location && touched.location
-                  ? 'border-red-300 bg-red-50'
-                  : 'border-gray-300'
-              }`}
-            />
-            {errors.location && touched.location && (
-              <p className="mt-1 text-sm text-red-600">{errors.location}</p>
-            )}
-            <p className="mt-1 text-xs text-gray-500">
-              Ex: Próximo ao freezer, Parede norte do depósito, Entrada principal
-            </p>
-          </div>
-
           {/* Descrição */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Descrição
             </label>
             <textarea
-              value={values.description}
+              value={values.description || ''}
               onChange={(e) => handleInputChange('description', e.target.value)}
               placeholder="Informações adicionais sobre o espaço..."
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 bg-white placeholder-gray-400"
             />
           </div>
 
-          {/* Tipo de Atrativo */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Tipo de Atrativo
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="relative">
-                <input
-                  type="radio"
-                  name="attractiveType"
-                  value="moscas"
-                  checked={values.attractiveType === 'moscas'}
-                  onChange={(e) => handleInputChange('attractiveType', e.target.value)}
-                  className="sr-only"
-                />
-                <div className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                  values.attractiveType === 'moscas'
-                    ? 'border-green-500 bg-green-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}>
-                  <div className="text-center">
-                    <div className="text-2xl mb-2">🪰</div>
-                    <div className="font-medium text-gray-900">Moscas</div>
-                    <div className="text-sm text-gray-500">Atrativo para moscas</div>
-                  </div>
-                </div>
+          {/* Área e Tipo de Ambiente */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Área */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Área (m²)
               </label>
-              
-              <label className="relative">
-                <input
-                  type="radio"
-                  name="attractiveType"
-                  value="outros"
-                  checked={values.attractiveType === 'outros'}
-                  onChange={(e) => handleInputChange('attractiveType', e.target.value)}
-                  className="sr-only"
-                />
-                <div className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                  values.attractiveType === 'outros'
-                    ? 'border-green-500 bg-green-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}>
-                  <div className="text-center">
-                    <div className="text-2xl mb-2">🐛</div>
-                    <div className="font-medium text-gray-900">Outros</div>
-                    <div className="text-sm text-gray-500">Outros tipos de pragas</div>
-                  </div>
-                </div>
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                value={values.areaSize || ''}
+                onChange={(e) => handleInputChange('areaSize', e.target.value ? parseFloat(e.target.value) : undefined)}
+                placeholder="Ex: 50.5"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 bg-white placeholder-gray-400"
+              />
+              {errors.areaSize && touched.areaSize && (
+                <p className="mt-1 text-sm text-red-600">{errors.areaSize}</p>
+              )}
+            </div>
+
+            {/* Tipo de Ambiente */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tipo de Ambiente
               </label>
+              <select
+                value={values.environmentType || 'indoor'}
+                onChange={(e) => handleInputChange('environmentType', e.target.value as 'indoor' | 'outdoor' | 'mixed')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 bg-white"
+              >
+                <option value="indoor">Interno</option>
+                <option value="outdoor">Externo</option>
+                <option value="mixed">Misto</option>
+              </select>
             </div>
           </div>
 
-          {/* Data de Instalação */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Calendar className="w-4 h-4 inline mr-1" />
-              Data de Instalação
-            </label>
-            <input
-              type="date"
-              value={values.installationDate.toISOString().split('T')[0]}
-              onChange={(e) => handleInputChange('installationDate', new Date(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            />
-          </div>
-
-          {/* QR Code Info */}
-          {initialData && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center space-x-2 mb-2">
-                <QrCode className="w-5 h-5 text-blue-600" />
-                <h4 className="font-medium text-blue-900">QR Code</h4>
-              </div>
-              <p className="text-sm text-blue-700">
-                Código: <span className="font-mono bg-white px-2 py-1 rounded">{initialData.qrCode}</span>
-              </p>
-              <p className="text-xs text-blue-600 mt-1">
-                O QR Code é gerado automaticamente e pode ser usado para acessar este espaço
-              </p>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex justify-end space-x-3 pt-6 border-t">
+          {/* Botões */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50"
+              disabled={isLoading}
             >
               Cancelar
             </button>
             <button
               type="submit"
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isLoading}
-              className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => console.log('🔥 Botão submit espaço clicado, dados:', values, 'errors:', errors)}
             >
-              {isLoading ? 'Salvando...' : (initialData ? 'Atualizar' : 'Criar Espaço')}
+              {isLoading ? 'Salvando...' : initialData ? 'Atualizar' : 'Criar'}
             </button>
           </div>
         </form>

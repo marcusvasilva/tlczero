@@ -5,8 +5,7 @@ import { z } from 'zod'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useClients } from '@/hooks/useClients'
 import type { Operator, CreateOperatorData } from '@/types/operator'
-import { formatCPF, formatPhone } from '@/lib/formatters'
-import { validateCPF } from '@/lib/validations'
+import { formatPhone } from '@/lib/formatters'
 
 // Componentes UI simples
 const Button = ({ children, type = 'button', variant = 'default', onClick, disabled, className = '' }: any) => (
@@ -37,21 +36,9 @@ const Label = ({ children, htmlFor }: any) => (
   </label>
 )
 
-const Card = ({ children, className = '' }: any) => (
-  <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md ${className}`}>
-    {children}
-  </div>
-)
 
-const Badge = ({ children, variant = 'default', className = '' }: any) => (
-  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-    variant === 'secondary' ? 'bg-gray-100 text-gray-800' : 'bg-blue-100 text-blue-800'
-  } ${className}`}>
-    {children}
-  </span>
-)
 
-// Schema de validação Zod
+// Schema de validação Zod - Com senha
 const operatorSchema = z.object({
   name: z.string()
     .min(2, 'Nome deve ter pelo menos 2 caracteres')
@@ -59,6 +46,11 @@ const operatorSchema = z.object({
   
   email: z.string()
     .email('Email inválido')
+    .optional()
+    .or(z.literal('')),
+  
+  password: z.string()
+    .min(6, 'Senha deve ter pelo menos 6 caracteres')
     .optional()
     .or(z.literal('')),
   
@@ -70,21 +62,12 @@ const operatorSchema = z.object({
       return cleaned.length === 10 || cleaned.length === 11
     }, 'Telefone deve ter 10 ou 11 dígitos'),
   
-  cpf: z.string()
-    .optional()
-    .refine((val) => {
-      if (!val || val === '') return true
-      return validateCPF(val)
-    }, 'CPF inválido'),
-  
   role: z.enum(['operador', 'supervisor'] as const, {
     required_error: 'Função é obrigatória'
   }),
   
-  clientId: z.string()
-    .min(1, 'Cliente é obrigatório'),
-  
-  active: z.boolean()
+  account_id: z.string()
+    .min(1, 'Conta é obrigatória')
 })
 
 type OperatorFormData = z.infer<typeof operatorSchema>
@@ -100,11 +83,11 @@ export default function OperatorForm({
   operator, 
   onSubmit, 
   onCancel, 
-  isLoading = false 
+ 
 }: OperatorFormProps) {
-  const { userType, clientContext, user } = useAuthContext()
+  const { userType, accountContext, user } = useAuthContext()
   const { clients } = useClients()
-  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  // const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(
     operator?.avatar || null
   )
@@ -112,7 +95,7 @@ export default function OperatorForm({
   // Filtrar clientes baseado no contexto do usuário
   const availableClients = userType === 'admin' 
     ? clients 
-    : clients.filter(client => client.id === (clientContext || user?.clientId))
+    : clients.filter(client => client.id === (accountContext || user?.account_id))
 
   const {
     register,
@@ -126,15 +109,14 @@ export default function OperatorForm({
     defaultValues: {
       name: operator?.name || '',
       email: operator?.email || '',
+      password: '',
       phone: operator?.phone || '',
-      cpf: operator?.cpf || '',
       role: (operator?.role === 'admin' ? 'operador' : operator?.role as 'operador' | 'supervisor') || 'operador',
-      clientId: operator?.clientId || clientContext || user?.clientId || '',
-      active: operator?.active ?? true
+      account_id: operator?.account_id || accountContext || user?.account_id || ''
     }
   })
 
-  const watchedRole = watch('role')
+
 
   // Handle avatar upload
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -151,7 +133,7 @@ export default function OperatorForm({
       return
     }
 
-    setAvatarFile(file)
+    // setAvatarFile(file)
 
     const reader = new FileReader()
     reader.onload = (e) => {
@@ -161,34 +143,39 @@ export default function OperatorForm({
   }
 
   const onFormSubmit = async (data: OperatorFormData) => {
+    console.log('🚀 Dados do formulário recebidos:', data)
+    
     try {
+      // Validar se account_id foi selecionado
+      if (!data.account_id) {
+        throw new Error('Por favor, selecione um cliente')
+      }
+      
       const submitData: CreateOperatorData = {
         name: data.name,
-        email: data.email || undefined,
+        email: data.email || '',
+        password: data.password || undefined, // Incluir senha se fornecida
         phone: data.phone || undefined,
-        cpf: data.cpf || undefined,
-        role: data.role,
-        clientId: data.clientId,
-        active: data.active,
-        avatar: avatarFile ? URL.createObjectURL(avatarFile) : operator?.avatar
+        role: data.role === 'operador' ? 'operator' : 'supervisor',
+        account_id: data.account_id as string,
+        active: true, // Sempre ativo por padrão
       }
 
+      console.log('📝 Dados preparados para envio:', submitData)
       await onSubmit(submitData)
+      console.log('✅ Operador criado com sucesso!')
     } catch (error) {
-      console.error('Erro ao salvar operador:', error)
+      console.error('❌ Erro ao salvar operador:', error)
+      // Re-lançar o erro para que seja tratado pela página pai
+      throw error
     }
   }
 
   const handleCancel = () => {
     reset()
-    setAvatarFile(null)
+    // setAvatarFile(null)
     setAvatarPreview(operator?.avatar || null)
     onCancel()
-  }
-
-  const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCPF(e.target.value)
-    setValue('cpf', formatted)
   }
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,7 +184,7 @@ export default function OperatorForm({
   }
 
   return (
-    <Card className="p-6 max-w-2xl mx-auto">
+    <div className="p-6">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           {operator ? 'Editar Operador' : 'Novo Operador'}
@@ -205,6 +192,28 @@ export default function OperatorForm({
         <p className="text-gray-600 dark:text-gray-400 mt-1">
           {operator ? 'Atualize as informações do operador' : 'Preencha os dados para criar um novo operador'}
         </p>
+        
+        {!operator && (
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <span className="text-blue-600 text-lg">🔐</span>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-blue-900 mb-1">
+                  Criação Automática de Usuário
+                </h3>
+                <p className="text-sm text-blue-800">
+                  Ao criar o operador, um usuário será criado automaticamente no sistema. 
+                  Defina email e senha ou deixe em branco para geração automática.
+                </p>
+                <p className="text-xs text-blue-700 mt-2">
+                  💡 Email e senha em branco = geração automática baseada no nome.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
@@ -220,7 +229,7 @@ export default function OperatorForm({
                 />
               ) : (
                 <div className="text-gray-400 text-2xl">
-                  {watch('name')?.charAt(0)?.toUpperCase() || '?'}
+                  {watch('name')?.charAt(0)?.toUpperCase() || 'G'}
                 </div>
               )}
             </div>
@@ -245,7 +254,7 @@ export default function OperatorForm({
             id="name"
             {...register('name')}
             placeholder="Digite o nome completo"
-            className={errors.name ? 'border-red-500' : ''}
+            className={`text-gray-900 bg-white ${errors.name ? 'border-red-500' : ''}`}
           />
           {errors.name && (
             <p className="text-sm text-red-500">{errors.name.message}</p>
@@ -260,42 +269,44 @@ export default function OperatorForm({
             type="email"
             {...register('email')}
             placeholder="email@exemplo.com"
-            className={errors.email ? 'border-red-500' : ''}
+            className={`text-gray-900 bg-white ${errors.email ? 'border-red-500' : ''}`}
           />
           {errors.email && (
             <p className="text-sm text-red-500">{errors.email.message}</p>
           )}
         </div>
 
-        {/* Telefone e CPF em linha */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="phone">Telefone</Label>
-            <Input
-              id="phone"
-              {...register('phone')}
-              onChange={handlePhoneChange}
-              placeholder="(11) 99999-9999"
-              className={errors.phone ? 'border-red-500' : ''}
-            />
-            {errors.phone && (
-              <p className="text-sm text-red-500">{errors.phone.message}</p>
-            )}
-          </div>
+        {/* Senha */}
+        <div className="space-y-2">
+          <Label htmlFor="password">Senha</Label>
+          <Input
+            id="password"
+            type="password"
+            {...register('password')}
+            placeholder="Digite a senha de acesso"
+            className={`text-gray-900 bg-white ${errors.password ? 'border-red-500' : ''}`}
+          />
+          {errors.password && (
+            <p className="text-sm text-red-500">{errors.password.message}</p>
+          )}
+          <p className="text-xs text-gray-500">
+            💡 Se não informar, uma senha será gerada automaticamente
+          </p>
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cpf">CPF</Label>
-            <Input
-              id="cpf"
-              {...register('cpf')}
-              onChange={handleCPFChange}
-              placeholder="000.000.000-00"
-              className={errors.cpf ? 'border-red-500' : ''}
-            />
-            {errors.cpf && (
-              <p className="text-sm text-red-500">{errors.cpf.message}</p>
-            )}
-          </div>
+        {/* Telefone */}
+        <div className="space-y-2">
+          <Label htmlFor="phone">Telefone</Label>
+          <Input
+            id="phone"
+            {...register('phone')}
+            onChange={handlePhoneChange}
+            placeholder="(11) 99999-9999"
+            className={`text-gray-900 bg-white ${errors.phone ? 'border-red-500' : ''}`}
+          />
+          {errors.phone && (
+            <p className="text-sm text-red-500">{errors.phone.message}</p>
+          )}
         </div>
 
         {/* Função e Cliente em linha */}
@@ -307,7 +318,7 @@ export default function OperatorForm({
             <select
               id="role"
               {...register('role')}
-              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white ${
+              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white ${
                 errors.role ? 'border-red-500' : ''
               }`}
             >
@@ -320,103 +331,41 @@ export default function OperatorForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="clientId">
+            <Label htmlFor="account_id">
               Cliente <span className="text-red-500">*</span>
             </Label>
             <select
-              id="clientId"
-              {...register('clientId')}
-              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white ${
-                errors.clientId ? 'border-red-500' : ''
+              id="account_id"
+              {...register('account_id')}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white ${
+                errors.account_id ? 'border-red-500' : ''
               }`}
-              disabled={userType !== 'admin'}
             >
               <option value="">Selecione um cliente</option>
-              {availableClients.map(client => (
+              {availableClients.map((client) => (
                 <option key={client.id} value={client.id}>
-                  {client.name}
+                  {client.company_name}
                 </option>
               ))}
             </select>
-            {errors.clientId && (
-              <p className="text-sm text-red-500">{errors.clientId.message}</p>
+            {errors.account_id && (
+              <p className="text-sm text-red-500">{errors.account_id.message}</p>
             )}
           </div>
         </div>
 
-        {/* Status */}
-        <div className="space-y-2">
-          <Label>Status</Label>
-          <div className="flex items-center space-x-4">
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="radio"
-                {...register('active')}
-                value="true"
-                className="text-green-500"
-              />
-              <Badge variant="default" className="bg-green-100 text-green-800">
-                Ativo
-              </Badge>
-            </label>
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="radio"
-                {...register('active')}
-                value="false"
-                className="text-red-500"
-              />
-              <Badge variant="secondary" className="bg-red-100 text-red-800">
-                Inativo
-              </Badge>
-            </label>
-          </div>
-        </div>
 
-        {/* Informações da função */}
-        {watchedRole && (
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-              Permissões da função: {watchedRole === 'operador' ? 'Operador' : 'Supervisor'}
-            </h4>
-            <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-              {watchedRole === 'operador' ? (
-                <>
-                  <li>• Visualizar espaços e coletas do cliente</li>
-                  <li>• Criar novas coletas via QR code</li>
-                  <li>• Visualizar dashboard básico</li>
-                </>
-              ) : (
-                <>
-                  <li>• Todas as permissões de operador</li>
-                  <li>• Gerenciar operadores do cliente</li>
-                  <li>• Visualizar relatórios completos</li>
-                  <li>• Gerenciar espaços do cliente</li>
-                </>
-              )}
-            </ul>
-          </div>
-        )}
 
-        {/* Botões */}
-        <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCancel}
-            disabled={isSubmitting || isLoading}
-          >
+        {/* Botões de Ação */}
+        <div className="flex justify-end space-x-4">
+          <Button type="button" variant="outline" onClick={handleCancel}>
             Cancelar
           </Button>
-          <Button
-            type="submit"
-            disabled={isSubmitting || isLoading}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            {isSubmitting || isLoading ? 'Salvando...' : (operator ? 'Atualizar' : 'Criar')}
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Salvando...' : 'Salvar'}
           </Button>
         </div>
       </form>
-    </Card>
+    </div>
   )
-} 
+}

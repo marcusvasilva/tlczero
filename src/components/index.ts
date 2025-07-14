@@ -20,4 +20,5 @@ export { AppHeader } from './layout/AppHeader'
 export { AppSidebar } from './layout/AppSidebar'
 
 // Auth components
-export { ProtectedRoute, PermissionGuard, usePermissions } from './auth/ProtectedRoute' 
+export { ProtectedRoute, PermissionGuard, usePermissions } from './auth/ProtectedRoute'
+export { default as AuthEmergencyReset } from './auth/AuthEmergencyReset' 

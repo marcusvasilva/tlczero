@@ -18,13 +18,13 @@ import {
   Trash2,
   Calendar,
   Target,
-  Zap,
+
   Activity,
   X
 } from 'lucide-react'
 import type { Space, CreateSpaceData, Client } from '@/types'
 
-type SortField = 'name' | 'location' | 'createdAt'
+type SortField = 'name' | 'client_id' | 'created_at'
 type SortOrder = 'asc' | 'desc'
 type FilterClient = 'all' | string // 'all' ou clientId específico
 type FilterStatus = 'all' | 'active' | 'inactive'
@@ -50,10 +50,15 @@ export function Spaces() {
     // getSpacesByClient
   } = useSpaces()
 
-  const {
-    filteredClients: clients,
-    activeClients
-  } = useClients({ filterActive: true })
+  // Memoizar options para evitar loops de renderização
+  const clientOptions = useMemo(() => ({ filterActive: true }), [])
+  
+  const { 
+    filteredClients: clients, 
+    activeClients,
+    isLoading: clientsLoading,
+    error: clientsError
+  } = useClients(clientOptions)
 
   // Estados locais
   const [searchTerm, setSearchTerm] = useState('')
@@ -100,13 +105,8 @@ export function Spaces() {
   // Estatísticas por tipo de atrativo
   const attractiveStats = useMemo(() => {
     const stats = { moscas: 0, outros: 0 }
-    filteredSpaces.forEach(space => {
-      if (space.attractiveType === 'moscas') {
-        stats.moscas++
-      } else {
-        stats.outros++
-      }
-    })
+    // Assumindo que todos os espaços são para moscas por padrão
+    stats.moscas = filteredSpaces.length
     return stats
   }, [filteredSpaces])
 
@@ -227,102 +227,103 @@ export function Spaces() {
   }
 
   // Download de QR Code
-  const handleDownloadQR = (space: Space) => {
-    // Implementar geração e download do QR code
-    console.log('Download QR Code para espaço:', space.name, space.qrCode)
+  const downloadQRCode = (space: Space) => {
+    console.log('Download QR Code para espaço:', space.name, space.id)
+    // Implementar download do QR code
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 responsive-container">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Espaços
+      <div className="responsive-flex">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mobile-header">
+            Meus Espaços
           </h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            Gestão completa de espaços e locais de coleta
+          <p className="mt-1 text-sm sm:text-base text-gray-500 dark:text-gray-400 mobile-subheader">
+            Status e eficácia do mata-moscas em cada local
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0 mt-4 sm:mt-0">
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors touch-target mobile-button"
           >
             <Download className="h-4 w-4" />
-            Exportar
+            <span className="hidden sm:inline">Exportar</span>
           </button>
           <button
             onClick={handleCreate}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+            disabled={isCreating}
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-target mobile-button"
           >
             <Plus className="h-4 w-4" />
-            Novo Espaço
+            <span className="hidden sm:inline">Novo Espaço</span>
           </button>
         </div>
       </div>
 
-      {/* Cards de estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+      {/* Stats cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg border border-gray-200 dark:border-gray-700 mobile-card">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <Building2 className="h-8 w-8 text-blue-600" />
+              <Building2 className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
             </div>
-            <div className="ml-4">
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            <div className="ml-3 sm:ml-4 min-w-0">
+              <div className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mobile-text">
                 Total de Espaços
               </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {totalSpaces}
+              <div className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
+                {totalSpaces || 0}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg border border-gray-200 dark:border-gray-700 mobile-card">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <Activity className="h-8 w-8 text-green-600" />
+              <Activity className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
             </div>
-            <div className="ml-4">
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            <div className="ml-3 sm:ml-4 min-w-0">
+              <div className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mobile-text">
                 Espaços Ativos
               </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {activeSpaces}
+              <div className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
+                {activeClients}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg border border-gray-200 dark:border-gray-700 mobile-card">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <Target className="h-8 w-8 text-purple-600" />
+              <Target className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
             </div>
-            <div className="ml-4">
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            <div className="ml-3 sm:ml-4 min-w-0">
+              <div className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mobile-text">
                 Atrativos Moscas
               </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
                 {attractiveStats.moscas || 0}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg border border-gray-200 dark:border-gray-700 mobile-card">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <Users className="h-8 w-8 text-orange-600" />
+              <Users className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600" />
             </div>
-            <div className="ml-4">
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            <div className="ml-3 sm:ml-4 min-w-0">
+              <div className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mobile-text">
                 Clientes Ativos
               </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {activeClients}
+              <div className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
+                {clients.filter(client => client.status === 'active').length}
               </div>
             </div>
           </div>
@@ -330,10 +331,10 @@ export function Spaces() {
       </div>
 
       {/* Filtros e busca */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-        <div className="flex flex-col lg:flex-row gap-4">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 mobile-card">
+        <div className="flex flex-col gap-4">
           {/* Busca */}
-          <div className="flex-1">
+          <div className="w-full">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
@@ -341,23 +342,24 @@ export function Spaces() {
                 placeholder="Buscar por nome, localização, cliente ou QR code..."
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full pl-10 pr-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white mobile-text"
               />
             </div>
           </div>
 
           {/* Filtros */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 flex-1">
             {/* Filtro por Cliente */}
             <select
               value={filterClient}
               onChange={(e) => handleFilterClient(e.target.value as FilterClient)}
-              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 mobile-text"
             >
               <option value="all">Todos os Clientes</option>
               {clients.map(client => (
                 <option key={client.id} value={client.id}>
-                  {client.name}
+                                        {client.company_name}
                 </option>
               ))}
             </select>
@@ -366,7 +368,7 @@ export function Spaces() {
             <select
               value={filterStatus}
               onChange={(e) => handleFilterStatus(e.target.value as FilterStatus)}
-              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 mobile-text"
             >
               <option value="all">Todos os Status</option>
               <option value="active">Apenas Ativos</option>
@@ -377,40 +379,42 @@ export function Spaces() {
             <select
               value={filterAttractive}
               onChange={(e) => handleFilterAttractive(e.target.value as FilterAttractive)}
-              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 mobile-text"
             >
               <option value="all">Todos os Tipos</option>
               <option value="moscas">Moscas</option>
               <option value="outros">Outros</option>
             </select>
+            </div>
 
             <button
               onClick={() => window.location.reload()}
-              className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+              className="flex items-center justify-center gap-2 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 touch-target mobile-button"
             >
               <RefreshCw className="h-4 w-4" />
-              Atualizar
+              <span className="sm:hidden">Atualizar</span>
+              <span className="hidden sm:inline">Atualizar</span>
             </button>
           </div>
         </div>
 
         {/* Seleção em massa */}
         {selectedSpaces.size > 0 && (
-          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900 rounded-md">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-blue-700 dark:text-blue-300">
+          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <span className="text-sm text-blue-700 dark:text-blue-300 mobile-text">
                 {selectedSpaces.size} espaço(s) selecionado(s)
               </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleExport}
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 touch-target"
                 >
                   Exportar Selecionados
                 </button>
                 <button
                   onClick={() => setSelectedSpaces(new Set())}
-                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 touch-target"
                 >
                   Limpar Seleção
                 </button>
@@ -493,11 +497,11 @@ export function Spaces() {
                     )}
                   </button>
                   <button
-                    onClick={() => handleSort('createdAt')}
+                    onClick={() => handleSort('created_at')}
                     className="flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200"
                   >
                     Data
-                    {sortField === 'createdAt' && (
+                    {sortField === 'created_at' && (
                       sortOrder === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />
                     )}
                   </button>
@@ -506,113 +510,106 @@ export function Spaces() {
             </div>
 
             {/* Grid de cards */}
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="p-3 sm:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
                 {paginatedSpaces.map((space) => {
                   const client = clientsMap[space.clientId]
                   
                   return (
                     <div 
                       key={space.id} 
-                      className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow bg-white dark:bg-gray-700"
+                      className="card-container mobile-card"
                     >
                       {/* Header do card */}
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
+                      <div className="card-header">
+                        <div className="card-header-content">
                           <input
                             type="checkbox"
                             checked={selectedSpaces.has(space.id)}
                             onChange={() => handleSelectSpace(space.id)}
-                            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded flex-shrink-0 touch-target"
                           />
-                          <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                          <h3 className="card-title">
                             {space.name}
                           </h3>
                         </div>
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          space.active 
-                            ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
-                        }`}>
-                          {space.active ? 'Ativo' : 'Inativo'}
-                        </span>
+                        <div className="card-header-badge">
+                          <span className={`badge-status ${
+                            space.active
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          }`}>
+                            {space.active ? 'Ativo' : 'Inativo'}
+                          </span>
+                        </div>
                       </div>
                       
                       {/* Informações do espaço */}
                       <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300 mb-4">
-                        <div className="flex items-center">
-                          <Building2 className="h-4 w-4 mr-2 text-gray-400" />
-                          <span className="truncate">
-                            <strong>Cliente:</strong> {client?.name || 'Cliente não encontrado'}
+                        <div className="flex items-center min-h-[1.25rem]">
+                          <Building2 className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                          <span className="truncate mobile-text">
+                            <strong className="text-gray-900 dark:text-white">Cliente:</strong> {client?.company_name || 'Cliente não encontrado'}
                           </span>
                         </div>
                         
-                        {space.location && (
-                          <div className="flex items-center">
-                            <MapPin className="h-4 w-4 mr-2 text-gray-400" />
-                            <span className="truncate">
-                              <strong>Local:</strong> {space.location}
+                        {space.description && (
+                          <div className="flex items-center min-h-[1.25rem]">
+                            <MapPin className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                            <span className="truncate mobile-text">
+                              <strong className="text-gray-900 dark:text-white">Local:</strong> {space.description}
                             </span>
                           </div>
                         )}
                         
-                        <div className="flex items-center">
-                          <QrCode className="h-4 w-4 mr-2 text-gray-400" />
-                          <span className="truncate">
-                            <strong>QR:</strong> {space.qrCode}
+                        <div className="flex items-center min-h-[1.25rem]">
+                          <QrCode className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                          <span className="truncate mobile-text">
+                            <strong className="text-gray-900 dark:text-white">QR:</strong> QR-{space.id.slice(0, 8)}
                           </span>
                         </div>
                         
-                        <div className="flex items-center">
-                          <Target className="h-4 w-4 mr-2 text-gray-400" />
-                          <span>
-                            <strong>Tipo:</strong> {space.attractiveType === 'moscas' ? 'Moscas' : 'Outros'}
+                        <div className="flex items-center min-h-[1.25rem]">
+                          <Target className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                          <span className="mobile-text">
+                            <strong className="text-gray-900 dark:text-white">Tipo:</strong> Moscas
                           </span>
                         </div>
                         
-                        <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-                          <span>
-                            <strong>Instalado:</strong> {formatDate(space.installationDate)}
+                        <div className="flex items-center min-h-[1.25rem]">
+                          <Calendar className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                          <span className="mobile-text">
+                            <strong className="text-gray-900 dark:text-white">Instalado:</strong> {formatDate(new Date(space.createdAt || new Date()))}
                           </span>
                         </div>
-                        
-                        {space.lastMaintenanceDate && (
-                          <div className="flex items-center">
-                            <Zap className="h-4 w-4 mr-2 text-gray-400" />
-                            <span>
-                              <strong>Manutenção:</strong> {formatDate(space.lastMaintenanceDate)}
-                            </span>
-                          </div>
-                        )}
                       </div>
 
                       {/* Ações */}
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 responsive-flex">
                         <button 
                           onClick={() => handleEdit(space)}
-                          className="flex-1 flex items-center justify-center gap-1 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-3 py-2 rounded text-sm hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors"
+                          className="flex-1 flex items-center justify-center gap-1 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-3 py-2 rounded text-sm hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors touch-target mobile-button"
                           title="Editar espaço"
                         >
-                          <Edit2 className="h-3 w-3" />
-                          <span>Editar</span>
+                          <Edit2 className="h-3 w-3 flex-shrink-0" />
+                          <span className="hidden sm:inline">Editar</span>
                         </button>
                         
                         <button 
                           onClick={() => handleViewQR(space)}
-                          className="flex-1 flex items-center justify-center gap-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 px-3 py-2 rounded text-sm hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
+                          className="flex-1 flex items-center justify-center gap-1 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-200 px-3 py-2 rounded text-sm hover:bg-green-200 dark:hover:bg-green-800 transition-colors touch-target mobile-button"
                           title="Visualizar QR Code"
                         >
-                          <QrCode className="h-3 w-3" />
-                          <span>QR</span>
+                          <QrCode className="h-3 w-3 flex-shrink-0" />
+                          <span className="hidden sm:inline">QR</span>
                         </button>
                         
                         <button 
                           onClick={() => handleDelete(space)}
-                          className="flex items-center justify-center bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 px-3 py-2 rounded text-sm hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                          className="flex items-center justify-center bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-200 px-3 py-2 rounded text-sm hover:bg-red-200 dark:hover:bg-red-800 transition-colors touch-target mobile-button"
                           title="Excluir espaço"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Trash2 className="h-3 w-3 flex-shrink-0" />
                         </button>
                       </div>
                     </div>
@@ -695,8 +692,16 @@ export function Spaces() {
         isOpen={showForm}
         onClose={handleCancel}
         onSubmit={handleSubmit}
-        initialData={editingSpace}
-        clients={clients.filter(client => client.active)}
+        initialData={editingSpace || undefined}
+        clients={clients.filter(client => client.status === 'active').map(client => ({
+          id: client.id,
+          company_name: client.company_name,
+          cnpj: client.cnpj || undefined,
+          contact_person: client.contact_person || undefined,
+          phone: client.phone || undefined,
+          address: client.address || undefined,
+          status: client.status
+        }))}
         isLoading={isCreating || isUpdating}
       />
 
@@ -735,20 +740,20 @@ export function Spaces() {
                 <div className="text-center">
                   <QrCode className="h-12 w-12 mx-auto text-gray-400 mb-2" />
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    QR Code: {viewingQRSpace.qrCode}
+                    QR Code: {viewingQRSpace.id}
                   </p>
                 </div>
               </div>
 
               <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300 mb-6">
                 <p><strong>Espaço:</strong> {viewingQRSpace.name}</p>
-                <p><strong>Cliente:</strong> {clientsMap[viewingQRSpace.clientId]?.name}</p>
-                <p><strong>Localização:</strong> {viewingQRSpace.location || 'Não informada'}</p>
+                <p><strong>Cliente:</strong> {clientsMap[viewingQRSpace.clientId]?.company_name}</p>
+                <p><strong>Descrição:</strong> {viewingQRSpace.description || 'Não informada'}</p>
               </div>
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => handleDownloadQR(viewingQRSpace)}
+                  onClick={() => downloadQRCode(viewingQRSpace)}
                   className="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
                 >
                   <Download className="h-4 w-4 inline mr-2" />

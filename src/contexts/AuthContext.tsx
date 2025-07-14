@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react'
-import type { User, AuthContextType, LoginCredentials } from '@/types/auth'
-import { mockUsers, mockCredentials } from '@/data/mockUsers'
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react'
+import type { AuthUser, AuthContextType, LoginCredentials, RegisterData } from '@/types/auth'
+import { supabase } from '@/lib/supabase'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -9,128 +10,288 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [clientContext, setClientContext] = useState<string | null>(null)
+  const [accountContext, setAccountContext] = useState<string | null>(null)
+  
+  // Referencias para controle de timeout e debug
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isInitializing = useRef(true)
+  const lastSessionCheck = useRef<number>(0)
 
   // Determinar o tipo de usuário baseado no role
-  const userType: 'admin' | 'client' | 'operator' = useMemo(() => {
+  const userType: 'admin' | 'supervisor' | 'operator' = useMemo(() => {
     if (!user) return 'operator'
-    return user.role === 'admin' 
-      ? 'admin' 
-      : user.role === 'supervisor' 
-        ? 'client' 
-        : 'operator'
+    if (user.role === 'admin') return 'admin'
+    if (user.role === 'supervisor') return 'supervisor'
+    return 'operator'
   }, [user])
 
-  // Verificar sessão expirada periodicamente (a cada 5 minutos)
-  useEffect(() => {
-    const checkSession = () => {
-      const savedUser = localStorage.getItem('user')
-      const sessionExpiry = localStorage.getItem('sessionExpiry')
-      
-      if (savedUser && sessionExpiry) {
-        const now = new Date().getTime()
-        const expiry = parseInt(sessionExpiry)
-        
-        if (now > expiry) {
-          // Sessão expirada
-          logout()
-          setError('Sua sessão expirou. Faça login novamente.')
-        }
-      }
-    }
-
-    const interval = setInterval(checkSession, 5 * 60 * 1000) // 5 minutos
-    return () => clearInterval(interval)
-  }, [])
-
-  useEffect(() => {
-    // Verificar se há um usuário logado no localStorage
-    const savedUser = localStorage.getItem('user')
-    const savedClientContext = localStorage.getItem('clientContext')
-    
-    if (savedUser) {
-      try {
-        const parsedUser = JSON.parse(savedUser)
-        setUser(parsedUser)
-        if (savedClientContext) {
-          setClientContext(savedClientContext)
-        }
-      } catch (error) {
-        console.error('Erro ao carregar usuário do localStorage:', error)
-        localStorage.removeItem('user')
-        localStorage.removeItem('clientContext')
-        localStorage.removeItem('sessionExpiry')
-      }
-    }
-    
-    setIsLoading(false)
-  }, [])
-
-  // Atualizar clientContext quando usuário mudar
+  // Definir accountContext automaticamente baseado no usuário logado
   useEffect(() => {
     if (user) {
-      if (user.role === 'supervisor' || user.role === 'operador') {
-        // Para supervisores e operadores, definir o contexto do cliente automaticamente
-        const newClientContext = user.clientId || null
-        setClientContext(newClientContext)
-        if (newClientContext) {
-          localStorage.setItem('clientContext', newClientContext)
-        } else {
-          localStorage.removeItem('clientContext')
-        }
-      } else if (user.role === 'admin') {
-        // Admin pode não ter contexto de cliente ou pode alternar
-        // Manter o contexto atual se existir
+      if (user.role === 'admin') {
+        // Admin vê todos os dados
+        setAccountContext(null)
+      } else {
+        // Supervisor e operador veem apenas dados da sua conta
+        setAccountContext(user.account_id)
       }
     } else {
-      setClientContext(null)
-      localStorage.removeItem('clientContext')
+      setAccountContext(null)
     }
   }, [user])
+
+  // Timeout de segurança para evitar loading infinito
+  const setAuthTimeout = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+    
+    timeoutRef.current = setTimeout(() => {
+      console.warn('⚠️ Timeout na verificação de autenticação (15s) - forçando reset')
+      setIsLoading(false)
+      setError('Timeout na verificação de autenticação. Tente recarregar a página.')
+    }, 15000) // 15 segundos máximo
+  }
+
+  const clearAuthTimeout = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
+  }
+
+  // Função para buscar dados do usuário no Supabase
+  const fetchUserData = async (supabaseUser: SupabaseUser): Promise<AuthUser | null> => {
+    try {
+      console.log('🔍 Buscando dados do usuário:', supabaseUser.id)
+      
+      if (!supabaseUser.id) {
+        console.log('❌ ID do usuário não encontrado')
+        return null
+      }
+
+      // Busca simples sem lógica complexa
+      const { data: dbUserData, error } = await supabase
+        .from('users')
+        .select(`
+          id,
+          email,
+          name,
+          role,
+          account_id,
+          supervisor_id,
+          phone,
+          cpf,
+          status,
+          created_at,
+          updated_at
+        `)
+        .eq('id', supabaseUser.id)
+        .single()
+
+      if (error) {
+        console.error('❌ Erro ao buscar usuário na tabela:', error.message)
+        return null
+      }
+
+      if (!dbUserData) {
+        console.log('❌ Dados do usuário não encontrados na tabela public.users')
+        return null
+      }
+
+      const userData: AuthUser = {
+        id: dbUserData.id,
+        email: dbUserData.email,
+        name: dbUserData.name,
+        role: dbUserData.role as 'admin' | 'supervisor' | 'operator',
+        account_id: dbUserData.account_id,
+        supervisor_id: dbUserData.supervisor_id,
+        phone: dbUserData.phone,
+        cpf: dbUserData.cpf,
+        status: dbUserData.status,
+        created_at: dbUserData.created_at,
+        updated_at: dbUserData.updated_at,
+      }
+
+      console.log('✅ Dados do usuário carregados:', { id: userData.id, role: userData.role, status: userData.status })
+      return userData
+    } catch (err) {
+      console.error('❌ Erro inesperado ao buscar dados do usuário:', err)
+      return null
+    }
+  }
+
+  // Verificar sessão inicial com proteções
+  useEffect(() => {
+    let isMounted = true
+    
+    const checkSession = async () => {
+      const now = Date.now()
+      
+      // Evitar múltiplas verificações muito próximas
+      if (now - lastSessionCheck.current < 1000 && !isInitializing.current) {
+        console.log('⏭️ Pulando verificação de sessão (muito recente)')
+        return
+      }
+      
+      lastSessionCheck.current = now
+      
+      try {
+        console.log('🔄 Verificando sessão inicial...')
+        setAuthTimeout() // Iniciar timeout de segurança
+        
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        if (sessionError) {
+          console.error('❌ Erro ao obter sessão:', sessionError)
+          throw sessionError
+        }
+    
+        if (!isMounted) return // Componente foi desmontado
+        
+        if (session?.user) {
+          console.log('👤 Sessão encontrada, buscando dados do usuário')
+          const userData = await fetchUserData(session.user)
+          
+          if (!isMounted) return
+          
+          if (userData && userData.status === 'active') {
+            console.log('✅ Usuário autenticado com sucesso')
+            console.log('👤 Dados do usuário:', { id: userData.id, email: userData.email, role: userData.role, account_id: userData.account_id })
+            setUser(userData)
+            setError(null)
+          } else {
+            console.log('❌ Usuário inativo ou dados inválidos, fazendo logout')
+            await supabase.auth.signOut()
+            setUser(null)
+            setError('Conta inativa. Contate o administrador.')
+          }
+        } else {
+          console.log('❌ Nenhuma sessão encontrada')
+          setUser(null)
+          setError(null)
+        }
+      } catch (err) {
+        console.error('❌ Erro ao verificar sessão:', err)
+        if (isMounted) {
+          setUser(null)
+          setError('Erro ao verificar autenticação. Tente fazer login novamente.')
+        }
+      } finally {
+        if (isMounted) {
+          clearAuthTimeout()
+          setIsLoading(false)
+          isInitializing.current = false
+          console.log('✅ Verificação de sessão concluída')
+        }
+      }
+    }
+
+    checkSession()
+
+    // Escutar mudanças na autenticação com proteções
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!isMounted) return
+        
+        console.log('🔔 Auth state change:', event)
+        
+        // Evitar processar eventos duplicados muito próximos
+        const now = Date.now()
+        if (now - lastSessionCheck.current < 500 && event !== 'SIGNED_OUT') {
+          console.log('⏭️ Ignorando evento auth duplicado')
+          return
+        }
+        lastSessionCheck.current = now
+        
+        try {
+          if (session?.user && event !== 'SIGNED_OUT') {
+            console.log('👤 Processando nova sessão')
+            const userData = await fetchUserData(session.user)
+            
+            if (!isMounted) return
+            
+            if (userData && userData.status === 'active') {
+              setUser(userData)
+              setError(null)
+            } else {
+              console.log('❌ Dados inválidos na mudança de auth, fazendo logout')
+              setUser(null)
+            }
+          } else {
+            console.log('🚪 Usuário deslogado')
+            setUser(null)
+            setError(null)
+          }
+        } catch (err) {
+          console.error('❌ Erro no auth state change:', err)
+          if (isMounted) {
+            setUser(null)
+          }
+        } finally {
+          if (isMounted && isInitializing.current) {
+            setIsLoading(false)
+            isInitializing.current = false
+          }
+        }
+      }
+    )
+
+    return () => {
+      isMounted = false
+      clearAuthTimeout()
+      subscription.unsubscribe()
+    }
+  }, [])
 
   const login = async (credentials: LoginCredentials): Promise<void> => {
     setIsLoading(true)
     setError(null)
     
     try {
-      // Simular delay de autenticação
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Verificar credenciais
-      const password = mockCredentials[credentials.email as keyof typeof mockCredentials]
-      if (!password || password !== credentials.password) {
-        throw new Error('Email ou senha incorretos')
-      }
-      
-      // Buscar usuário nos dados mockados
-      const foundUser = mockUsers.find(u => u.email === credentials.email)
-      
-      if (!foundUser) {
-        throw new Error('Usuário não encontrado')
-      }
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password,
+      })
 
-      if (!foundUser.active) {
-        throw new Error('Usuário inativo. Entre em contato com o administrador.')
+      if (error) {
+        // Melhorar as mensagens de erro baseadas no código/tipo de erro
+        let errorMessage = 'Erro ao fazer login'
+        
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage = 'Email ou senha incorretos. Verifique seus dados e tente novamente.'
+        } else if (error.message.includes('Email not confirmed')) {
+          errorMessage = 'Email não confirmado. Verifique sua caixa de entrada e confirme seu email.'
+        } else if (error.message.includes('Too many requests')) {
+          errorMessage = 'Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.'
+        } else if (error.message.includes('User not found')) {
+          errorMessage = 'Usuário não encontrado. Verifique o email ou crie uma nova conta.'
+        } else if (error.message.includes('Network')) {
+          errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.'
+        } else {
+          errorMessage = error.message
+        }
+        
+        throw new Error(errorMessage)
       }
       
-      // Atualizar último login
-      const updatedUser = {
-        ...foundUser,
-        lastLogin: new Date()
+      if (data.user) {
+        const userData = await fetchUserData(data.user)
+        if (!userData) {
+          throw new Error('Perfil de usuário não encontrado no sistema. Entre em contato com o suporte.')
+        }
+        if (userData.status !== 'active') {
+          await supabase.auth.signOut()
+          throw new Error('Conta desativada. Entre em contato com o administrador.')
+        }
+        setUser(userData)
       }
-      
-      setUser(updatedUser)
-      localStorage.setItem('user', JSON.stringify(updatedUser))
-      
-      // Definir expiração da sessão (24 horas)
-      const expirationTime = new Date().getTime() + (24 * 60 * 60 * 1000)
-      localStorage.setItem('sessionExpiry', expirationTime.toString())
-      
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido no login'
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao fazer login'
+      console.error('Erro no login:', err)
       setError(errorMessage)
       throw new Error(errorMessage)
     } finally {
@@ -138,64 +299,164 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  const logout = () => {
+  const register = async (data: RegisterData): Promise<void> => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      console.log('🔄 Iniciando registro de usuário:', data.email)
+
+      // Criar usuário no Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            name: data.name,
+            role: data.role, // Usar role diretamente sem mapear
+            phone: data.phone,
+            account_id: data.account_id,
+            supervisor_id: data.supervisor_id
+          }
+        }
+      })
+
+      if (authError) {
+        console.error('❌ Erro no registro Auth:', authError)
+        
+        // Melhorar mensagens de erro
+        let errorMessage = 'Erro ao registrar usuário'
+        
+        if (authError.message.includes('User already registered')) {
+          errorMessage = 'Este email já está registrado. Tente fazer login.'
+        } else if (authError.message.includes('Password should be at least')) {
+          errorMessage = 'A senha deve ter pelo menos 6 caracteres.'
+        } else if (authError.message.includes('Invalid email')) {
+          errorMessage = 'Email inválido. Verifique o formato do email.'
+        } else if (authError.message.includes('Email rate limit exceeded')) {
+          errorMessage = 'Muitas tentativas de registro. Aguarde alguns minutos.'
+        } else {
+          errorMessage = authError.message
+        }
+        
+        throw new Error(errorMessage)
+      }
+
+      if (authData.user) {
+        console.log('✅ Usuário criado no Auth:', authData.user.id)
+        
+        // Aguardar um pouco para o trigger processar
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // Verificar se o usuário foi criado na tabela users pelo trigger
+        let attempts = 0
+        const maxAttempts = 5
+        let userCreated = false
+        
+        while (!userCreated && attempts < maxAttempts) {
+          attempts++
+          
+          const { data: userData, error: fetchError } = await supabase
+            .from('users')
+            .select('id, email, name, role')
+            .eq('id', authData.user.id)
+            .single()
+
+          if (userData) {
+            console.log('✅ Usuário criado automaticamente na tabela users:', userData)
+            userCreated = true
+            break
+          }
+          
+          if (fetchError && !fetchError.message.includes('No rows')) {
+            console.error(`Tentativa ${attempts} - Erro ao verificar usuário:`, fetchError)
+          }
+          
+          // Aguardar antes da próxima tentativa
+          await new Promise(resolve => setTimeout(resolve, 500 * attempts))
+        }
+
+        if (!userCreated) {
+          console.error('❌ Usuário não foi criado automaticamente após', maxAttempts, 'tentativas')
+          throw new Error('Falha na criação automática do perfil. O trigger pode não estar funcionando. Contate o suporte.')
+        }
+
+        // Fazer logout após registro (usuário precisa fazer login)
+        await supabase.auth.signOut()
+        
+        console.log('✅ Registro concluído com sucesso')
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao registrar usuário'
+      console.error('❌ Erro no registro:', err)
+      setError(errorMessage)
+      throw new Error(errorMessage)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const logout = async (): Promise<void> => {
+    setIsLoading(true)
+    try {
+      await supabase.auth.signOut()
     setUser(null)
-    setClientContext(null)
-    setError(null)
-    localStorage.removeItem('user')
-    localStorage.removeItem('clientContext')
-    localStorage.removeItem('sessionExpiry')
+    setAccountContext(null)
+    } catch (err) {
+      console.error('Erro ao fazer logout:', err)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const clearError = () => {
+  const clearError = (): void => {
     setError(null)
   }
 
-  const updateUser = (userData: Partial<User>) => {
+  const updateUser = async (userData: Partial<AuthUser>): Promise<void> => {
     if (user) {
+      try {
+        const { error } = await supabase
+          .from('users')
+          .update({
+            name: userData.name,
+            status: userData.status || 'active',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id)
+
+        if (error) {
+          throw error
+        }
+
       const updatedUser = { ...user, ...userData, updatedAt: new Date() }
       setUser(updatedUser)
-      localStorage.setItem('user', JSON.stringify(updatedUser))
+      } catch (error) {
+        console.error('Erro ao atualizar usuário:', error)
+        throw error
+      }
     }
   }
 
-  const handleSetClientContext = (clientId: string | null) => {
-    setClientContext(clientId)
-    if (clientId) {
-      localStorage.setItem('clientContext', clientId)
-    } else {
-      localStorage.removeItem('clientContext')
-    }
-  }
-
-  const contextValue: AuthContextType = useMemo(() => ({
+  const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
+    userType,
+    accountContext,
     isLoading,
     error,
     login,
+    register,
     logout,
     clearError,
     updateUser,
-    userType,
-    clientContext,
-    setClientContext: handleSetClientContext
-  }), [
-    user,
-    isLoading,
-    error,
-    userType,
-    clientContext
-  ])
+    setAccountContext,
+  }
 
-  return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-export function useAuthContext() {
+export const useAuthContext = (): AuthContextType => {
   const context = useContext(AuthContext)
   if (context === undefined) {
     throw new Error('useAuthContext must be used within an AuthProvider')

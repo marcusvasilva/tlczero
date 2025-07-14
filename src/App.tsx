@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { lazy, Suspense } from 'react'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ToastProvider } from '@/contexts/ToastContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
@@ -9,6 +8,7 @@ import { PWAInstallPrompt } from './components/common/PWAInstallPrompt'
 import { ToastContainer } from './components/common/Toast'
 import { ConnectionStatus } from './components/common/ConnectionStatus'
 import { Login } from './pages/Login'
+import { Register } from './pages/Register'
 
 // Importações não-lazy para componentes sem export default
 import { Clients } from './pages/Clients'
@@ -16,18 +16,11 @@ import { Spaces } from './pages/Spaces'
 import { Collections } from './pages/Collections'
 import { Collect } from './pages/Collect'
 import { Operators } from './pages/Operators'
+// Importações normais para todos os componentes
+import Dashboard from './pages/Dashboard'
+import Reports from './pages/Reports'
 
-// Lazy loading apenas para componentes com export default
-const Dashboard = lazy(() => import('./pages/Dashboard'))
-const Reports = lazy(() => import('./pages/Reports'))
-const PwaDemo = lazy(() => import('./pages/PwaDemo'))
 
-// Componente de loading para lazy loading
-const LazyLoading = () => (
-  <div className="flex justify-center items-center h-[50vh]">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-  </div>
-)
 
 // Página temporária para rotas não implementadas
 function ComingSoon({ title }: { title: string }) {
@@ -50,8 +43,9 @@ function App() {
       <ToastProvider>
         <Router>
           <Routes>
-            {/* Rota pública de login */}
+            {/* Rotas públicas */}
             <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
             
             {/* Rotas protegidas com layout */}
             <Route path="/" element={
@@ -62,11 +56,7 @@ function App() {
               <Route index element={<Navigate to="/dashboard" replace />} />
               
               {/* Dashboard - todos os usuários autenticados */}
-              <Route path="dashboard" element={
-                <Suspense fallback={<LazyLoading />}>
-                  <Dashboard />
-                </Suspense>
-              } />
+              <Route path="dashboard" element={<Dashboard />} />
               
               {/* Clientes - admin e supervisor podem criar/editar, operador só visualiza */}
               <Route path="clients" element={<Clients />} />
@@ -90,18 +80,11 @@ function App() {
               {/* Relatórios - admin e supervisor podem criar, operador só visualiza */}
               <Route path="reports" element={
                 <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
-                  <Suspense fallback={<LazyLoading />}>
-                    <Reports />
-                  </Suspense>
+                  <Reports />
                 </ProtectedRoute>
               } />
               
-              {/* Demonstração PWA - para testes e demonstração */}
-              <Route path="pwa-demo" element={
-                <Suspense fallback={<LazyLoading />}>
-                  <PwaDemo />
-                </Suspense>
-              } />
+
               
               {/* Configurações - apenas admin */}
               <Route path="settings" element={

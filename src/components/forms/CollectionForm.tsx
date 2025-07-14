@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { X, Camera, Upload, Scale, User, Building2, Calendar, FileText } from 'lucide-react'
-import { useForm } from '@/hooks'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { Scale, X, Building2, User, Calendar, Camera, MessageSquare } from 'lucide-react'
+import { useForm } from '@/hooks/useForm'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { collectionSchema } from '@/lib/validations'
-import type { Collection, CreateCollectionData, Space, Operator, Client } from '@/types'
+import { getCurrentBrazilDate, formatBrazilDateTimeLocal, parseBrazilDateTime } from '@/lib/utils'
+import type { CreateCollectionData, Collection, Space, SimpleOperator, Client } from '@/types'
 
 interface CollectionFormProps {
   isOpen: boolean
@@ -10,7 +12,7 @@ interface CollectionFormProps {
   onSubmit: (data: CreateCollectionData) => void
   initialData?: Collection | null
   spaces: Space[]
-  operators: Operator[]
+  operators: SimpleOperator[]
   clients: Client[]
   selectedSpaceId?: string
   isLoading?: boolean
@@ -27,8 +29,16 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
   selectedSpaceId,
   isLoading = false
 }) => {
+  const { user, userType, accountContext } = useAuthContext()
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const previousSelectedSpaceRef = useRef<string | undefined>(undefined)
+  const initialDataRef = useRef<Collection | null>(null)
+
+  // Para admin, clientId fica vazio (será selecionado no formulário)
+  // Para supervisor/operator, usa o account_id do usuário
+  const clientId = useMemo(() => {
+    return userType === 'admin' ? '' : (accountContext || user?.account_id || '')
+  }, [userType, accountContext, user?.account_id])
 
   const {
     values,
@@ -41,16 +51,13 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
     isValid
   } = useForm<CreateCollectionData>({
     initialValues: {
-
-
-
       spaceId: selectedSpaceId || '',
-      operatorId: '',
-      clientId: '',
-      weight: 0,
+      operatorId: userType === 'operator' ? (user?.id || '') : '',
+      clientId: clientId,
+      weight: 0.01, // Iniciar com valor mínimo válido
       photoUrl: '',
       observations: '',
-      collectedAt: new Date()
+      collectedAt: getCurrentBrazilDate()
     },
     validate: (values) => {
       const result = collectionSchema.safeParse(values)
@@ -66,9 +73,10 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
     }
   })
 
-  // Preencher formulário quando editando
+  // Preencher formulário quando editando - apenas quando initialData mudar
   useEffect(() => {
-    if (initialData) {
+    if (initialData && initialData !== initialDataRef.current) {
+      initialDataRef.current = initialData
       setFieldValue('spaceId', initialData.spaceId)
       setFieldValue('operatorId', initialData.operatorId)
       setFieldValue('weight', initialData.weight)
@@ -77,27 +85,67 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
       setFieldValue('collectedAt', initialData.collectedAt)
       setFieldValue('clientId', initialData.clientId)
       setPhotoPreview(initialData.photoUrl || null)
-    } else {
+    } else if (!initialData && initialDataRef.current) {
+      initialDataRef.current = null
       reset()
       setPhotoPreview(null)
     }
   }, [initialData, setFieldValue, reset])
 
-  // Preencher spaceId quando selecionado externamente
+  // Preencher spaceId quando selecionado externamente - apenas quando mudar
   useEffect(() => {
     if (selectedSpaceId && selectedSpaceId !== previousSelectedSpaceRef.current) {
       previousSelectedSpaceRef.current = selectedSpaceId
       setFieldValue('spaceId', selectedSpaceId)
     }
-  }, [selectedSpaceId])
+  }, [selectedSpaceId, setFieldValue])
 
-  // Mapas para lookup rápido
+  // Filtrar dados baseado no contexto do usuário - memoizado para evitar recálculos
+  const targetAccountId = useMemo(() => {
+    return accountContext || user?.account_id
+  }, [accountContext, user?.account_id])
+  
+  const filteredSpaces = useMemo(() => {
+    console.log('🎯 Filtrando espaços. AccountId:', targetAccountId, 'UserType:', userType)
+    console.log('🎯 Espaços recebidos:', spaces.map(s => ({ id: s.id, name: s.name, accountId: s.accountId, clientId: s.clientId })))
+    
+    if (userType === 'admin') {
+      console.log('✅ Admin: mostrando todos os espaços')
+      return spaces
+    }
+    
+    const filtered = spaces.filter(space => {
+      // Verificar ambas as propriedades para compatibilidade
+      const spaceAccountId = space.accountId || space.clientId
+      return spaceAccountId === targetAccountId
+    })
+    console.log(`📋 Espaços filtrados: ${filtered.length} de ${spaces.length}`)
+    console.log('📋 Espaços filtrados detalhes:', filtered.map(s => ({ id: s.id, name: s.name, accountId: s.accountId, clientId: s.clientId })))
+    return filtered
+  }, [spaces, userType, targetAccountId])
+
+  const filteredOperators = useMemo(() => {
+    console.log('🎯 Filtrando operadores. AccountId:', targetAccountId, 'UserType:', userType)
+    console.log('🎯 Operadores recebidos:', operators.map(o => ({ id: o.id, name: o.name, account_id: o.account_id, role: o.role })))
+    
+    if (userType === 'admin') {
+      console.log('✅ Admin: mostrando todos os operadores')
+      return operators
+    }
+    
+    const filtered = operators.filter(operator => operator.account_id === targetAccountId)
+    console.log(`📋 Operadores filtrados: ${filtered.length} de ${operators.length}`)
+    console.log('📋 Operadores filtrados detalhes:', filtered.map(o => ({ id: o.id, name: o.name, account_id: o.account_id, role: o.role })))
+    return filtered
+  }, [operators, userType, targetAccountId])
+
+  // Mapas para lookup rápido - memoizados
   const spacesMap = useMemo(() => {
-    return spaces.reduce((acc, space) => {
+    return filteredSpaces.reduce((acc, space) => {
       acc[space.id] = space
       return acc
     }, {} as Record<string, Space>)
-  }, [spaces])
+  }, [filteredSpaces])
 
   const clientsMap = useMemo(() => {
     return clients.reduce((acc, client) => {
@@ -106,10 +154,15 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
     }, {} as Record<string, Client>)
   }, [clients])
 
-  const selectedSpace = spacesMap[values.spaceId]
-  const selectedOperator = operators.find(operator => operator.id === values.operatorId)
+  const selectedSpace = useMemo(() => {
+    return spacesMap[values.spaceId]
+  }, [spacesMap, values.spaceId])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const selectedOperator = useMemo(() => {
+    return filteredOperators.find(operator => operator.id === values.operatorId)
+  }, [filteredOperators, values.operatorId])
+
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault()
 
     // Validar usando schema
@@ -123,14 +176,15 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
     }
 
     onSubmit(values)
-  }
+  }, [values, setError, onSubmit])
 
-  const handleInputChange = (field: keyof CreateCollectionData, value: any) => {
+  const handleInputChange = useCallback((field: keyof CreateCollectionData, value: any) => {
+    console.log(`📝 Alterando campo ${field}:`, value)
     setFieldValue(field, value)
     clearError(field)
-  }
+  }, [setFieldValue, clearError])
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       // Validar tamanho e tipo
@@ -154,255 +208,242 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
       }
       reader.readAsDataURL(file)
     }
-  }
+  }, [setError, setFieldValue, clearError])
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setPhotoPreview(null)
     reset()
     onClose()
-  }
+  }, [reset, onClose])
+  
+  // Prevenir event bubbling no modal
+  const handleModalClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+  }, [])
+
+  // Handle ESC key para fechar modal
+  const handleEscKey = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape' && isOpen) {
+      handleClose()
+    }
+  }, [isOpen, handleClose])
+
+  // Adicionar/remover event listener para ESC
+  useEffect(() => {
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscKey)
+      return () => document.removeEventListener('keydown', handleEscKey)
+    }
+  }, [isOpen, handleEscKey])
 
   if (!isOpen) return null
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-              <Scale className="w-5 h-5 text-green-600 dark:text-green-400" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                {initialData ? 'Editar Coleta' : 'Nova Coleta'}
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {initialData ? 'Atualize os dados da coleta' : 'Registre uma nova coleta de pragas'}
-              </p>
-            </div>
+  // Não renderizar até que o contexto de autenticação esteja disponível
+  // Para admin, clientId pode estar vazio (será selecionado no formulário)
+  // Para supervisor/operator, clientId é obrigatório
+  if (!user || (userType !== 'admin' && !clientId)) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl p-6">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+            <span className="ml-3 text-gray-700">Carregando contexto...</span>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={handleClose}>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={handleModalClick}>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            {initialData ? 'Editar Coleta' : 'Nova Coleta'}
+          </h2>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Coluna Esquerda */}
-            <div className="space-y-6">
-              {/* Seleção de Espaço */}
-              <div>
-                <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  <Building2 className="w-4 h-4 mr-2" />
-                  Espaço *
-                </label>
-                <select
-                  value={values.spaceId}
-                  onChange={(e) => handleInputChange('spaceId', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                >
-                  <option value="">Selecione um espaço</option>
-                  {spaces.map((space) => {
-                    const client = clientsMap[space.clientId]
-                    return (
-                      <option key={space.id} value={space.id}>
-                        {space.name} - {client?.name || 'Cliente não encontrado'}
-                      </option>
-                    )
-                  })}
-                </select>
-                {errors.spaceId && touched.spaceId && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.spaceId}</p>
-                )}
-                
-                {/* Informações do Espaço Selecionado */}
-                {selectedSpace && (
-                  <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <div className="text-sm text-gray-600 dark:text-gray-300">
-                      <p><strong>QR Code:</strong> {selectedSpace.qrCode}</p>
-                      <p><strong>Tipo:</strong> {selectedSpace.attractiveType}</p>
-                      <p><strong>Localização:</strong> {selectedSpace.location}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Seleção de Operador */}
-              <div>
-                <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  <User className="w-4 h-4 mr-2" />
-                  Operador *
-                </label>
-                <select
-                  value={values.operatorId}
-                  onChange={(e) => handleInputChange('operatorId', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                >
-                  <option value="">Selecione um operador</option>
-                  {operators.map((operator) => (
-                    <option key={operator.id} value={operator.id}>
-                      {operator.name} ({operator.role})
-                    </option>
-                  ))}
-                </select>
-                {errors.operatorId && touched.operatorId && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.operatorId}</p>
-                )}
-                
-                {/* Informações do Operador Selecionado */}
-                {selectedOperator && (
-                  <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <div className="text-sm text-gray-600 dark:text-gray-300">
-                      <p><strong>Email:</strong> {selectedOperator.email}</p>
-                      <p><strong>Telefone:</strong> {selectedOperator.phone}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Peso */}
-              <div>
-                <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  <Scale className="w-4 h-4 mr-2" />
-                  Peso (kg) *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  max="50"
-                  value={values.weight}
-                  onChange={(e) => handleInputChange('weight', parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="Ex: 1,25"
-                />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Peso da coleta em quilogramas (0.01 a 50.00 kg)
-                </p>
-                {errors.weight && touched.weight && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.weight}</p>
-                )}
-              </div>
-
-              {/* Data e Hora */}
-              <div>
-                <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Data e Hora da Coleta *
-                </label>
-                <input
-                  type="datetime-local"
-                  value={values.collectedAt instanceof Date 
-                    ? values.collectedAt.toISOString().slice(0, 16) 
-                    : ''
-                  }
-                  onChange={(e) => handleInputChange('collectedAt', new Date(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                />
-                {errors.collectedAt && touched.collectedAt && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.collectedAt}</p>
-                )}
-              </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Seleção de Cliente - apenas para admin */}
+          {userType === 'admin' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Cliente *
+              </label>
+              <select
+                value={values.clientId}
+                onChange={(e) => handleInputChange('clientId', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                required
+              >
+                <option value="">Selecione um cliente</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.company_name}
+                  </option>
+                ))}
+              </select>
+              {errors.clientId && touched.clientId && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.clientId}</p>
+              )}
             </div>
+          )}
 
-            {/* Coluna Direita */}
-            <div className="space-y-6">
-              {/* Upload de Foto */}
-              <div>
-                <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  <Camera className="w-4 h-4 mr-2" />
-                  Foto da Coleta
-                </label>
-                
-                {photoPreview ? (
-                  <div className="relative">
-                    <img
-                      src={photoPreview}
-                      alt="Preview da coleta"
-                      className="w-full h-48 object-cover rounded-lg border border-gray-300 dark:border-gray-600"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPhotoPreview(null)
-                        setFieldValue('photoUrl', '')
-                      }}
-                      className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      Clique para adicionar uma foto
-                    </p>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePhotoUpload}
-                      className="hidden"
-                      id="photo-upload"
-                    />
-                    <label
-                      htmlFor="photo-upload"
-                      className="inline-flex items-center px-4 py-2 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-md cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                    >
-                      <Camera className="w-4 h-4 mr-2" />
-                      Selecionar Foto
-                    </label>
-                  </div>
-                )}
-                
-                {errors.photoUrl && touched.photoUrl && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.photoUrl}</p>
-                )}
-              </div>
+          {/* Seleção de Espaço */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <Building2 className="inline w-4 h-4 mr-1" />
+              Espaço *
+            </label>
+            <select
+              value={values.spaceId}
+              onChange={(e) => handleInputChange('spaceId', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              required
+            >
+              <option value="">Selecione um espaço</option>
+              {filteredSpaces.map((space) => (
+                <option key={space.id} value={space.id}>
+                  {space.name}
+                </option>
+              ))}
+            </select>
+            {errors.spaceId && touched.spaceId && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.spaceId}</p>
+            )}
+          </div>
 
-              {/* Observações */}
-              <div>
-                <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Observações
-                </label>
-                <textarea
-                  value={values.observations}
-                  onChange={(e) => handleInputChange('observations', e.target.value)}
-                  rows={6}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none"
-                  placeholder="Adicione observações sobre a coleta (opcional)..."
+          {/* Seleção de Operador */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <User className="inline w-4 h-4 mr-1" />
+              Operador *
+            </label>
+            <select
+              value={values.operatorId}
+              onChange={(e) => handleInputChange('operatorId', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              required
+              disabled={userType === 'operator'}
+            >
+              <option value="">Selecione um operador</option>
+              {filteredOperators.map((operator) => (
+                <option key={operator.id} value={operator.id}>
+                  {operator.name}
+                </option>
+              ))}
+            </select>
+            {errors.operatorId && touched.operatorId && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.operatorId}</p>
+            )}
+          </div>
+
+          {/* Peso */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <Scale className="inline w-4 h-4 mr-1" />
+              Peso Coletado (kg) *
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={values.weight}
+              onChange={(e) => handleInputChange('weight', parseFloat(e.target.value) || 0)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              required
+            />
+            {errors.weight && touched.weight && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.weight}</p>
+            )}
+          </div>
+
+          {/* Data da Coleta */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <Calendar className="inline w-4 h-4 mr-1" />
+              Data da Coleta *
+            </label>
+                         <input
+               type="datetime-local"
+               value={values.collectedAt ? formatBrazilDateTimeLocal(values.collectedAt) : ''}
+               onChange={(e) => {
+                 const parsedDate = parseBrazilDateTime(e.target.value)
+                 handleInputChange('collectedAt', parsedDate)
+               }}
+               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+               required
+             />
+            {errors.collectedAt && touched.collectedAt && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.collectedAt}</p>
+            )}
+          </div>
+
+          {/* Upload de Foto */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <Camera className="inline w-4 h-4 mr-1" />
+              Foto da Coleta
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoUpload}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            />
+            {photoPreview && (
+              <div className="mt-2">
+                <img
+                  src={photoPreview}
+                  alt="Preview da foto"
+                  className="w-32 h-32 object-cover rounded-lg border border-gray-300"
                 />
-                {errors.observations && touched.observations && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.observations}</p>
-                )}
               </div>
-            </div>
+            )}
+            {errors.photoUrl && touched.photoUrl && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.photoUrl}</p>
+            )}
+          </div>
+
+          {/* Observações */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <MessageSquare className="inline w-4 h-4 mr-1" />
+              Observações
+            </label>
+            <textarea
+              value={values.observations}
+              onChange={(e) => handleInputChange('observations', e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Observações sobre a coleta..."
+            />
+            {errors.observations && touched.observations && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.observations}</p>
+            )}
           </div>
 
           {/* Botões */}
-          <div className="flex items-center justify-end space-x-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-600">
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={!isValid || isLoading}
-              className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading && (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              )}
-              <span>{initialData ? 'Atualizar' : 'Criar'} Coleta</span>
+              {isLoading ? 'Salvando...' : (initialData ? 'Atualizar' : 'Criar')}
             </button>
           </div>
         </form>

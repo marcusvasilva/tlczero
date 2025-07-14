@@ -1,28 +1,38 @@
 import { format, parseISO, isValid } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { BRAZIL_TIMEZONE } from './utils'
 
 // Formatação de peso
 export const formatWeight = (weight: number): string => {
   return `${weight.toFixed(2)} kg`
 }
 
-// Formatação de datas
+// Formatação de datas com fuso horário do Brasil
 export const formatDate = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? parseISO(date) : date
   if (!isValid(dateObj)) return 'Data inválida'
-  return format(dateObj, 'dd/MM/yyyy', { locale: ptBR })
+  
+  // Converter para fuso do Brasil antes de formatar
+  const brazilDate = new Date(dateObj.toLocaleString('en-US', { timeZone: BRAZIL_TIMEZONE }))
+  return format(brazilDate, 'dd/MM/yyyy', { locale: ptBR })
 }
 
 export const formatDateTime = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? parseISO(date) : date
   if (!isValid(dateObj)) return 'Data inválida'
-  return format(dateObj, 'dd/MM/yyyy HH:mm', { locale: ptBR })
+  
+  // Converter para fuso do Brasil antes de formatar
+  const brazilDate = new Date(dateObj.toLocaleString('en-US', { timeZone: BRAZIL_TIMEZONE }))
+  return format(brazilDate, 'dd/MM/yyyy HH:mm', { locale: ptBR })
 }
 
 export const formatDateForInput = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? parseISO(date) : date
   if (!isValid(dateObj)) return ''
-  return format(dateObj, 'yyyy-MM-dd')
+  
+  // Converter para fuso do Brasil antes de formatar
+  const brazilDate = new Date(dateObj.toLocaleString('en-US', { timeZone: BRAZIL_TIMEZONE }))
+  return format(brazilDate, 'yyyy-MM-dd')
 }
 
 // Formatação de telefone

@@ -1,14 +1,16 @@
-import { useState, useCallback, useMemo } from 'react'
-import { useLocalStorage } from './useLocalStorage'
-import { mockOperators } from '@/data/mockOperators'
-import type { Operator, CreateOperatorData, UpdateOperatorData } from '@/types'
+import { useState, useCallback, useMemo, useEffect } from 'react'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
+import type { User as SupabaseUser } from '@/lib/supabase'
+import type { Operator, CreateOperatorData, OperatorCreationResult } from '@/types'
+import { mapSupabaseUserToLegacy, mapLegacyUserToSupabase } from '@/lib/typeMappers'
+import { useAuthContext } from '@/contexts/AuthContext'
+import { generateTemporaryPassword, isValidEmail } from '@/lib/utils'
 
 interface UseOperatorsOptions {
   searchTerm?: string
-  sortBy?: 'name' | 'email' | 'role' | 'createdAt'
+  sortBy?: 'name' | 'email' | 'created_at'
   sortOrder?: 'asc' | 'desc'
   filterActive?: boolean
-  filterRole?: 'admin' | 'supervisor' | 'operador'
 }
 
 interface UseOperatorsReturn {
@@ -26,18 +28,14 @@ interface UseOperatorsReturn {
   error: string | null
   
   // CRUD operations
-  createOperator: (data: CreateOperatorData) => Promise<Operator>
-  updateOperator: (id: string, data: UpdateOperatorData) => Promise<Operator>
+  createOperator: (data: CreateOperatorData) => Promise<OperatorCreationResult>
+  updateOperator: (id: string, data: Partial<CreateOperatorData>) => Promise<Operator>
   deleteOperator: (id: string) => Promise<void>
-  activateOperator: (id: string) => Promise<Operator>
-  deactivateOperator: (id: string) => Promise<Operator>
   getOperator: (id: string) => Operator | undefined
-  getOperatorsByRole: (role: 'admin' | 'supervisor' | 'operador') => Operator[]
   
   // Utilities
   searchOperators: (term: string) => void
-  sortOperators: (field: 'name' | 'email' | 'role' | 'createdAt', order?: 'asc' | 'desc') => void
-  filterByRole: (role: 'admin' | 'supervisor' | 'operador' | '') => void
+  sortOperators: (field: 'name' | 'email' | 'created_at', order?: 'asc' | 'desc') => void
   clearError: () => void
   refreshOperators: () => void
   
@@ -45,132 +43,304 @@ interface UseOperatorsReturn {
   totalOperators: number
   activeOperators: number
   inactiveOperators: number
-  operatorsByRole: Record<string, number>
 }
 
 export const useOperators = (options: UseOperatorsOptions = {}): UseOperatorsReturn => {
-  const [operators, setOperators] = useLocalStorage<Operator[]>('tlc-operators', mockOperators)
+  const { user, userType, accountContext } = useAuthContext()
+  const [supabaseUsers, setSupabaseUsers] = useState<SupabaseUser[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState(options.searchTerm || '')
-  const [sortBy, setSortBy] = useState<'name' | 'email' | 'role' | 'createdAt'>(options.sortBy || 'name')
+  const [sortBy, setSortBy] = useState<'name' | 'email' | 'created_at'>(options.sortBy || 'name')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(options.sortOrder || 'asc')
-  const [roleFilter, setRoleFilter] = useState<'admin' | 'supervisor' | 'operador' | ''>(options.filterRole || '')
 
-  // Simulate API delay
-  const simulateDelay = useCallback((ms: number = 800) => 
-    new Promise(resolve => setTimeout(resolve, ms)), [])
+  // Mapear usuários Supabase para operadores do frontend
+  const operators = useMemo(() => {
+    return supabaseUsers.map(user => mapSupabaseUserToLegacy(user) as Operator)
+  }, [supabaseUsers])
+
+  // Fetch operators (users with role supervisor/operator) from Supabase
+  const fetchOperators = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    
+    try {
+      console.log('🔍 Buscando operadores na nova estrutura...')
+      
+      let query = supabase
+        .from('users')
+        .select('*')
+        .in('role', ['supervisor', 'operator'])
+        .order(sortBy, { ascending: sortOrder === 'asc' })
+
+      // Apply automatic account filtering based on user context
+      const targetAccountId = accountContext || user?.account_id
+      
+      // For non-admin users, filter by their account
+      if (userType !== 'admin' && targetAccountId) {
+        query = query.eq('account_id', targetAccountId)
+      }
+
+      const { data, error } = await query
+
+      if (error) {
+        throw error
+      }
+
+      console.log('✅ Operadores carregados:', data?.length || 0)
+      setSupabaseUsers(data || [])
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar operadores'
+      setError(errorMessage)
+      console.error('Erro ao buscar operadores:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [sortBy, sortOrder, userType, accountContext, user?.account_id])
+
+  // Initial load
+  useEffect(() => {
+    fetchOperators()
+  }, [fetchOperators])
 
   // Clear error
   const clearError = useCallback(() => {
     setError(null)
   }, [])
 
-  // Create operator
-  const createOperator = useCallback(async (data: CreateOperatorData): Promise<Operator> => {
+  // Create operator with automatic user creation
+  const createOperator = useCallback(async (data: CreateOperatorData): Promise<OperatorCreationResult> => {
+    console.log('🎯 Iniciando createOperator com dados:', data)
     setIsCreating(true)
     setError(null)
     
     try {
-      await simulateDelay()
-      
       // Validate required fields
       if (!data.name?.trim()) {
         throw new Error('Nome é obrigatório')
       }
+      if (!data.account_id) {
+        throw new Error('Conta é obrigatória')
+      }
       if (!data.role) {
         throw new Error('Função é obrigatória')
       }
-      if (!data.clientId?.trim()) {
-        throw new Error('Cliente é obrigatório')
+      
+      const accountId = data.account_id
+      
+      // Gerar email se não fornecido
+      let operatorEmail = data.email
+      if (!operatorEmail) {
+        // Gerar email baseado no nome + timestamp
+        const cleanName = data.name.toLowerCase()
+          .replace(/\s+/g, '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+        operatorEmail = `${cleanName}${Date.now()}@tlcagro.com.br`
+        console.log('📧 Email gerado automaticamente:', operatorEmail)
       }
       
-      // Check if email already exists (only if email is provided)
-      if (data.email?.trim()) {
-        const emailExists = operators.some(operator => 
-          operator.email?.toLowerCase() === data.email?.toLowerCase()
-        )
-        if (emailExists) {
-          throw new Error('Email já está em uso')
+      // Usar senha fornecida ou gerar automaticamente
+      let operatorPassword = data.password
+      if (!operatorPassword) {
+        operatorPassword = generateTemporaryPassword(12)
+        console.log('🔐 Senha gerada automaticamente')
+      } else {
+        console.log('🔐 Usando senha fornecida pelo usuário')
+      }
+      
+      // Validar email
+      if (!isValidEmail(operatorEmail)) {
+        throw new Error('Email inválido')
+      }
+      
+      // Check if email already exists
+      const { data: existingUser, error: checkUserError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', operatorEmail)
+        .single()
+
+      if (checkUserError && checkUserError.code !== 'PGRST116') {
+        throw checkUserError
+      }
+
+      if (existingUser) {
+        throw new Error('Email já está em uso por outro usuário')
+      }
+      
+      console.log('✅ Validação passou, convertendo dados...')
+      
+      // Criar dados do usuário com email definido
+      const userData = {
+        ...data,
+        email: operatorEmail,
+        account_id: accountId,
+        status: 'active'
+      }
+      
+      const supabaseData = mapLegacyUserToSupabase(userData)
+      
+      console.log('📡 Fazendo insert do usuário no Supabase...')
+      const { data: newUser, error: userError } = await supabase
+        .from('users')
+        .insert([supabaseData])
+        .select()
+        .single()
+
+      if (userError) {
+        console.error('❌ Erro ao criar usuário:', userError)
+        throw userError
+      }
+
+      console.log('✅ Usuário criado no Supabase:', newUser)
+      
+      // Criar usuário no Supabase Auth automaticamente
+      let credentials: OperatorCreationResult['credentials'] = undefined
+      
+      try {
+        console.log('🔐 Criando usuário no Supabase Auth...')
+        console.log('📧 Email a ser usado:', operatorEmail)
+        
+        // Verificar se o admin está disponível
+        if (!supabaseAdmin.auth.admin) {
+          throw new Error('Supabase Auth Admin não está disponível')
+        }
+        
+        console.log('✅ Supabase Auth Admin está disponível')
+        
+        const authPayload = {
+          email: operatorEmail,
+          password: operatorPassword,
+          user_metadata: {
+            name: data.name,
+            role: data.role,
+            phone: data.phone || null,
+            account_id: accountId
+          },
+          email_confirm: true // Confirmar email automaticamente
+        }
+        
+        console.log('📤 Payload para criação do usuário:', {
+          ...authPayload,
+          password: '[HIDDEN]'
+        })
+        
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser(authPayload)
+
+        if (authError) {
+          console.error('❌ Erro detalhado ao criar usuário no Auth:', {
+            message: authError.message,
+            code: authError.code,
+            status: authError.status,
+            details: authError
+          })
+          console.warn('⚠️ Erro ao criar usuário no Auth (usuário já foi criado):', authError.message)
+          // Não falhar completamente, apenas avisar
+          credentials = {
+            email: operatorEmail,
+            password: operatorPassword,
+            userCreated: false
+          }
+        } else {
+          console.log('✅ Usuário criado no Supabase Auth com sucesso!')
+          console.log('👤 Dados do usuário criado:', {
+            id: authData.user?.id,
+            email: authData.user?.email,
+            user_metadata: authData.user?.user_metadata
+          })
+          credentials = {
+            email: operatorEmail,
+            password: operatorPassword,
+            userCreated: true
+          }
+        }
+        
+      } catch (authErr) {
+        console.error('💥 Erro capturado na criação do usuário:', authErr)
+        console.warn('⚠️ Falha na criação do usuário (operador criado com sucesso):', authErr)
+        credentials = {
+          email: operatorEmail,
+          password: operatorPassword,
+          userCreated: false
         }
       }
       
-      const newOperator: Operator = {
-        id: Date.now().toString(),
-        name: data.name.trim(),
-        email: data.email?.trim() || undefined,
-        phone: data.phone?.trim() || undefined,
-        cpf: data.cpf?.trim() || undefined,
-        role: data.role,
-        active: data.active,
-        hireDate: new Date(),
-        clientId: data.clientId,
-        avatar: data.avatar,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
+      // Mapear usuário de volta para tipo operador frontend
+      const mappedOperator = mapSupabaseUserToLegacy(newUser) as Operator
+      console.log('🔄 Operador mapeado para frontend:', mappedOperator)
+
+      // Refresh operators list
+      await fetchOperators()
       
-      setOperators(prev => [newOperator, ...prev])
-      return newOperator
+      return {
+        operator: mappedOperator,
+        credentials
+      }
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao criar operador'
+      console.error('💥 Erro geral ao criar operador:', err)
       setError(errorMessage)
       throw new Error(errorMessage)
     } finally {
       setIsCreating(false)
     }
-  }, [operators, setOperators, simulateDelay])
+  }, [fetchOperators])
 
   // Update operator
-  const updateOperator = useCallback(async (id: string, data: UpdateOperatorData): Promise<Operator> => {
+  const updateOperator = useCallback(async (id: string, data: Partial<CreateOperatorData>): Promise<Operator> => {
     setIsUpdating(true)
     setError(null)
     
     try {
-      await simulateDelay()
-      
-      const existingOperator = operators.find(operator => operator.id === id)
-      if (!existingOperator) {
-        throw new Error('Operador não encontrado')
-      }
-      
       // Validate required fields if provided
       if (data.name !== undefined && !data.name?.trim()) {
         throw new Error('Nome é obrigatório')
       }
-      if (data.email !== undefined && !data.email?.trim()) {
-        throw new Error('Email é obrigatório')
-      }
       
-      // Check if email already exists (excluding current operator)
+      // Check if email already exists (excluding current user)
       if (data.email) {
-        const emailExists = operators.some(operator => 
-          operator.id !== id && operator.email?.toLowerCase() === data.email!.toLowerCase()
-        )
-        if (emailExists) {
+        const { data: existing, error: checkError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', data.email)
+          .neq('id', id)
+          .single()
+
+        if (checkError && checkError.code !== 'PGRST116') {
+          throw checkError
+        }
+
+        if (existing) {
           throw new Error('Email já está em uso')
         }
       }
       
-      const updatedOperator: Operator = {
-        ...existingOperator,
-        ...data,
-        name: data.name?.trim() || existingOperator.name,
-        email: data.email?.trim() || existingOperator.email,
-        phone: data.phone?.trim() || existingOperator.phone,
-        cpf: data.cpf?.trim() || existingOperator.cpf,
-        updatedAt: new Date()
+      // Converter dados frontend para Supabase usando mapeador
+      const supabaseData = mapLegacyUserToSupabase(data)
+
+      const { data: updatedUser, error } = await supabase
+        .from('users')
+        .update(supabaseData)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) {
+        throw error
       }
+
+      // Mapear de volta para tipo operador frontend
+      const mappedOperator = mapSupabaseUserToLegacy(updatedUser) as Operator
+
+      // Refresh operators list
+      await fetchOperators()
       
-      setOperators(prev => prev.map(operator => 
-        operator.id === id ? updatedOperator : operator
-      ))
-      
-      return updatedOperator
+      return mappedOperator
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar operador'
@@ -179,7 +349,7 @@ export const useOperators = (options: UseOperatorsOptions = {}): UseOperatorsRet
     } finally {
       setIsUpdating(false)
     }
-  }, [operators, setOperators, simulateDelay])
+  }, [fetchOperators])
 
   // Delete operator (soft delete)
   const deleteOperator = useCallback(async (id: string): Promise<void> => {
@@ -187,19 +357,17 @@ export const useOperators = (options: UseOperatorsOptions = {}): UseOperatorsRet
     setError(null)
     
     try {
-      await simulateDelay()
-      
-      const existingOperator = operators.find(operator => operator.id === id)
-      if (!existingOperator) {
-        throw new Error('Operador não encontrado')
+      const { error } = await supabase
+        .from('users')
+        .update({ status: 'inactive' })
+        .eq('id', id)
+
+      if (error) {
+        throw error
       }
       
-      // Soft delete - mark as inactive
-      setOperators(prev => prev.map(operator => 
-        operator.id === id 
-          ? { ...operator, active: false, updatedAt: new Date() }
-          : operator
-      ))
+      // Refresh operators list
+      await fetchOperators()
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao excluir operador'
@@ -208,84 +376,11 @@ export const useOperators = (options: UseOperatorsOptions = {}): UseOperatorsRet
     } finally {
       setIsDeleting(false)
     }
-  }, [operators, setOperators, simulateDelay])
+  }, [fetchOperators])
 
-  // Activate operator
-  const activateOperator = useCallback(async (id: string): Promise<Operator> => {
-    setIsUpdating(true)
-    setError(null)
-    
-    try {
-      await simulateDelay(400)
-      
-      const existingOperator = operators.find(operator => operator.id === id)
-      if (!existingOperator) {
-        throw new Error('Operador não encontrado')
-      }
-      
-      const updatedOperator = {
-        ...existingOperator,
-        active: true,
-        updatedAt: new Date()
-      }
-      
-      setOperators(prev => prev.map(operator => 
-        operator.id === id ? updatedOperator : operator
-      ))
-      
-      return updatedOperator
-      
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao ativar operador'
-      setError(errorMessage)
-      throw new Error(errorMessage)
-    } finally {
-      setIsUpdating(false)
-    }
-  }, [operators, setOperators, simulateDelay])
-
-  // Deactivate operator
-  const deactivateOperator = useCallback(async (id: string): Promise<Operator> => {
-    setIsUpdating(true)
-    setError(null)
-    
-    try {
-      await simulateDelay(400)
-      
-      const existingOperator = operators.find(operator => operator.id === id)
-      if (!existingOperator) {
-        throw new Error('Operador não encontrado')
-      }
-      
-      const updatedOperator = {
-        ...existingOperator,
-        active: false,
-        updatedAt: new Date()
-      }
-      
-      setOperators(prev => prev.map(operator => 
-        operator.id === id ? updatedOperator : operator
-      ))
-      
-      return updatedOperator
-      
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao desativar operador'
-      setError(errorMessage)
-      throw new Error(errorMessage)
-    } finally {
-      setIsUpdating(false)
-    }
-  }, [operators, setOperators, simulateDelay])
-
-  // Get single operator
+  // Get operator by ID
   const getOperator = useCallback((id: string): Operator | undefined => {
     return operators.find(operator => operator.id === id)
-  }, [operators])
-
-  // Get operators by role
-  const getOperatorsByRole = useCallback((role: 'admin' | 'supervisor' | 'operador'): Operator[] => {
-    return operators.filter(operator => operator.role === role && operator.active)
   }, [operators])
 
   // Search operators
@@ -294,38 +389,19 @@ export const useOperators = (options: UseOperatorsOptions = {}): UseOperatorsRet
   }, [])
 
   // Sort operators
-  const sortOperators = useCallback((field: 'name' | 'email' | 'role' | 'createdAt', order: 'asc' | 'desc' = 'asc') => {
+  const sortOperators = useCallback((field: 'name' | 'email' | 'created_at', order: 'asc' | 'desc' = 'asc') => {
     setSortBy(field)
     setSortOrder(order)
   }, [])
 
-  // Filter by role
-  const filterByRole = useCallback((role: 'admin' | 'supervisor' | 'operador' | '') => {
-    setRoleFilter(role)
-  }, [])
-
-  // Refresh operators (reload from storage)
+  // Refresh operators
   const refreshOperators = useCallback(() => {
-    setIsLoading(true)
-    setTimeout(() => {
-      // This would typically refetch from API
-      setIsLoading(false)
-    }, 500)
-  }, [])
+    fetchOperators()
+  }, [fetchOperators])
 
-  // Filtered and sorted operators
+  // Filter and sort operators
   const filteredOperators = useMemo(() => {
     let filtered = operators
-
-    // Apply active filter
-    if (options.filterActive !== undefined) {
-      filtered = filtered.filter(operator => operator.active === options.filterActive)
-    }
-
-    // Apply role filter
-    if (roleFilter) {
-      filtered = filtered.filter(operator => operator.role === roleFilter)
-    }
 
     // Apply search filter
     if (searchTerm) {
@@ -333,60 +409,24 @@ export const useOperators = (options: UseOperatorsOptions = {}): UseOperatorsRet
       filtered = filtered.filter(operator =>
         operator.name.toLowerCase().includes(term) ||
         operator.email?.toLowerCase().includes(term) ||
-        operator.phone?.includes(term) ||
-        operator.cpf?.includes(term) ||
-        operator.role.toLowerCase().includes(term)
+        operator.phone?.toLowerCase().includes(term)
       )
     }
 
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let aValue: string | Date
-      let bValue: string | Date
-
-      switch (sortBy) {
-        case 'name':
-          aValue = a.name.toLowerCase()
-          bValue = b.name.toLowerCase()
-          break
-        case 'email':
-          aValue = a.email?.toLowerCase() || ''
-          bValue = b.email?.toLowerCase() || ''
-          break
-        case 'role':
-          aValue = a.role.toLowerCase()
-          bValue = b.role.toLowerCase()
-          break
-        case 'createdAt':
-          aValue = a.createdAt
-          bValue = b.createdAt
-          break
-        default:
-          aValue = a.name.toLowerCase()
-          bValue = b.name.toLowerCase()
-      }
-
-      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1
-      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1
-      return 0
-    })
+    // Apply active filter
+    if (options.filterActive !== undefined) {
+      filtered = filtered.filter(operator => 
+        options.filterActive ? operator.status === 'active' : operator.status !== 'active'
+      )
+    }
 
     return filtered
-  }, [operators, searchTerm, sortBy, sortOrder, options.filterActive, roleFilter])
+  }, [operators, searchTerm, options.filterActive])
 
-  // Statistics
-  const totalOperators = useMemo(() => operators.length, [operators])
-  const activeOperators = useMemo(() => operators.filter(operator => operator.active).length, [operators])
-  const inactiveOperators = useMemo(() => operators.filter(operator => !operator.active).length, [operators])
-  
-  const operatorsByRole = useMemo(() => {
-    return operators.reduce((acc, operator) => {
-      if (operator.active) {
-        acc[operator.role] = (acc[operator.role] || 0) + 1
-      }
-      return acc
-    }, {} as Record<string, number>)
-  }, [operators])
+  // Stats
+  const totalOperators = operators.length
+  const activeOperators = operators.filter(operator => operator.status === 'active').length
+  const inactiveOperators = operators.filter(operator => operator.status !== 'active').length
 
   return {
     // Data
@@ -406,22 +446,17 @@ export const useOperators = (options: UseOperatorsOptions = {}): UseOperatorsRet
     createOperator,
     updateOperator,
     deleteOperator,
-    activateOperator,
-    deactivateOperator,
     getOperator,
-    getOperatorsByRole,
     
     // Utilities
     searchOperators,
     sortOperators,
-    filterByRole,
     clearError,
     refreshOperators,
     
     // Stats
     totalOperators,
     activeOperators,
-    inactiveOperators,
-    operatorsByRole
+    inactiveOperators
   }
 } 

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useSpaces, useCollections, useAuth } from '@/hooks'
+import { useSpaces, useCollections } from '@/hooks'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { formatDate } from '@/lib/formatters'
 import { 
   Camera, 
@@ -42,11 +43,10 @@ export function Collect() {
   const qrCode = searchParams.get('qr')
   
   // Hooks
-  const { user } = useAuth()
+  const { user } = useAuthContext()
   const { filteredSpaces } = useSpaces()
   const { 
     createCollection, 
-    isCreating, 
     error: collectionError, 
     clearError 
   } = useCollections()
@@ -55,7 +55,27 @@ export function Collect() {
   const getSpaceByQRCode = async (qrCode: string) => {
     // Simular delay de API
     await new Promise(resolve => setTimeout(resolve, 500))
-    return filteredSpaces.find(space => space.qrCode === qrCode) || null
+    const supabaseSpace = filteredSpaces.find(space => {
+      // Como os dados mockados não têm qrCode, vamos usar o ID como fallback
+      return space.id === qrCode || (space as any).qrCode === qrCode
+    })
+    
+    if (!supabaseSpace) return null
+    
+    // Mapear dados do Supabase para o formato esperado
+    const mappedSpace: Space & { client?: Client } = {
+      id: supabaseSpace.id,
+      clientId: (supabaseSpace as any).client_id || '',
+      name: supabaseSpace.name || '',
+      description: supabaseSpace.description || undefined,
+      areaSize: (supabaseSpace as any).area_size || undefined,
+      environmentType: (supabaseSpace as any).environment_type as 'indoor' | 'outdoor' | 'mixed' || 'indoor',
+      active: (supabaseSpace as any).status === 'active',
+      createdAt: new Date((supabaseSpace as any).created_at || new Date()),
+      updatedAt: new Date((supabaseSpace as any).updated_at || new Date()),
+    }
+    
+    return mappedSpace
   }
 
   // Estados do formulário
@@ -231,6 +251,7 @@ export function Collect() {
         clientId: space?.clientId || ''
       }
 
+      // Usar diretamente o collectionData no formato camelCase
       await createCollection(collectionData)
       
       // Sucesso - mostrar feedback e redirecionar
@@ -342,11 +363,11 @@ export function Collect() {
               </span>
             </div>
             
-            {space?.location && (
+            {space?.description && (
               <div className="flex items-center">
                 <MapPin className="h-4 w-4 text-gray-400 mr-2" />
                 <span className="text-gray-600 dark:text-gray-300">
-                  <strong>Local:</strong> {space.location}
+                  <strong>Descrição:</strong> {space.description}
                 </span>
               </div>
             )}
@@ -512,10 +533,10 @@ export function Collect() {
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
         <button
           onClick={handleSubmit}
-          disabled={isCreating || isSubmitting}
+          disabled={isSubmitting}
           className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
         >
-          {isCreating || isSubmitting ? (
+          {isSubmitting ? (
             <>
               <RefreshCw className="h-5 w-5 animate-spin mr-2" />
               Registrando...

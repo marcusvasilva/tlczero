@@ -1,7 +1,35 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuthContext } from '@/contexts/AuthContext'
-import { hasPermission } from '@/data'
+import AuthEmergencyReset from './AuthEmergencyReset'
+// Função de permissões inline (substituindo import removido)
+const rolePermissions = {
+  admin: [
+    { resource: 'clients', actions: ['create', 'read', 'update', 'delete'] },
+    { resource: 'operators', actions: ['create', 'read', 'update', 'delete'] },
+    { resource: 'spaces', actions: ['create', 'read', 'update', 'delete'] },
+    { resource: 'collections', actions: ['create', 'read', 'update', 'delete'] },
+    { resource: 'reports', actions: ['create', 'read', 'update', 'delete'] },
+    { resource: 'settings', actions: ['create', 'read', 'update', 'delete'] }
+  ],
+  supervisor: [
+    { resource: 'clients', actions: ['read', 'update'] },
+    { resource: 'operators', actions: ['read'] },
+    { resource: 'spaces', actions: ['create', 'read', 'update'] },
+    { resource: 'collections', actions: ['create', 'read', 'update'] },
+    { resource: 'reports', actions: ['read'] }
+  ],
+  operador: [
+    { resource: 'collections', actions: ['create', 'read'] },
+    { resource: 'spaces', actions: ['read'] }
+  ]
+}
+
+const hasPermission = (role: 'admin' | 'supervisor' | 'operador', resource: string, action: string): boolean => {
+  const permissions = rolePermissions[role]
+  const resourcePermission = permissions.find(p => p.resource === resource)
+  return resourcePermission?.actions.includes(action) ?? false
+}
 import type { ProtectedRouteProps } from '@/types'
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
@@ -9,18 +37,52 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   allowedRoles,
   redirectTo = '/login'
 }) => {
-  const { isAuthenticated, user, isLoading } = useAuthContext()
+  const { isAuthenticated, user, isLoading, error } = useAuthContext()
   const location = useLocation()
+  const [showEmergency, setShowEmergency] = useState(false)
+  const [loadingStartTime] = useState(Date.now())
+
+  // Detectar loading muito longo e mostrar opções de emergência
+  useEffect(() => {
+    if (!isLoading) {
+      setShowEmergency(false)
+      return
+    }
+
+    const timer = setTimeout(() => {
+      setShowEmergency(true)
+    }, 10000) // 10 segundos
+
+    return () => clearTimeout(timer)
+  }, [isLoading])
+
+  const handleEmergencyReset = () => {
+    setShowEmergency(false)
+    window.location.reload()
+  }
 
   // Mostrar loading enquanto verifica autenticação
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Verificando autenticação...</p>
+      <>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Verificando autenticação...</p>
+            {error && (
+              <p className="text-red-600 text-sm mt-2">{error}</p>
+            )}
+            <p className="text-xs text-gray-400 mt-2">
+              {Math.floor((Date.now() - loadingStartTime) / 1000)}s
+            </p>
+          </div>
         </div>
-      </div>
+        
+        <AuthEmergencyReset
+          isVisible={showEmergency}
+          onReset={handleEmergencyReset}
+        />
+      </>
     )
   }
 

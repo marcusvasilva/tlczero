@@ -1,89 +1,149 @@
-import { useState, useCallback, useMemo } from 'react'
-import { useLocalStorage } from './useLocalStorage'
-import { mockCollections } from '@/data/mockCollections'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import { supabase } from '@/lib/supabase'
+import type { Tables } from '@/types/database'
+import type { Collection as FrontendCollection, CreateCollectionData } from '@/types/collection'
+import { mapSupabaseCollectionToLegacy, mapLegacyCollectionToSupabase } from '@/lib/typeMappers'
 import { useAuthContext } from '@/contexts/AuthContext'
-import type { Collection, CreateCollectionData, UpdateCollectionData } from '@/types'
 
-interface UseCollectionsOptions {
-  spaceId?: string
-  operatorId?: string
-  clientId?: string
-  dateRange?: {
-    start: Date
-    end: Date
-  }
-  sortBy?: 'collectedAt' | 'weight' | 'createdAt'
-  sortOrder?: 'asc' | 'desc'
-  minWeight?: number
-  maxWeight?: number
-}
+type DatabaseCollection = Tables<'collections'>
 
 interface UseCollectionsReturn {
-  // Data
-  collections: Collection[]
-  filteredCollections: Collection[]
+  collections: FrontendCollection[]
+  collectionsDetailed: any[] // Usar any temporariamente até definir o tipo correto
+  filteredCollections: FrontendCollection[]
   
   // Loading states
   isLoading: boolean
-  isCreating: boolean
-  isUpdating: boolean
   isDeleting: boolean
   
   // Error states
   error: string | null
   
   // CRUD operations
-  createCollection: (data: CreateCollectionData) => Promise<Collection>
-  updateCollection: (id: string, data: UpdateCollectionData) => Promise<Collection>
+  createCollection: (data: CreateCollectionData) => Promise<FrontendCollection>
+  updateCollection: (id: string, data: Partial<CreateCollectionData>) => Promise<FrontendCollection>
   deleteCollection: (id: string) => Promise<void>
-  getCollection: (id: string) => Collection | undefined
-  getCollectionsBySpace: (spaceId: string) => Collection[]
-  getCollectionsByOperator: (operatorId: string) => Collection[]
-  getCollectionsByDateRange: (start: Date, end: Date) => Collection[]
+  getCollection: (id: string) => FrontendCollection | undefined
+  getCollectionsBySpace: (spaceId: string) => FrontendCollection[]
+  getCollectionsByUser: (userId: string) => FrontendCollection[]
   
   // Utilities
-  filterBySpace: (spaceId: string) => void
-  filterByOperator: (operatorId: string) => void
-  filterByDateRange: (start: Date, end: Date) => void
-  filterByWeightRange: (min: number, max: number) => void
-  sortCollections: (field: 'collectedAt' | 'weight' | 'createdAt', order?: 'asc' | 'desc') => void
-  clearFilters: () => void
+  searchCollections: (term: string) => FrontendCollection[]
+  sortCollections: (field: string, order: 'asc' | 'desc') => void
   clearError: () => void
   refreshCollections: () => void
   
   // Stats
   totalCollections: number
   totalWeight: number
-  averageWeight: number
-  collectionsToday: number
-  collectionsThisWeek: number
-  collectionsThisMonth: number
-  weightToday: number
-  weightThisWeek: number
-  weightThisMonth: number
+  thisMonthWeight: number
 }
 
-export const useCollections = (options: UseCollectionsOptions = {}): UseCollectionsReturn => {
-  const [collections, setCollections] = useLocalStorage<Collection[]>('tlc-collections', mockCollections)
+export const useCollections = (): UseCollectionsReturn => {
+  const { userType, accountContext } = useAuthContext()
+  const [collections, setCollections] = useState<FrontendCollection[]>([])
+  const [collectionsDetailed, setCollectionsDetailed] = useState<any[]>([]) // Usar any temporariamente
   const [isLoading, setIsLoading] = useState(false)
-  const [isCreating, setIsCreating] = useState(false)
-  const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [spaceFilter, setSpaceFilter] = useState(options.spaceId || '')
-  const [operatorFilter, setOperatorFilter] = useState(options.operatorId || '')
-  const [clientFilter] = useState(options.clientId || '')
-  const [dateRangeFilter, setDateRangeFilter] = useState(options.dateRange)
-  const [weightRangeFilter, setWeightRangeFilter] = useState({
-    min: options.minWeight,
-    max: options.maxWeight
-  })
-  const [sortBy, setSortBy] = useState<'collectedAt' | 'weight' | 'createdAt'>(options.sortBy || 'collectedAt')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(options.sortOrder || 'desc')
+  
+  // Usar ref para evitar recarregamentos desnecessários
+  const lastUserTypeRef = useRef(userType)
+  const lastAccountContextRef = useRef(accountContext)
 
-  // Simulate API delay
-  const simulateDelay = useCallback((ms: number = 800) => 
-    new Promise(resolve => setTimeout(resolve, ms)), [])
+  const loadCollections = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      console.log('🔄 Carregando coletas...')
+
+      let query = supabase
+        .from('collections')
+        .select(`
+          *,
+          spaces!inner(
+            id,
+            name,
+            account_id,
+            accounts!inner(
+              id,
+              company_name
+            )
+          ),
+          users!inner(
+            id,
+            name,
+            role
+          )
+        `)
+        .order('collection_date', { ascending: false })
+
+      // Aplicar filtro por conta se não for admin
+      if (userType !== 'admin' && accountContext) {
+        const accountId = typeof accountContext === 'string' ? accountContext : (accountContext as any)?.accountId
+        if (accountId) {
+          query = query.eq('spaces.account_id', accountId)
+        }
+      }
+
+      const { data, error } = await query
+
+      if (error) {
+        console.error('❌ Erro ao carregar coletas:', error)
+        throw error
+      }
+
+      console.log('📦 Dados brutos do Supabase:', data)
+
+      if (data) {
+        // Mapear os dados para o tipo frontend
+        const mappedData = data.map(item => {
+          const mapped = mapSupabaseCollectionToLegacy(item as DatabaseCollection)
+          // Adicionar accountId através do join
+          mapped.clientId = (item as any).spaces?.accounts?.id || ''
+          return mapped
+        })
+        
+        console.log('📤 Coletas mapeadas:', mappedData)
+        setCollections(mappedData)
+        setCollectionsDetailed(data) // Manter dados brutos para uso detalhado
+      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar coletas:', error)
+      setError(error instanceof Error ? error.message : 'Erro desconhecido')
+    } finally {
+      setIsLoading(false)
+    }
+  }, []) // Remover dependências para evitar loops
+
+  // Initial load apenas na montagem
+  useEffect(() => {
+    loadCollections()
+  }, []) // Sem dependências para carregar apenas uma vez
+
+  // Recarregar quando contexto mudar significativamente
+  useEffect(() => {
+    // Skip no primeiro render
+    if (lastUserTypeRef.current === undefined && lastAccountContextRef.current === undefined) {
+      lastUserTypeRef.current = userType
+      lastAccountContextRef.current = accountContext
+      return
+    }
+
+    const shouldReload = 
+      lastUserTypeRef.current !== userType || 
+      lastAccountContextRef.current !== accountContext
+
+    if (shouldReload) {
+      lastUserTypeRef.current = userType
+      lastAccountContextRef.current = accountContext
+      loadCollections()
+    }
+  }, [userType, accountContext]) // Remover loadCollections das dependências
+
+  // Refresh collections function
+  const refreshCollections = useCallback(() => {
+    loadCollections()
+  }, [loadCollections])
 
   // Clear error
   const clearError = useCallback(() => {
@@ -91,103 +151,69 @@ export const useCollections = (options: UseCollectionsOptions = {}): UseCollecti
   }, [])
 
   // Create collection
-  const createCollection = useCallback(async (data: CreateCollectionData): Promise<Collection> => {
-    setIsCreating(true)
-    setError(null)
+  const createCollection = useCallback(async (data: CreateCollectionData): Promise<FrontendCollection> => {
+    console.log('📝 Criando nova coleta:', data)
     
-    try {
-      await simulateDelay()
-      
-      // Validate required fields
-      if (!data.spaceId?.trim()) {
-        throw new Error('Espaço é obrigatório')
-      }
-      if (!data.operatorId?.trim()) {
-        throw new Error('Operador é obrigatório')
-      }
-      if (!data.weight || data.weight <= 0) {
-        throw new Error('Peso deve ser maior que zero')
-      }
-      if (!data.collectedAt) {
-        throw new Error('Data da coleta é obrigatória')
-      }
-      if (!data.clientId?.trim()) {
-        throw new Error('Cliente é obrigatório')
-      }
-      
-      const newCollection: Collection = {
-        id: Date.now().toString(),
-        spaceId: data.spaceId.trim(),
-        operatorId: data.operatorId.trim(),
-        clientId: data.clientId.trim(),
-        weight: data.weight,
-        photoUrl: data.photoUrl?.trim() || undefined,
-        observations: data.observations?.trim() || undefined,
-        collectedAt: data.collectedAt,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-      
-      setCollections(prev => [newCollection, ...prev])
-      return newCollection
-      
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao criar coleta'
-      setError(errorMessage)
-      throw new Error(errorMessage)
-    } finally {
-      setIsCreating(false)
+    const supabaseData = mapLegacyCollectionToSupabase(data)
+    console.log('📤 Dados para inserção no Supabase:', supabaseData)
+
+    const { data: createdData, error } = await supabase
+      .from('collections')
+      .insert(supabaseData)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('❌ Erro ao criar coleta:', error)
+      throw error
     }
-  }, [setCollections, simulateDelay])
+
+    console.log('✅ Coleta criada:', createdData)
+    const mappedCollection = mapSupabaseCollectionToLegacy(createdData as DatabaseCollection)
+    
+    // Atualizar estado local
+    setCollections(prev => [mappedCollection, ...prev])
+    
+    // Recarregar para pegar dados completos com joins
+    setTimeout(() => loadCollections(), 100)
+    
+    return mappedCollection
+  }, [loadCollections])
 
   // Update collection
-  const updateCollection = useCallback(async (id: string, data: UpdateCollectionData): Promise<Collection> => {
-    setIsUpdating(true)
-    setError(null)
+  const updateCollection = useCallback(async (id: string, data: Partial<CreateCollectionData>): Promise<FrontendCollection> => {
+    console.log('📝 Atualizando coleta:', { id, data })
     
-    try {
-      await simulateDelay()
-      
-      const existingCollection = collections.find(collection => collection.id === id)
-      if (!existingCollection) {
-        throw new Error('Coleta não encontrada')
-      }
-      
-      // Validate required fields if provided
-      if (data.spaceId !== undefined && !data.spaceId?.trim()) {
-        throw new Error('Espaço é obrigatório')
-      }
-      if (data.operatorId !== undefined && !data.operatorId?.trim()) {
-        throw new Error('Operador é obrigatório')
-      }
-      if (data.weight !== undefined && (!data.weight || data.weight <= 0)) {
-        throw new Error('Peso deve ser maior que zero')
-      }
-      
-      const updatedCollection: Collection = {
-        ...existingCollection,
-        ...data,
-        spaceId: data.spaceId?.trim() || existingCollection.spaceId,
-        operatorId: data.operatorId?.trim() || existingCollection.operatorId,
-        photoUrl: data.photoUrl?.trim() || existingCollection.photoUrl,
-        observations: data.observations?.trim() || existingCollection.observations,
-        updatedAt: new Date()
-      }
-      
-      setCollections(prev => prev.map(collection => 
-        collection.id === id ? updatedCollection : collection
-      ))
-      
-      return updatedCollection
-      
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar coleta'
-      setError(errorMessage)
-      throw new Error(errorMessage)
-    } finally {
-      setIsUpdating(false)
+    const supabaseData = mapLegacyCollectionToSupabase(data as any)
+    console.log('📤 Dados para atualização no Supabase:', supabaseData)
+
+    const { data: updatedData, error } = await supabase
+      .from('collections')
+      .update(supabaseData)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('❌ Erro ao atualizar coleta:', error)
+      throw error
     }
-  }, [collections, setCollections, simulateDelay])
+
+    console.log('✅ Coleta atualizada:', updatedData)
+    const mappedCollection = mapSupabaseCollectionToLegacy(updatedData as DatabaseCollection)
+    
+    // Atualizar estado local
+    setCollections(prev => 
+      prev.map(collection => 
+        collection.id === id ? mappedCollection : collection
+      )
+    )
+    
+    // Recarregar para pegar dados completos
+    setTimeout(() => loadCollections(), 100)
+    
+    return mappedCollection
+  }, [loadCollections])
 
   // Delete collection
   const deleteCollection = useCallback(async (id: string): Promise<void> => {
@@ -195,294 +221,109 @@ export const useCollections = (options: UseCollectionsOptions = {}): UseCollecti
     setError(null)
     
     try {
-      await simulateDelay()
+      const { error } = await supabase
+        .from('collections')
+        .delete()
+        .eq('id', id)
       
-      const existingCollection = collections.find(collection => collection.id === id)
-      if (!existingCollection) {
-        throw new Error('Coleta não encontrada')
+      if (error) {
+        throw error
       }
       
-      // Hard delete for collections (unlike clients/spaces)
-      setCollections(prev => prev.filter(collection => collection.id !== id))
-      
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao excluir coleta'
-      setError(errorMessage)
-      throw new Error(errorMessage)
+      // Refresh collections list
+      await loadCollections()
+    } catch (error) {
+      console.error('❌ Erro ao deletar coleta:', error)
+      setError(error instanceof Error ? error.message : 'Erro ao deletar coleta')
+      throw error
     } finally {
       setIsDeleting(false)
     }
-  }, [collections, setCollections, simulateDelay])
+  }, [loadCollections])
 
   // Get single collection
-  const getCollection = useCallback((id: string): Collection | undefined => {
+  const getCollection = useCallback((id: string): FrontendCollection | undefined => {
     return collections.find(collection => collection.id === id)
   }, [collections])
 
   // Get collections by space
-  const getCollectionsBySpace = useCallback((spaceId: string): Collection[] => {
+  const getCollectionsBySpace = useCallback((spaceId: string): FrontendCollection[] => {
     return collections.filter(collection => collection.spaceId === spaceId)
   }, [collections])
 
-  // Get collections by operator
-  const getCollectionsByOperator = useCallback((operatorId: string): Collection[] => {
-    return collections.filter(collection => collection.operatorId === operatorId)
+  // Get collections by user (updated from getCollectionsByOperator)
+  const getCollectionsByUser = useCallback((userId: string): FrontendCollection[] => {
+    return collections.filter(collection => collection.operatorId === userId)
   }, [collections])
 
-  // Get collections by date range
-  const getCollectionsByDateRange = useCallback((start: Date, end: Date): Collection[] => {
-    return collections.filter(collection => {
-      const collectedAt = new Date(collection.collectedAt)
-      return collectedAt >= start && collectedAt <= end
-    })
+  // Search collections
+  const searchCollections = useCallback((term: string): FrontendCollection[] => {
+    const searchTerm = term.toLowerCase().trim()
+    if (!searchTerm) return collections
+
+    return collections.filter(collection => 
+      collection.notes?.toLowerCase().includes(searchTerm) ||
+      collection.id.toLowerCase().includes(searchTerm)
+    )
   }, [collections])
-
-  // Filter by space
-  const filterBySpace = useCallback((spaceId: string) => {
-    setSpaceFilter(spaceId)
-  }, [])
-
-  // Filter by operator
-  const filterByOperator = useCallback((operatorId: string) => {
-    setOperatorFilter(operatorId)
-  }, [])
-
-  // Filter by date range
-  const filterByDateRange = useCallback((start: Date, end: Date) => {
-    setDateRangeFilter({ start, end })
-  }, [])
-
-  // Filter by weight range
-  const filterByWeightRange = useCallback((min: number, max: number) => {
-    setWeightRangeFilter({ min, max })
-  }, [])
 
   // Sort collections
-  const sortCollections = useCallback((field: 'collectedAt' | 'weight' | 'createdAt', order: 'asc' | 'desc' = 'desc') => {
-    setSortBy(field)
-    setSortOrder(order)
-  }, [])
-
-  // Clear all filters
-  const clearFilters = useCallback(() => {
-    setSpaceFilter('')
-    setOperatorFilter('')
-    setDateRangeFilter(undefined)
-    setWeightRangeFilter({ min: undefined, max: undefined })
-  }, [])
-
-  // Refresh collections (reload from storage)
-  const refreshCollections = useCallback(() => {
-    setIsLoading(true)
-    setTimeout(() => {
-      // This would typically refetch from API
-      setIsLoading(false)
-    }, 500)
-  }, [])
-
-  // Filtered and sorted collections
-  const filteredCollections = useMemo(() => {
-    let filtered = collections
-
-    // Apply client filter
-    if (clientFilter) {
-      filtered = filtered.filter(collection => collection.clientId === clientFilter)
-    }
-
-    // Apply space filter
-    if (spaceFilter) {
-      filtered = filtered.filter(collection => collection.spaceId === spaceFilter)
-    }
-
-    // Apply operator filter
-    if (operatorFilter) {
-      filtered = filtered.filter(collection => collection.operatorId === operatorFilter)
-    }
-
-    // Apply date range filter
-    if (dateRangeFilter) {
-      filtered = filtered.filter(collection => {
-        const collectedAt = new Date(collection.collectedAt)
-        return collectedAt >= dateRangeFilter.start && collectedAt <= dateRangeFilter.end
-      })
-    }
-
-    // Apply weight range filter
-    if (weightRangeFilter.min !== undefined) {
-      filtered = filtered.filter(collection => collection.weight >= weightRangeFilter.min!)
-    }
-    if (weightRangeFilter.max !== undefined) {
-      filtered = filtered.filter(collection => collection.weight <= weightRangeFilter.max!)
-    }
-
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let aValue: number | Date
-      let bValue: number | Date
-
-      switch (sortBy) {
-        case 'weight':
-          aValue = a.weight
-          bValue = b.weight
-          break
-        case 'collectedAt':
-          aValue = new Date(a.collectedAt)
-          bValue = new Date(b.collectedAt)
-          break
-        case 'createdAt':
-          aValue = a.createdAt
-          bValue = b.createdAt
-          break
-        default:
-          aValue = new Date(a.collectedAt)
-          bValue = new Date(b.collectedAt)
-      }
-
-      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1
-      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1
+  const sortCollections = useCallback((field: string, order: 'asc' | 'desc') => {
+    setCollections(prev => [...prev].sort((a, b) => {
+      const aValue = (a as any)[field]
+      const bValue = (b as any)[field]
+      
+      if (aValue < bValue) return order === 'asc' ? -1 : 1
+      if (aValue > bValue) return order === 'asc' ? 1 : -1
       return 0
-    })
+    }))
+  }, [])
 
-    return filtered
-  }, [collections, clientFilter, spaceFilter, operatorFilter, dateRangeFilter, weightRangeFilter, sortBy, sortOrder])
+  // Memoized derived values
+  const filteredCollections = useMemo(() => {
+    return collections
+  }, [collections])
 
-  // Statistics
   const totalCollections = useMemo(() => collections.length, [collections])
   
-  const totalWeight = useMemo(() => {
-    return collections.reduce((sum, collection) => sum + collection.weight, 0)
-  }, [collections])
+  const totalWeight = useMemo(() => 
+    collections.reduce((sum, collection) => sum + (collection.weight || 0), 0), 
+    [collections]
+  )
   
-  const averageWeight = useMemo(() => {
-    return totalCollections > 0 ? totalWeight / totalCollections : 0
-  }, [totalWeight, totalCollections])
-
-  // Date-based statistics
-  const today = useMemo(() => {
+  const thisMonthWeight = useMemo(() => {
     const now = new Date()
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  }, [])
-
-  const thisWeekStart = useMemo(() => {
-    const now = new Date()
-    const day = now.getDay()
-    const diff = now.getDate() - day
-    return new Date(now.getFullYear(), now.getMonth(), diff)
-  }, [])
-
-  const thisMonthStart = useMemo(() => {
-    const now = new Date()
-    return new Date(now.getFullYear(), now.getMonth(), 1)
-  }, [])
-
-  const collectionsToday = useMemo(() => {
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    return collections.filter(collection => {
-      const collectedAt = new Date(collection.collectedAt)
-      return collectedAt >= today && collectedAt < tomorrow
-    }).length
-  }, [collections, today])
-
-  const collectionsThisWeek = useMemo(() => {
-    return collections.filter(collection => {
-      const collectedAt = new Date(collection.collectedAt)
-      return collectedAt >= thisWeekStart
-    }).length
-  }, [collections, thisWeekStart])
-
-  const collectionsThisMonth = useMemo(() => {
-    return collections.filter(collection => {
-      const collectedAt = new Date(collection.collectedAt)
-      return collectedAt >= thisMonthStart
-    }).length
-  }, [collections, thisMonthStart])
-
-  const weightToday = useMemo(() => {
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    
     return collections
       .filter(collection => {
-        const collectedAt = new Date(collection.collectedAt)
-        return collectedAt >= today && collectedAt < tomorrow
+        const collectionDate = new Date(collection.collectedAt)
+        return collectionDate >= startOfMonth
       })
-      .reduce((sum, collection) => sum + collection.weight, 0)
-  }, [collections, today])
-
-  const weightThisWeek = useMemo(() => {
-    return collections
-      .filter(collection => {
-        const collectedAt = new Date(collection.collectedAt)
-        return collectedAt >= thisWeekStart
-      })
-      .reduce((sum, collection) => sum + collection.weight, 0)
-  }, [collections, thisWeekStart])
-
-  const weightThisMonth = useMemo(() => {
-    return collections
-      .filter(collection => {
-        const collectedAt = new Date(collection.collectedAt)
-        return collectedAt >= thisMonthStart
-      })
-      .reduce((sum, collection) => sum + collection.weight, 0)
-  }, [collections, thisMonthStart])
+      .reduce((sum, collection) => sum + (collection.weight || 0), 0)
+  }, [collections])
 
   return {
-    // Data
     collections,
+    collectionsDetailed,
     filteredCollections,
-    
-    // Loading states
     isLoading,
-    isCreating,
-    isUpdating,
     isDeleting,
-    
-    // Error states
     error,
-    
-    // CRUD operations
     createCollection,
     updateCollection,
     deleteCollection,
     getCollection,
     getCollectionsBySpace,
-    getCollectionsByOperator,
-    getCollectionsByDateRange,
-    
-    // Utilities
-    filterBySpace,
-    filterByOperator,
-    filterByDateRange,
-    filterByWeightRange,
+    getCollectionsByUser,
+    searchCollections,
     sortCollections,
-    clearFilters,
     clearError,
     refreshCollections,
-    
-    // Stats
     totalCollections,
     totalWeight,
-    averageWeight,
-    collectionsToday,
-    collectionsThisWeek,
-    collectionsThisMonth,
-    weightToday,
-    weightThisWeek,
-    weightThisMonth
+    thisMonthWeight
   }
 }
 
-// Hook wrapper que aplica automaticamente filtro por cliente
-export const useClientCollections = (options: Omit<UseCollectionsOptions, 'clientId'> = {}) => {
-  const { userType, clientContext, user } = useAuthContext()
-  
-  // Para admin: não aplica filtro de cliente (vê todos)
-  // Para supervisor/operador: aplica filtro do cliente atual
-  const clientId = userType === 'admin' ? undefined : (clientContext || user?.clientId)
-  
-  return useCollections({
-    ...options,
-    clientId
-  })
-} 
+ 

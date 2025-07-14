@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import type { ChangeEvent, FocusEvent } from 'react'
 
 export interface UseFormOptions<T> {
@@ -44,6 +44,9 @@ export function useForm<T extends Record<string, any>>(
     return true
   }, [values, options.validate])
 
+  // REMOVIDO: useEffect que causava loop infinito
+  // A validação agora acontece apenas quando necessário (handleBlur, handleSubmit)
+
   const handleChange = useCallback((e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
     const fieldValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
@@ -51,10 +54,15 @@ export function useForm<T extends Record<string, any>>(
     setValues(prev => ({ ...prev, [name]: fieldValue }))
     
     // Limpar erro do campo quando o usuário começar a digitar
-    if (errors[name as keyof T]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }))
-    }
-  }, [errors])
+    setErrors(prev => {
+      if (prev[name as keyof T]) {
+        const newErrors = { ...prev }
+        delete newErrors[name as keyof T]
+        return newErrors
+      }
+      return prev
+    })
+  }, []) // Removido 'errors' da dependência para evitar loop infinito
 
   const handleBlur = useCallback((e: FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name } = e.target
@@ -99,7 +107,11 @@ export function useForm<T extends Record<string, any>>(
 
   const clearError = useCallback((field?: keyof T) => {
     if (field) {
-      setErrors(prev => ({ ...prev, [field]: undefined }))
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[field]
+        return newErrors
+      })
     } else {
       setErrors({})
     }

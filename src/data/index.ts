@@ -1,29 +1,19 @@
-// Export all mock data
-export { mockClients } from './mockClients'
-export { mockOperators } from './mockOperators'
-export { mockSpaces } from './mockSpaces'
-export { mockCollections } from './mockCollections'
-export { mockUsers, mockCredentials, rolePermissions, hasPermission } from './mockUsers'
+// Arquivo mantido para compatibilidade
+// Os dados agora vêm do Supabase através dos hooks
 
-import { mockClients } from './mockClients'
-import { mockOperators } from './mockOperators'
-import { mockSpaces } from './mockSpaces'
-import { mockCollections } from './mockCollections'
-import { mockUsers } from './mockUsers'
-
-// Export data generators for testing
-export const generateMockData = () => ({
-  clients: mockClients,
-  operators: mockOperators,
-  spaces: mockSpaces,
-  collections: mockCollections,
-  users: mockUsers
+// Função auxiliar para contagem de dados (agora deve ser implementada pelos hooks)
+export const getDataCounts = () => ({
+  totalClients: 0,
+  totalSpaces: 0,
+  totalOperators: 0,
+  totalCollections: 0
 })
 
-// Export data counts for dashboard
-export const getDataCounts = () => ({
-  totalClients: mockClients.filter(c => c.active).length,
-  totalSpaces: mockSpaces.filter(s => s.active).length,
-  totalOperators: mockOperators.filter(o => o.active).length,
-  totalCollections: mockCollections.length
+// Função para gerar dados de demonstração (removida - dados vêm do Supabase)
+export const generateMockData = () => ({
+  clients: [],
+  operators: [],
+  spaces: [],
+  collections: [],
+  users: []
 }) 

@@ -1,10 +1,11 @@
 // Export all types
-export * from './client'
+export * from './account'  // Nova estrutura de accounts (inclui compatibilidade Client)
 export * from './space'
-export * from './collection'
-export * from './operator'
+export * from './collection' 
+export * from './operator'  // Nova estrutura de users (inclui compatibilidade Operator)
 export * from './dashboard'
-export * from './auth'
+// export * from './auth'
+export * from './database' // Tipos da database
 
 // Common utility types
 export interface ApiResponse<T = any> {

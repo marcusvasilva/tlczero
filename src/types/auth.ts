@@ -1,24 +1,27 @@
-export interface User {
-  id: string
-  name: string
-  email: string
-  role: 'admin' | 'supervisor' | 'operador'
-  avatar?: string
-  active: boolean
-  lastLogin?: Date
-  createdAt: Date
-  updatedAt: Date
-  clientId?: string
-}
+import type { User as DatabaseUser } from './operator'
 
+// Usando o tipo User da nova estrutura de database
+export type AuthUser = DatabaseUser
+
+// Interfaces para autenticação
 export interface LoginCredentials {
   email: string
   password: string
   rememberMe?: boolean
 }
 
+export interface RegisterData {
+  name: string
+  email: string
+  password: string
+  role: 'admin' | 'supervisor' | 'operator'
+  phone?: string
+  account_id?: string
+  supervisor_id?: string
+}
+
 export interface AuthState {
-  user: User | null
+  user: AuthUser | null
   isAuthenticated: boolean
   isLoading: boolean
   error: string | null
@@ -26,22 +29,23 @@ export interface AuthState {
 
 export interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>
+  register: (data: RegisterData) => Promise<void>
   logout: () => void
   clearError: () => void
-  updateUser: (userData: Partial<User>) => void
-  userType: 'admin' | 'client' | 'operator'
-  clientContext: string | null
-  setClientContext: (clientId: string | null) => void
+  updateUser: (userData: Partial<AuthUser>) => void
+  userType: 'admin' | 'supervisor' | 'operator'
+  accountContext: string | null
+  setAccountContext: (accountId: string | null) => void
 }
 
 export interface ProtectedRouteProps {
   children: React.ReactNode
-  allowedRoles?: User['role'][]
+  allowedRoles?: AuthUser['role'][]
   redirectTo?: string
 }
 
 export interface SessionData {
-  user: User
+  user: AuthUser
   token: string
   expiresAt: Date
 }
@@ -54,5 +58,14 @@ export interface Permission {
 export interface RolePermissions {
   admin: Permission[]
   supervisor: Permission[]
-  operador: Permission[]
+  operator: Permission[]
+}
+
+// Para compatibilidade temporária
+export interface User extends AuthUser {
+  clientId?: string
+  active?: boolean
+  lastLogin?: Date
+  createdAt?: Date
+  updatedAt?: Date
 } 

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useClients, usePagination } from '@/hooks'
 import { formatPhone, formatCNPJ, formatDateTime } from '@/lib/formatters'
 import { ClientForm } from '@/components/forms/ClientForm'
@@ -17,15 +17,24 @@ import {
   Edit2,
   Trash2
 } from 'lucide-react'
-import type { Client, CreateClientData } from '@/types'
+import type { Account } from '@/types'
+import { supabase } from '@/lib/supabase'
+import { useAuthContext } from '@/contexts/AuthContext'
 
-type SortField = 'name' | 'email' | 'createdAt'
+type SortField = 'company_name' | 'email' | 'created_at'
 type SortOrder = 'asc' | 'desc'
 
 export function Clients() {
-  // Hooks de gerenciamento de estado
-  const {
+  const { userType } = useAuthContext()
+  
+  // Memoizar options para evitar loops de renderização
+  const clientOptions = useMemo(() => ({ filterActive: true }), [])
+  
+  const { 
     filteredClients,
+    totalClients,
+    activeClients,
+    inactiveClients,
     isLoading,
     isCreating,
     isUpdating,
@@ -37,20 +46,18 @@ export function Clients() {
     searchClients,
     sortClients,
     clearError,
-    totalClients,
-    activeClients,
-    inactiveClients
-  } = useClients({ filterActive: true })
+    refreshClients
+  } = useClients(clientOptions)
 
   // Estados locais
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortField, setSortField] = useState<SortField>('name')
+  const [sortField, setSortField] = useState<SortField>('company_name')
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
   const [showActiveOnly, setShowActiveOnly] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [editingClient, setEditingClient] = useState<Client | null>(null)
-  const [deletingClient, setDeletingClient] = useState<Client | null>(null)
+  const [editingClient, setEditingClient] = useState<Account | null>(null)
+  const [deletingClient, setDeletingClient] = useState<Account | null>(null)
   const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set())
 
   // Paginação
@@ -98,24 +105,24 @@ export function Clients() {
     clearError()
   }
 
-  const handleEdit = (client: Client) => {
+  const handleEdit = (client: Account) => {
     setEditingClient(client)
     setShowForm(true)
     clearError()
   }
 
-  const handleDelete = (client: Client) => {
+  const handleDelete = (client: Account) => {
     setDeletingClient(client)
     setShowDeleteDialog(true)
     clearError()
   }
 
-  const handleSubmit = async (data: Partial<Client>) => {
+  const handleSubmit = async (data: Partial<Account>) => {
     try {
       if (editingClient) {
-        await updateClient(editingClient.id, data as CreateClientData)
+        await updateClient(editingClient.id, data)
       } else {
-        await createClient(data as CreateClientData)
+        await createClient(data as Omit<Account, "id" | "created_at" | "updated_at">)
       }
       setShowForm(false)
       setEditingClient(null)
@@ -170,34 +177,36 @@ export function Clients() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="responsive-spacing">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+      <div className="responsive-flex justify-between items-start">
+        <div className="min-w-0 flex-1">
+          <h1 className="mobile-header text-gray-900 dark:text-white">
             Clientes
           </h1>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="mobile-text text-gray-600 dark:text-gray-300">
             Gestão completa de clientes cadastrados no sistema
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 flex-shrink-0">
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+            className="mobile-button flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 touch-target"
           >
             <Download className="h-4 w-4" />
-            Exportar
+            <span className="hidden sm:inline">Exportar</span>
           </button>
           <button
             onClick={handleCreate}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+            className="mobile-button flex items-center gap-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 touch-target"
           >
             <Plus className="h-4 w-4" />
-            Novo Cliente
+            <span className="hidden sm:inline">Novo Cliente</span>
           </button>
         </div>
       </div>
+
+      {/* DEBUG: Temporariamente removido para focar no problema das coletas */}
 
       {/* Cards de estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -377,11 +386,11 @@ export function Clients() {
                 <div className="ml-6 grid grid-cols-12 gap-4 w-full">
                   <div className="col-span-4">
                     <button
-                      onClick={() => handleSort('name')}
+                      onClick={() => handleSort('company_name')}
                       className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200"
                     >
                       Cliente
-                      {sortField === 'name' && (
+                      {sortField === 'company_name' && (
                         sortOrder === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />
                       )}
                     </button>
@@ -398,11 +407,11 @@ export function Clients() {
                   </div>
                   <div className="col-span-2">
                     <button
-                      onClick={() => handleSort('createdAt')}
+                      onClick={() => handleSort('created_at')}
                       className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200"
                     >
                       Cadastrado
-                      {sortField === 'createdAt' && (
+                      {sortField === 'created_at' && (
                         sortOrder === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />
                       )}
                     </button>
@@ -438,16 +447,16 @@ export function Clients() {
                         <div className="flex items-center">
                           <div>
                             <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {client.name}
+                              {client.company_name}
                             </div>
                             <div className="text-sm text-gray-500 dark:text-gray-400">
                               {client.email || 'Sem email'}
                             </div>
-                            {client.contactPerson && (
-                              <div className="text-xs text-gray-400 dark:text-gray-500">
-                                Contato: {client.contactPerson}
-                              </div>
-                            )}
+                                                          {client.contact_person && (
+                                <div className="text-xs text-gray-400 dark:text-gray-500">
+                                  Contato: {client.contact_person}
+                                </div>
+                              )}
                           </div>
                         </div>
                       </div>
@@ -469,18 +478,18 @@ export function Clients() {
                       {/* Data de cadastro */}
                       <div className="col-span-2">
                         <div className="text-sm text-gray-900 dark:text-white">
-                          {formatDateTime(client.createdAt)}
+                          {client.created_at ? formatDateTime(client.created_at) : '-'}
                         </div>
                       </div>
 
                       {/* Status */}
                       <div className="col-span-1">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          client.active 
+                          client.status === 'active'
                             ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
                             : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
                         }`}>
-                          {client.active ? 'Ativo' : 'Inativo'}
+                          {client.status === 'active' ? 'Ativo' : 'Inativo'}
                         </span>
                       </div>
 
@@ -592,7 +601,7 @@ export function Clients() {
       <ConfirmDialog
         isOpen={showDeleteDialog}
         title="Excluir Cliente"
-        message={`Tem certeza que deseja excluir o cliente "${deletingClient?.name}"? Esta ação marcará o cliente como inativo e não pode ser desfeita.`}
+        message={`Tem certeza que deseja excluir o cliente "${deletingClient?.company_name}"? Esta ação marcará o cliente como inativo e não pode ser desfeita.`}
         confirmText="Excluir"
         cancelText="Cancelar"
         onConfirm={confirmDelete}

@@ -1,19 +1,18 @@
-import { useState, useCallback, useMemo } from 'react'
-import { useLocalStorage } from './useLocalStorage'
-import { mockClients } from '@/data/mockClients'
-import type { Client, CreateClientData, UpdateClientData } from '@/types'
+import { useState, useCallback, useMemo, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
+import type { Account } from '@/types'
 
 interface UseClientsOptions {
   searchTerm?: string
-  sortBy?: 'name' | 'email' | 'createdAt'
+  sortBy?: 'company_name' | 'email' | 'created_at'
   sortOrder?: 'asc' | 'desc'
   filterActive?: boolean
 }
 
 interface UseClientsReturn {
   // Data
-  clients: Client[]
-  filteredClients: Client[]
+  clients: Account[]
+  filteredClients: Account[]
   
   // Loading states
   isLoading: boolean
@@ -25,14 +24,14 @@ interface UseClientsReturn {
   error: string | null
   
   // CRUD operations
-  createClient: (data: CreateClientData) => Promise<Client>
-  updateClient: (id: string, data: UpdateClientData) => Promise<Client>
+  createClient: (data: Omit<Account, 'id' | 'created_at' | 'updated_at'>) => Promise<Account>
+  updateClient: (id: string, data: Partial<Account>) => Promise<Account>
   deleteClient: (id: string) => Promise<void>
-  getClient: (id: string) => Client | undefined
+  getClient: (id: string) => Account | undefined
   
   // Utilities
   searchClients: (term: string) => void
-  sortClients: (field: 'name' | 'email' | 'createdAt', order?: 'asc' | 'desc') => void
+  sortClients: (field: 'company_name' | 'email' | 'created_at', order?: 'asc' | 'desc') => void
   clearError: () => void
   refreshClients: () => void
   
@@ -43,19 +42,81 @@ interface UseClientsReturn {
 }
 
 export const useClients = (options: UseClientsOptions = {}): UseClientsReturn => {
-  const [clients, setClients] = useLocalStorage<Client[]>('tlc-clients', mockClients)
+  const [clients, setClients] = useState<Account[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState(options.searchTerm || '')
-  const [sortBy, setSortBy] = useState<'name' | 'email' | 'createdAt'>(options.sortBy || 'name')
+  const [sortBy, setSortBy] = useState<'company_name' | 'email' | 'created_at'>(options.sortBy || 'company_name')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(options.sortOrder || 'asc')
 
-  // Simulate API delay
-  const simulateDelay = useCallback((ms: number = 800) => 
-    new Promise(resolve => setTimeout(resolve, ms)), [])
+  // Fetch clients from Supabase
+  const fetchClients = useCallback(async () => {
+    console.log('📋 Iniciando fetchClients...')
+    console.log('📋 Opções de filtro:', options)
+    console.log('📋 sortBy:', sortBy, 'sortOrder:', sortOrder)
+    setIsLoading(true)
+    setError(null)
+    
+    try {
+      let query = supabase
+        .from('accounts')
+        .select('*')
+        .order(sortBy, { ascending: sortOrder === 'asc' })
+
+      // Apply filters
+      if (options.filterActive !== undefined) {
+        console.log('📋 Aplicando filtro de status:', options.filterActive ? 'active' : 'inactive')
+        query = query.eq('status', options.filterActive ? 'active' : 'inactive')
+      } else {
+        console.log('📋 Sem filtro de status aplicado')
+      }
+
+      console.log('📋 Query construída, executando...')
+      const { data, error } = await query
+
+      if (error) {
+        console.error('❌ Erro na query do Supabase:', error)
+        throw error
+      }
+
+      console.log('📊 Dados brutos do Supabase:', data)
+      console.log('📊 Número de registros retornados:', data?.length || 0)
+      
+      // Mapear dados para formato compatível
+      const mappedClients: Account[] = (data || []).map(account => ({
+        id: account.id,
+        company_name: account.company_name,
+        contact_person: account.contact_person,
+        phone: account.phone,
+        email: account.email || null,
+        address: account.address || null,
+        city: account.city || null,
+        state: account.state || null,
+        cep: account.cep || null,
+        cnpj: account.cnpj || null,
+        status: account.status as 'active' | 'inactive',
+        created_at: account.created_at,
+        updated_at: account.updated_at
+      }))
+
+      setClients(mappedClients)
+      console.log('✅ fetchClients concluído com sucesso, clientes:', mappedClients.length)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar clientes'
+      setError(errorMessage)
+      console.error('Erro ao buscar clientes:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [sortBy, sortOrder, options.filterActive])
+
+  // Initial load
+  useEffect(() => {
+    fetchClients()
+  }, []) // Removido fetchClients das dependências para evitar loops
 
   // Clear error
   const clearError = useCallback(() => {
@@ -63,102 +124,137 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
   }, [])
 
   // Create client
-  const createClient = useCallback(async (data: CreateClientData): Promise<Client> => {
+  const createClient = useCallback(async (data: Omit<Account, 'id' | 'created_at' | 'updated_at'>): Promise<Account> => {
+          console.log('🎯 Criando cliente:', data)
     setIsCreating(true)
     setError(null)
     
     try {
-      await simulateDelay()
-      
       // Validate required fields
-      if (!data.name?.trim()) {
-        throw new Error('Nome é obrigatório')
+      if (!data.company_name?.trim()) {
+        throw new Error('Nome da empresa é obrigatório')
       }
-      if (!data.email?.trim()) {
-        throw new Error('Email é obrigatório')
+      if (!data.contact_person?.trim()) {
+        throw new Error('Pessoa de contato é obrigatória')
       }
-      
-      // Check if email already exists
-      const emailExists = clients.some(client => 
-        client.email?.toLowerCase() === data.email?.toLowerCase()
-      )
-      if (emailExists) {
-        throw new Error('Email já está em uso')
+      if (!data.phone?.trim()) {
+        throw new Error('Telefone é obrigatório')
       }
       
-      const newClient: Client = {
-        id: Date.now().toString(),
-        name: data.name.trim(),
-        email: data.email?.trim() || '',
-        phone: data.phone?.trim() || '',
-        cnpj: data.cnpj?.trim() || '',
-        address: data.address?.trim() || '',
-        contactPerson: data.contactPerson?.trim() || '',
-        active: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
+      console.log('🚀 Validação passou, fazendo insert no Supabase...')
+      const { data: newClient, error } = await supabase
+        .from('accounts')
+        .insert([{
+          company_name: data.company_name,
+          contact_person: data.contact_person,
+          phone: data.phone,
+          email: data.email,
+          address: data.address,
+          city: data.city,
+          state: data.state,
+          cep: data.cep,
+          cnpj: data.cnpj,
+          status: data.status || 'active'
+        }])
+        .select()
+        .single()
+
+      if (error) {
+        console.error('❌ Erro do Supabase:', error)
+        throw error
       }
+
+      console.log('✅ Cliente criado no Supabase:', newClient)
+      console.log('🔄 Atualizando lista de clientes...')
       
-      setClients(prev => [newClient, ...prev])
-      return newClient
+      // Refresh clients list
+      await fetchClients()
+      console.log('✅ Lista atualizada, retornando cliente...')
+      
+      return {
+        id: newClient.id,
+        company_name: newClient.company_name,
+        contact_person: newClient.contact_person,
+        phone: newClient.phone,
+        email: newClient.email,
+        address: newClient.address,
+        city: newClient.city,
+        state: newClient.state,
+        cep: newClient.cep,
+        cnpj: newClient.cnpj,
+        status: newClient.status as 'active' | 'inactive',
+        created_at: newClient.created_at,
+        updated_at: newClient.updated_at
+      }
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao criar cliente'
+      console.error('💥 Erro ao criar cliente:', errorMessage, err)
       setError(errorMessage)
       throw new Error(errorMessage)
     } finally {
       setIsCreating(false)
     }
-  }, [clients, setClients, simulateDelay])
+  }, [fetchClients])
 
   // Update client
-  const updateClient = useCallback(async (id: string, data: UpdateClientData): Promise<Client> => {
+  const updateClient = useCallback(async (id: string, data: Partial<Account>): Promise<Account> => {
     setIsUpdating(true)
     setError(null)
     
     try {
-      await simulateDelay()
-      
-      const existingClient = clients.find(client => client.id === id)
-      if (!existingClient) {
-        throw new Error('Cliente não encontrado')
-      }
-      
       // Validate required fields if provided
-      if (data.name !== undefined && !data.name?.trim()) {
-        throw new Error('Nome é obrigatório')
+      if (data.company_name !== undefined && !data.company_name?.trim()) {
+        throw new Error('Nome da empresa é obrigatório')
       }
-      if (data.email !== undefined && !data.email?.trim()) {
-        throw new Error('Email é obrigatório')
+      if (data.contact_person !== undefined && !data.contact_person?.trim()) {
+        throw new Error('Pessoa de contato é obrigatória')
       }
-      
-      // Check if email already exists (excluding current client)
-      if (data.email) {
-        const emailExists = clients.some(client => 
-          client.id !== id && client.email?.toLowerCase() === data.email!.toLowerCase()
-        )
-        if (emailExists) {
-          throw new Error('Email já está em uso')
-        }
+      if (data.phone !== undefined && !data.phone?.trim()) {
+        throw new Error('Telefone é obrigatório')
       }
-      
-      const updatedClient: Client = {
-        ...existingClient,
-        ...data,
-        name: data.name?.trim() || existingClient.name,
-        email: data.email?.trim() || existingClient.email,
-        phone: data.phone?.trim() || existingClient.phone,
-        cnpj: data.cnpj?.trim() || existingClient.cnpj,
-        address: data.address?.trim() || existingClient.address,
-        contactPerson: data.contactPerson?.trim() || existingClient.contactPerson,
-        updatedAt: new Date()
+
+      const updateData: any = {}
+      if (data.company_name !== undefined) updateData.company_name = data.company_name
+      if (data.contact_person !== undefined) updateData.contact_person = data.contact_person
+      if (data.phone !== undefined) updateData.phone = data.phone
+      if (data.email !== undefined) updateData.email = data.email
+      if (data.address !== undefined) updateData.address = data.address
+      if (data.city !== undefined) updateData.city = data.city
+      if (data.state !== undefined) updateData.state = data.state
+      if (data.cep !== undefined) updateData.cep = data.cep
+      if (data.cnpj !== undefined) updateData.cnpj = data.cnpj
+      if (data.status !== undefined) updateData.status = data.status
+
+      const { data: updatedClient, error } = await supabase
+        .from('accounts')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) {
+        throw error
       }
+
+      // Refresh clients list
+      await fetchClients()
       
-      setClients(prev => prev.map(client => 
-        client.id === id ? updatedClient : client
-      ))
-      
-      return updatedClient
+      return {
+        id: updatedClient.id,
+        company_name: updatedClient.company_name,
+        contact_person: updatedClient.contact_person,
+        phone: updatedClient.phone,
+        email: updatedClient.email,
+        address: updatedClient.address,
+        city: updatedClient.city,
+        state: updatedClient.state,
+        cep: updatedClient.cep,
+        cnpj: updatedClient.cnpj,
+        status: updatedClient.status as 'active' | 'inactive',
+        created_at: updatedClient.created_at,
+        updated_at: updatedClient.updated_at
+      }
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar cliente'
@@ -167,7 +263,7 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
     } finally {
       setIsUpdating(false)
     }
-  }, [clients, setClients, simulateDelay])
+  }, [fetchClients])
 
   // Delete client
   const deleteClient = useCallback(async (id: string): Promise<void> => {
@@ -175,19 +271,17 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
     setError(null)
     
     try {
-      await simulateDelay()
-      
-      const existingClient = clients.find(client => client.id === id)
-      if (!existingClient) {
-        throw new Error('Cliente não encontrado')
+      const { error } = await supabase
+        .from('accounts')
+        .delete()
+        .eq('id', id)
+
+      if (error) {
+        throw error
       }
       
-      // Soft delete - mark as inactive instead of removing
-      setClients(prev => prev.map(client => 
-        client.id === id 
-          ? { ...client, active: false, updatedAt: new Date() }
-          : client
-      ))
+      // Refresh clients list
+      await fetchClients()
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao excluir cliente'
@@ -196,10 +290,10 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
     } finally {
       setIsDeleting(false)
     }
-  }, [clients, setClients, simulateDelay])
+  }, [fetchClients])
 
-  // Get single client
-  const getClient = useCallback((id: string): Client | undefined => {
+  // Get client by ID
+  const getClient = useCallback((id: string): Account | undefined => {
     return clients.find(client => client.id === id)
   }, [clients])
 
@@ -209,76 +303,38 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
   }, [])
 
   // Sort clients
-  const sortClients = useCallback((field: 'name' | 'email' | 'createdAt', order: 'asc' | 'desc' = 'asc') => {
+  const sortClients = useCallback((field: 'company_name' | 'email' | 'created_at', order: 'asc' | 'desc' = 'asc') => {
     setSortBy(field)
     setSortOrder(order)
   }, [])
 
-  // Refresh clients (reload from storage)
+  // Refresh clients
   const refreshClients = useCallback(() => {
-    setIsLoading(true)
-    setTimeout(() => {
-      // This would typically refetch from API
-      setIsLoading(false)
-    }, 500)
-  }, [])
+    fetchClients()
+  }, [fetchClients])
 
-  // Filtered and sorted clients
+  // Filter clients
   const filteredClients = useMemo(() => {
     let filtered = clients
-
-    // Apply active filter
-    if (options.filterActive !== undefined) {
-      filtered = filtered.filter(client => client.active === options.filterActive)
-    }
 
     // Apply search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase()
       filtered = filtered.filter(client =>
-        client.name.toLowerCase().includes(term) ||
-        client.email?.toLowerCase().includes(term) ||
-        client.phone?.includes(term) ||
-        client.cnpj?.includes(term) ||
-        client.address?.toLowerCase().includes(term)
+        client.company_name.toLowerCase().includes(term) ||
+        (client.email && client.email.toLowerCase().includes(term)) ||
+        (client.cnpj && client.cnpj.toLowerCase().includes(term)) ||
+        client.contact_person.toLowerCase().includes(term)
       )
     }
 
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let aValue: string | Date
-      let bValue: string | Date
-
-      switch (sortBy) {
-        case 'name':
-          aValue = a.name.toLowerCase()
-          bValue = b.name.toLowerCase()
-          break
-        case 'email':
-          aValue = a.email?.toLowerCase() || ''
-          bValue = b.email?.toLowerCase() || ''
-          break
-        case 'createdAt':
-          aValue = a.createdAt
-          bValue = b.createdAt
-          break
-        default:
-          aValue = a.name.toLowerCase()
-          bValue = b.name.toLowerCase()
-      }
-
-      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1
-      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1
-      return 0
-    })
-
     return filtered
-  }, [clients, searchTerm, sortBy, sortOrder, options.filterActive])
+  }, [clients, searchTerm])
 
-  // Statistics
-  const totalClients = useMemo(() => clients.length, [clients])
-  const activeClients = useMemo(() => clients.filter(client => client.active).length, [clients])
-  const inactiveClients = useMemo(() => clients.filter(client => !client.active).length, [clients])
+  // Stats
+  const totalClients = clients.length
+  const activeClients = clients.filter(client => client.status === 'active').length
+  const inactiveClients = clients.filter(client => client.status === 'inactive').length
 
   return {
     // Data

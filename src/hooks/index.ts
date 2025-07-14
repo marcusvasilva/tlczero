@@ -1,17 +1,14 @@
-// Core hooks
-export { useLocalStorage } from './useLocalStorage'
-export { useAuth } from './useAuth'
-export { useForm } from './useForm'
-export { usePagination } from './usePagination'
-
-// Entity management hooks
-export { useClients } from './useClients'
-export { useSpaces, useClientSpaces } from './useSpaces'
-export { useCollections, useClientCollections } from './useCollections'
-export { useOperators } from './useOperators'
-
-// API hook
+// Hooks principais
 export { useApi } from './useApi'
+export { useForm } from './useForm'
+export { useLocalStorage } from './useLocalStorage'
+export { usePagination } from './usePagination'
+export { useOfflineSync } from './useOfflineSync'
 
-// New hooks
-export * from './useOfflineSync' 
+// Hooks de domínio
+export { useClients } from './useClients'
+export { useOperators } from './useOperators' 
+export { useSimpleOperators } from './useSimpleOperators'
+export { useSpaces, useClientSpaces } from './useSpaces'
+export { useCollections } from './useCollections'
+export { useReports } from './useReports' 

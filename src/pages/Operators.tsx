@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Plus, Search, Edit2, Trash2, UserCheck, UserX, X } from 'lucide-react'
-import { useOperators } from '@/hooks/useOperators'
+import { useSimpleOperators } from '@/hooks/useSimpleOperators'
 import { useAuthContext } from '@/contexts/AuthContext'
+import { useToast } from '@/contexts/ToastContext'
 import { formatDate } from '@/lib/formatters'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
-import OperatorForm from '@/components/forms/OperatorForm'
-import type { Operator, CreateOperatorData } from '@/types'
+import SimpleOperatorForm from '@/components/forms/SimpleOperatorForm'
+import type { SimpleOperator, CreateSimpleOperatorData } from '@/types/operator'
 
 // Componentes UI simples
 function Button({ children, variant = 'default', size = 'default', onClick, className = '' }: {
@@ -91,7 +92,8 @@ function Modal({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => 
 }
 
 export function Operators() {
-  const { userType, clientContext, user } = useAuthContext()
+  const { userType, accountContext, user } = useAuthContext()
+  const { toast } = useToast()
   const { 
     operators, 
     isLoading, 
@@ -101,26 +103,26 @@ export function Operators() {
     createOperator,
     error,
     clearError 
-  } = useOperators()
+  } = useSimpleOperators()
   
   const [searchTerm, setSearchTerm] = useState('')
   const [showInactive, setShowInactive] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [operatorToDelete, setOperatorToDelete] = useState<Operator | null>(null)
+  const [operatorToDelete, setOperatorToDelete] = useState<SimpleOperator | undefined>(undefined)
   const [showForm, setShowForm] = useState(false)
-  const [editingOperator, setEditingOperator] = useState<Operator | null>(null)
+  const [editingOperator, setEditingOperator] = useState<SimpleOperator | undefined>(undefined)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Filtrar operadores baseado no contexto do cliente
+  // Filtrar operadores baseado no contexto da conta
   const filteredOperators = operators.filter(operator => {
     // Para admin: vê todos os operadores
     if (userType === 'admin') {
       return true
     }
     
-    // Para supervisor: vê apenas operadores do seu cliente
-    const currentClientId = clientContext || user?.clientId
-    if (!currentClientId || operator.clientId !== currentClientId) {
+    // Para supervisor: vê apenas operadores de sua conta
+    const currentAccountId = accountContext || user?.account_id
+    if (!currentAccountId || operator.account_id !== currentAccountId) {
       return false
     }
     
@@ -132,66 +134,139 @@ export function Operators() {
       (operator.email && operator.email.toLowerCase().includes(searchTerm.toLowerCase()))
     
     // Filtro de status
-    const matchesStatus = showInactive || operator.active
+    const matchesStatus = showInactive || operator.status === 'active'
     
     return matchesSearch && matchesStatus
   })
 
-  const handleDeleteOperator = async (operator: Operator) => {
+  const handleDeleteOperator = async (operator: SimpleOperator) => {
     try {
+      toast({
+        title: 'Excluindo operador...',
+        description: `Removendo ${operator.name}`,
+        variant: 'default'
+      })
+      
       await deleteOperator(operator.id)
       setShowDeleteDialog(false)
-      setOperatorToDelete(null)
+      setOperatorToDelete(undefined)
+      
+      toast({
+        title: 'Operador excluído!',
+        description: `${operator.name} foi removido com sucesso`,
+        variant: 'success'
+      })
     } catch (error) {
       console.error('Erro ao excluir operador:', error)
+      toast({
+        title: 'Erro ao excluir operador',
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: 'destructive'
+      })
     }
   }
 
-  const handleToggleStatus = async (operator: Operator) => {
+  const handleToggleStatus = async (operator: SimpleOperator) => {
     try {
-      await updateOperator(operator.id, { active: !operator.active })
+      const newStatus = operator.status === 'active' ? 'inactive' : 'active'
+      toast({
+        title: `${newStatus === 'active' ? 'Ativando' : 'Desativando'} operador...`,
+        description: `Alterando status de ${operator.name}`,
+        variant: 'default'
+      })
+      
+      await updateOperator(operator.id, { status: newStatus })
+      
+      toast({
+        title: 'Status atualizado!',
+        description: `${operator.name} foi ${newStatus === 'active' ? 'ativado' : 'desativado'} com sucesso`,
+        variant: 'success'
+      })
     } catch (error) {
       console.error('Erro ao alterar status do operador:', error)
+      toast({
+        title: 'Erro ao alterar status',
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: 'destructive'
+      })
     }
   }
 
   const handleCreateOperator = () => {
-    setEditingOperator(null)
+    setEditingOperator(undefined)
     setShowForm(true)
   }
 
-  const handleEditOperator = (operator: Operator) => {
+  const handleEditOperator = (operator: SimpleOperator) => {
     setEditingOperator(operator)
     setShowForm(true)
   }
 
-  const handleFormSubmit = async (data: CreateOperatorData) => {
+  const handleFormSubmit = async (data: CreateSimpleOperatorData) => {
+    console.log('🔥 handleFormSubmit iniciado com dados:', data)
     setIsSubmitting(true)
+    
     try {
       if (editingOperator) {
+        console.log('🔄 Editando operador existente')
+        toast({
+          title: 'Atualizando operador...',
+          description: 'Salvando alterações',
+          variant: 'default'
+        })
+        
         await updateOperator(editingOperator.id, data)
+        setShowForm(false)
+        setEditingOperator(undefined)
+        
+        toast({
+          title: 'Operador atualizado!',
+          description: 'As informações foram salvas com sucesso',
+          variant: 'success'
+        })
       } else {
+        console.log('🆕 Criando novo operador simples')
+        toast({
+          title: 'Criando operador...',
+          description: 'Salvando dados do operador',
+          variant: 'default'
+        })
+        
         await createOperator(data)
+        console.log('✅ Operador criado com sucesso')
+        
+        setShowForm(false)
+        setEditingOperator(undefined)
+        
+        toast({
+          title: 'Operador criado!',
+          description: 'Operador adicionado com sucesso',
+          variant: 'success'
+        })
       }
-      setShowForm(false)
-      setEditingOperator(null)
     } catch (error) {
-      console.error('Erro ao salvar operador:', error)
+      console.error('❌ Erro ao salvar operador:', error)
+      toast({
+        title: 'Erro ao salvar operador',
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: 'destructive'
+      })
       throw error
     } finally {
+      console.log('🏁 handleFormSubmit finalizado')
       setIsSubmitting(false)
     }
   }
 
   const handleFormCancel = () => {
     setShowForm(false)
-    setEditingOperator(null)
+    setEditingOperator(undefined)
   }
 
   const stats = {
     total: filteredOperators.length,
-    active: filteredOperators.filter(o => o.active).length,
-    inactive: filteredOperators.filter(o => !o.active).length
+    active: filteredOperators.filter(o => o.status === 'active').length,
+    inactive: filteredOperators.filter(o => o.status === 'inactive').length
   }
 
   return (
@@ -294,7 +369,7 @@ export function Operators() {
       <Card>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Operador
@@ -309,7 +384,7 @@ export function Operators() {
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Último Login
+                  Criado em
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Ações
@@ -326,10 +401,7 @@ export function Operators() {
               ) : filteredOperators.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                    {searchTerm || !showInactive 
-                      ? 'Nenhum operador encontrado com os filtros aplicados'
-                      : 'Nenhum operador cadastrado'
-                    }
+                    Nenhum operador encontrado
                   </td>
                 </tr>
               ) : (
@@ -338,27 +410,21 @@ export function Operators() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
-                          {operator.avatar ? (
-                            <img 
-                              className="h-10 w-10 rounded-full object-cover" 
-                              src={operator.avatar} 
-                              alt={operator.name}
-                            />
-                          ) : (
-                            <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                              <span className="text-sm font-medium text-gray-700">
-                                {operator.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          )}
+                          <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                            <span className="text-sm font-medium text-gray-700">
+                              {operator.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
                             {operator.name}
                           </div>
-                          <div className="text-sm text-gray-500">
-                            ID: {operator.id}
-                          </div>
+                          {operator.email && (
+                            <div className="text-sm text-gray-500">
+                              {operator.email}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -368,43 +434,36 @@ export function Operators() {
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div>
-                        {operator.email && (
-                          <div className="text-sm text-gray-900">{operator.email}</div>
-                        )}
-                        {operator.phone && (
-                          <div className="text-sm text-gray-500">{operator.phone}</div>
-                        )}
-                        {!operator.email && !operator.phone && (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </div>
+                      {operator.phone || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge variant={operator.active ? 'default' : 'secondary'}>
-                        {operator.active ? 'Ativo' : 'Inativo'}
+                      <Badge variant={operator.status === 'active' ? 'default' : 'secondary'}>
+                        {operator.status === 'active' ? 'Ativo' : 'Inativo'}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {operator.lastLogin ? formatDate(operator.lastLogin) : 'Nunca'}
+                      {formatDate(operator.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end gap-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleToggleStatus(operator)}
-                          className="text-blue-600 hover:text-blue-700"
+                          onClick={() => handleEditOperator(operator)}
                         >
-                          {operator.active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                          <Edit2 className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleEditOperator(operator)}
-                          className="text-green-600 hover:text-green-700"
+                          onClick={() => handleToggleStatus(operator)}
+                          className={operator.status === 'active' ? 'text-red-600' : 'text-green-600'}
                         >
-                          <Edit2 className="h-4 w-4" />
+                          {operator.status === 'active' ? (
+                            <UserX className="h-4 w-4" />
+                          ) : (
+                            <UserCheck className="h-4 w-4" />
+                          )}
                         </Button>
                         <Button
                           variant="outline"
@@ -413,7 +472,7 @@ export function Operators() {
                             setOperatorToDelete(operator)
                             setShowDeleteDialog(true)
                           }}
-                          className="text-red-600 hover:text-red-700"
+                          className="text-red-600"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -429,8 +488,8 @@ export function Operators() {
 
       {/* Form Modal */}
       <Modal isOpen={showForm} onClose={handleFormCancel}>
-        <OperatorForm
-          operator={editingOperator || undefined}
+        <SimpleOperatorForm
+          operator={editingOperator}
           onSubmit={handleFormSubmit}
           onCancel={handleFormCancel}
           isLoading={isSubmitting}
@@ -440,17 +499,16 @@ export function Operators() {
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={showDeleteDialog}
+        title="Confirmar exclusão"
+        message={`Tem certeza que deseja excluir o operador "${operatorToDelete?.name}"?`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
         onConfirm={() => operatorToDelete && handleDeleteOperator(operatorToDelete)}
         onCancel={() => {
           setShowDeleteDialog(false)
-          setOperatorToDelete(null)
+          setOperatorToDelete(undefined)
         }}
-        title="Excluir Operador"
-        message={`Tem certeza que deseja excluir o operador "${operatorToDelete?.name}"? Esta ação não pode ser desfeita.`}
-        confirmText="Excluir"
-        cancelText="Cancelar"
         isLoading={isDeleting}
-        variant="danger"
       />
     </div>
   )

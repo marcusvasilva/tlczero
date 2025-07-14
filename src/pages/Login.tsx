@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, Link } from 'react-router-dom'
 import { Eye, EyeOff, LogIn, AlertCircle, CheckCircle } from 'lucide-react'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useForm } from '@/hooks'
@@ -8,7 +8,6 @@ import type { LoginCredentials } from '@/types'
 export function Login() {
   const { isAuthenticated, login, error, clearError, isLoading } = useAuthContext()
   const [showPassword, setShowPassword] = useState(false)
-  const [showCredentials, setShowCredentials] = useState(false)
 
   const {
     values,
@@ -73,92 +72,27 @@ export function Login() {
     }
   }
 
-  const fillDemoCredentials = (role: 'admin' | 'supervisor' | 'operador') => {
-    const credentials = {
-      admin: { email: 'admin@tlczero.com.br', password: 'admin123' },
-      supervisor: { email: 'supervisor@tlczero.com.br', password: 'super123' },
-      operador: { email: 'operador@tlczero.com.br', password: 'oper123' }
-    }
 
-    const { email, password } = credentials[role]
-    
-    // Simular digitação
-    const emailInput = document.getElementById('email') as HTMLInputElement
-    const passwordInput = document.getElementById('password') as HTMLInputElement
-    
-    if (emailInput && passwordInput) {
-      emailInput.value = email
-      passwordInput.value = password
-      
-      // Disparar eventos para atualizar o estado do formulário
-      emailInput.dispatchEvent(new Event('input', { bubbles: true }))
-      passwordInput.dispatchEvent(new Event('input', { bubbles: true }))
-    }
-  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo e Título */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4 touch-target">
             <span className="text-2xl font-bold text-white">TLC</span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">TLC Zero</h1>
-          <p className="text-gray-600">Sistema de Controle de Pragas</p>
+          <h1 className="mobile-header text-gray-900 dark:text-white mb-2">TLC Zero</h1>
+          <p className="mobile-text text-gray-600 dark:text-gray-400">Sistema de Controle de Pragas</p>
         </div>
 
         {/* Card de Login */}
-        <div className="bg-white rounded-lg shadow-xl p-8">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl mobile-card">
+          <h2 className="mobile-subheader text-gray-900 dark:text-white mb-6 text-center">
             Entrar no Sistema
           </h2>
 
-          {/* Credenciais Demo */}
-          <div className="mb-6">
-            <button
-              type="button"
-              onClick={() => setShowCredentials(!showCredentials)}
-              className="w-full text-sm text-blue-600 hover:text-blue-800 underline"
-            >
-              {showCredentials ? 'Ocultar' : 'Ver'} credenciais de demonstração
-            </button>
-            
-            {showCredentials && (
-              <div className="mt-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <h4 className="font-medium text-blue-900 mb-2">Credenciais Demo:</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between items-center">
-                    <span className="text-blue-700">Admin:</span>
-                    <button
-                      onClick={() => fillDemoCredentials('admin')}
-                      className="text-blue-600 hover:text-blue-800 underline"
-                    >
-                      admin@tlczero.com.br / admin123
-                    </button>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-blue-700">Supervisor:</span>
-                    <button
-                      onClick={() => fillDemoCredentials('supervisor')}
-                      className="text-blue-600 hover:text-blue-800 underline"
-                    >
-                      supervisor@tlczero.com.br / super123
-                    </button>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-blue-700">Operador:</span>
-                    <button
-                      onClick={() => fillDemoCredentials('operador')}
-                      className="text-blue-600 hover:text-blue-800 underline"
-                    >
-                      operador@tlczero.com.br / oper123
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+
 
           {/* Formulário */}
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -272,8 +206,18 @@ export function Login() {
             </button>
           </form>
 
+          {/* Link para Registro */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Não tem uma conta?{' '}
+              <Link to="/register" className="text-green-600 hover:text-green-700 underline font-medium">
+                Criar conta
+              </Link>
+            </p>
+          </div>
+
           {/* Informações Adicionais */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
             <div className="text-center">
               <p className="text-xs text-gray-500 mb-2">
                 Sistema desenvolvido para controle de pragas

@@ -17,7 +17,7 @@ import {
   Zap
 } from 'lucide-react'
 import { useAuthContext } from '@/contexts/AuthContext'
-import { useClientCollections } from '@/hooks/useCollections'
+import { useCollections } from '@/hooks/useCollections'
 import { useClientSpaces } from '@/hooks/useSpaces'
 import { useClients } from '@/hooks/useClients'
 import { formatDate, formatWeight } from '@/lib/formatters'
@@ -56,7 +56,7 @@ const Badge = ({ children, variant = 'default' }: any) => (
 
 export default function Reports() {
   const { userType, clientContext, user } = useAuthContext()
-  const { collections } = useClientCollections()
+  const { collections } = useCollections()
   const { spaces } = useClientSpaces()
   const { clients } = useClients()
   
@@ -695,7 +695,7 @@ export default function Reports() {
                          {space.name}
                        </div>
                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                         QR: {space.qrCode}
+                         ID: {space.id}
                        </div>
                      </td>
                      <td className="px-6 py-4 whitespace-nowrap">

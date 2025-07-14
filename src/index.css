@@ -85,3 +85,260 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  /* Utilitários para responsividade mobile */
+  .mobile-container {
+    @apply px-2 sm:px-4 lg:px-6 py-2 sm:py-4 lg:py-6;
+  }
+  
+  .mobile-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6;
+  }
+  
+  .mobile-text {
+    @apply text-sm sm:text-base leading-relaxed;
+  }
+  
+  .mobile-button {
+    @apply px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base font-medium rounded-lg transition-colors;
+  }
+  
+  .mobile-card {
+    @apply p-4 sm:p-6 rounded-lg border transition-shadow;
+  }
+  
+  .mobile-table {
+    @apply overflow-x-auto;
+  }
+  
+  .mobile-table table {
+    @apply min-w-full;
+  }
+  
+  .mobile-header {
+    @apply text-xl sm:text-2xl lg:text-3xl font-bold leading-tight;
+  }
+  
+  .mobile-subheader {
+    @apply text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed;
+  }
+  
+  /* Melhorias para touch targets */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
+  }
+  
+  /* Espaçamento responsivo */
+  .responsive-spacing {
+    @apply space-y-4 sm:space-y-6 lg:space-y-8;
+  }
+  
+  /* Flex responsivo */
+  .responsive-flex {
+    @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4;
+  }
+  
+  /* Container responsivo */
+  .responsive-container {
+    @apply max-w-7xl mx-auto px-2 sm:px-4 lg:px-6;
+  }
+
+  /* Melhorias específicas para cards */
+  .card-header {
+    @apply flex items-center justify-between mb-3 gap-2;
+  }
+
+  .card-header-content {
+    @apply flex items-center gap-2 flex-1 min-w-0 overflow-hidden;
+  }
+
+  .card-header-badge {
+    @apply flex-shrink-0 max-w-[80px] sm:max-w-none;
+  }
+
+  .card-content {
+    @apply space-y-2 text-sm text-gray-600 dark:text-gray-300 mb-4;
+  }
+
+  .card-actions {
+    @apply flex gap-2 justify-end flex-wrap;
+  }
+
+  /* Badges responsivos */
+  .badge-responsive {
+    @apply inline-flex items-center px-2 py-1 text-xs font-medium rounded-full flex-shrink-0 whitespace-nowrap;
+  }
+
+  .badge-status {
+    @apply inline-flex items-center px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap;
+    max-width: 60px;
+  }
+
+  @media (min-width: 640px) {
+    .badge-status {
+      max-width: none;
+    }
+  }
+
+  /* Fix para overflow de badges */
+  .badge-container {
+    @apply flex items-center gap-1 flex-wrap;
+  }
+
+  .badge-no-wrap {
+    @apply whitespace-nowrap flex-shrink-0;
+  }
+
+  /* Container de card com overflow controlado */
+  .card-container {
+    @apply border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow bg-white dark:bg-gray-700 overflow-hidden;
+  }
+
+  .card-title {
+    @apply font-semibold text-gray-900 dark:text-white truncate mobile-text flex-1 min-w-0;
+  }
+
+  /* Inputs responsivos */
+  .input-responsive {
+    @apply w-full px-3 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white;
+  }
+
+  /* Sidebar mobile específico */
+  .sidebar-mobile-logo {
+    @apply flex items-center gap-2 flex-1 min-w-0;
+  }
+
+  .sidebar-mobile-controls {
+    @apply flex items-center gap-2 flex-shrink-0;
+  }
+
+  /* Truncate text melhorado */
+  .truncate-multiline {
+    @apply overflow-hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  /* Animations */
+  .slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  .slide-out-right {
+    animation: slideOutRight 0.3s ease-in;
+  }
+
+  @keyframes slideOutRight {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+
+  /* Smooth transitions */
+  .transition-layout {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  /* Melhorias para grid responsivo */
+  .grid-responsive {
+    @apply grid grid-cols-1 gap-4;
+  }
+
+  @media (min-width: 640px) {
+    .grid-responsive {
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+  }
+
+  /* Melhorias para formulários mobile */
+  .form-mobile {
+    @apply space-y-4 sm:space-y-6;
+  }
+
+  .form-mobile .form-group {
+    @apply space-y-2;
+  }
+
+  .form-mobile label {
+    @apply text-sm sm:text-base font-medium text-gray-700 dark:text-gray-300;
+  }
+
+  .form-mobile input,
+  .form-mobile textarea,
+  .form-mobile select {
+    @apply w-full px-3 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm sm:text-base;
+  }
+
+  /* Melhorias para tabelas responsivas */
+  .table-responsive {
+    @apply w-full overflow-x-auto;
+  }
+
+  .table-responsive table {
+    @apply min-w-full divide-y divide-gray-200 dark:divide-gray-700;
+  }
+
+  .table-responsive th,
+  .table-responsive td {
+    @apply px-2 sm:px-4 py-2 sm:py-3 text-sm sm:text-base;
+  }
+
+  /* Estados de loading mobile */
+  .loading-mobile {
+    @apply flex items-center justify-center py-8 sm:py-12;
+  }
+
+  .loading-mobile .spinner {
+    @apply h-6 w-6 sm:h-8 sm:w-8 animate-spin;
+  }
+
+  /* Melhorias para overlay mobile */
+  .overlay-mobile {
+    @apply fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50;
+  }
+
+  .modal-mobile {
+    @apply fixed inset-x-2 sm:inset-x-4 top-2 sm:top-4 bottom-2 sm:bottom-4 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-50 overflow-y-auto;
+  }
+
+  @media (min-width: 640px) {
+    .modal-mobile {
+      @apply inset-x-auto inset-y-auto left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg max-h-[90vh];
+    }
+  }
+
+  /* Estados hover melhorados para mobile */
+  @media (hover: hover) {
+    .hover-effect:hover {
+      @apply transform scale-105 transition-transform duration-200;
+    }
+  }
+
+  /* Melhorias para acessibilidade */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800;
+  }
+
+  .sr-only {
+    @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+    clip: rect(0, 0, 0, 0);
+  }
+}

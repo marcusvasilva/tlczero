@@ -9,7 +9,7 @@ import {
 } from '@/lib/serviceWorker'
 import { useCollections } from './useCollections'
 import { generateId } from '@/lib/generators'
-import { useAuth } from './useAuth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 
 interface UseOfflineSyncOptions {
@@ -24,7 +24,7 @@ export function useOfflineSync(options: UseOfflineSyncOptions = {}) {
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
   const [pendingItems, setPendingItems] = useState<PendingCollection[]>([])
   const { createCollection } = useCollections()
-  const { user } = useAuth()
+  const { user } = useAuthContext()
   const { toast } = useToast()
 
   // Atualizar estado de conexão
@@ -105,12 +105,11 @@ export function useOfflineSync(options: UseOfflineSyncOptions = {}) {
         try {
           // Converter para o formato esperado pela API
           const collectionData = {
-            clientId: collection.clientId || "",
             spaceId: collection.spaceId,
             operatorId: collection.operatorId || user?.id || '',
+            clientId: '', // Será preenchido pelo hook
             weight: collection.weight,
-            photoUrl: collection.photo,
-            observations: collection.notes,
+            observations: collection.notes || '',
             collectedAt: new Date(collection.createdAt)
           }
           
