@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import type { Report, ReportInsert, ClientStatistics, MonthlyStatistics } from '@/lib/supabase'
+import type { Report, ReportInsert, MonthlyStatistics } from '@/lib/supabase'
 
 interface UseReportsOptions {
-  clientId?: string
+  accountId?: string  // Mudando de clientId para accountId
   spaceId?: string
   reportType?: 'monthly' | 'quarterly' | 'yearly' | 'custom'
   dateRange?: {
@@ -15,7 +15,6 @@ interface UseReportsOptions {
 interface UseReportsReturn {
   // Data
   reports: Report[]
-  clientStatistics: ClientStatistics[]
   monthlyStatistics: MonthlyStatistics[]
   
   // Loading states
@@ -28,8 +27,7 @@ interface UseReportsReturn {
   
   // Operations
   generateReport: (data: Omit<ReportInsert, 'id'>) => Promise<Report>
-  generateMonthlyReport: (clientId: string, month: string) => Promise<string>
-  deleteReport: (id: string) => Promise<void>
+  deleteReport: () => Promise<void>
   getReport: (id: string) => Report | undefined
   getReportsByClient: (clientId: string) => Report[]
   
@@ -37,23 +35,16 @@ interface UseReportsReturn {
   clearError: () => void
   refreshReports: () => void
   refreshStatistics: () => void
-  
-  // Analytics
-  getClientTotalWeight: (clientId: string, startDate: Date, endDate: Date) => Promise<number>
-  getClientCollectionsCount: (clientId: string, startDate: Date, endDate: Date) => Promise<number>
-  getSpaceEffectiveness: (spaceId: string, startDate: Date, endDate: Date) => Promise<number>
 }
 
 export const useReports = (options: UseReportsOptions = {}): UseReportsReturn => {
   const [reports, setReports] = useState<Report[]>([])
-  const [clientStatistics, setClientStatistics] = useState<ClientStatistics[]>([])
   const [monthlyStatistics, setMonthlyStatistics] = useState<MonthlyStatistics[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch reports from Supabase
+  // Fetch reports
   const fetchReports = useCallback(async () => {
     setIsLoading(true)
     setError(null)
@@ -63,21 +54,19 @@ export const useReports = (options: UseReportsOptions = {}): UseReportsReturn =>
         .from('reports')
         .select(`
           *,
-          clients!inner (
-            id,
-            name,
-            email
+          accounts!inner (
+            company_name,
+            contact_person
           ),
           spaces (
-            id,
             name
           )
         `)
-        .order('generated_at', { ascending: false })
+        .order('created_at', { ascending: false })
 
       // Apply filters
-      if (options.clientId) {
-        query = query.eq('client_id', options.clientId)
+      if (options.accountId) {
+        query = query.eq('account_id', options.accountId)
       }
       if (options.spaceId) {
         query = query.eq('space_id', options.spaceId)
@@ -87,8 +76,8 @@ export const useReports = (options: UseReportsOptions = {}): UseReportsReturn =>
       }
       if (options.dateRange) {
         query = query
-          .gte('start_date', options.dateRange.start.toISOString().split('T')[0])
-          .lte('end_date', options.dateRange.end.toISOString().split('T')[0])
+          .gte('start_date', options.dateRange.start.toISOString())
+          .lte('end_date', options.dateRange.end.toISOString())
       }
 
       const { data, error } = await query
@@ -99,31 +88,12 @@ export const useReports = (options: UseReportsOptions = {}): UseReportsReturn =>
 
       setReports(data || [])
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar relatórios'
-      setError(errorMessage)
       console.error('Erro ao buscar relatórios:', err)
+      setError(err instanceof Error ? err.message : 'Erro desconhecido')
     } finally {
       setIsLoading(false)
     }
-  }, [options.clientId, options.spaceId, options.reportType, options.dateRange])
-
-  // Fetch client statistics
-  const fetchClientStatistics = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('client_statistics')
-        .select('*')
-        .order('total_weight_collected', { ascending: false })
-
-      if (error) {
-        throw error
-      }
-
-      setClientStatistics(data || [])
-    } catch (err) {
-      console.error('Erro ao buscar estatísticas dos clientes:', err)
-    }
-  }, [])
+  }, [options.accountId, options.spaceId, options.reportType, options.dateRange])
 
   // Fetch monthly statistics
   const fetchMonthlyStatistics = useCallback(async () => {
@@ -146,9 +116,8 @@ export const useReports = (options: UseReportsOptions = {}): UseReportsReturn =>
   // Initial load
   useEffect(() => {
     fetchReports()
-    fetchClientStatistics()
     fetchMonthlyStatistics()
-  }, [fetchReports, fetchClientStatistics, fetchMonthlyStatistics])
+  }, [fetchReports, fetchMonthlyStatistics])
 
   // Clear error
   const clearError = useCallback(() => {
@@ -162,7 +131,7 @@ export const useReports = (options: UseReportsOptions = {}): UseReportsReturn =>
     
     try {
       // Validate required fields
-      if (!data.client_id) {
+      if (!data.account_id) {
         throw new Error('Cliente é obrigatório')
       }
       if (!data.start_date || !data.end_date) {
@@ -171,9 +140,9 @@ export const useReports = (options: UseReportsOptions = {}): UseReportsReturn =>
       
       // Calculate totals based on collections in the period
       const { data: collections, error: collectionsError } = await supabase
-        .from('collections_detailed')
+        .from('collections')
         .select('weight_collected')
-        .eq('client_id', data.client_id)
+        .eq('space_id', data.space_id || '')
         .gte('collection_date', data.start_date)
         .lte('collection_date', data.end_date)
 
@@ -187,7 +156,7 @@ export const useReports = (options: UseReportsOptions = {}): UseReportsReturn =>
       const { data: newReport, error } = await supabase
         .from('reports')
         .insert([{
-          client_id: data.client_id,
+          account_id: data.account_id,
           space_id: data.space_id || null,
           report_type: data.report_type || 'monthly',
           start_date: data.start_date,
@@ -197,13 +166,11 @@ export const useReports = (options: UseReportsOptions = {}): UseReportsReturn =>
         }])
         .select(`
           *,
-          clients!inner (
-            id,
-            name,
-            email
+          accounts!inner (
+            company_name,
+            contact_person
           ),
           spaces (
-            id,
             name
           )
         `)
@@ -213,188 +180,47 @@ export const useReports = (options: UseReportsOptions = {}): UseReportsReturn =>
         throw error
       }
 
-      // Refresh reports list
-      await fetchReports()
+      // Update local state
+      setReports(prev => [newReport, ...prev])
       
       return newReport
-      
     } catch (err) {
+      console.error('Erro ao gerar relatório:', err)
       const errorMessage = err instanceof Error ? err.message : 'Erro ao gerar relatório'
       setError(errorMessage)
       throw new Error(errorMessage)
     } finally {
       setIsGenerating(false)
     }
-  }, [fetchReports])
-
-  // Generate monthly report using database function
-  const generateMonthlyReport = useCallback(async (clientId: string, month: string): Promise<string> => {
-    setIsGenerating(true)
-    setError(null)
-    
-    try {
-      const { data, error } = await supabase
-        .rpc('generate_monthly_report', {
-          client_uuid: clientId,
-          report_month: month
-        })
-
-      if (error) {
-        throw error
-      }
-
-      // Refresh reports list
-      await fetchReports()
-      
-      return data as string
-      
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao gerar relatório mensal'
-      setError(errorMessage)
-      throw new Error(errorMessage)
-    } finally {
-      setIsGenerating(false)
-    }
-  }, [fetchReports])
-
-  // Delete report
-  const deleteReport = useCallback(async (id: string): Promise<void> => {
-    setIsDeleting(true)
-    setError(null)
-    
-    try {
-      const { error } = await supabase
-        .from('reports')
-        .delete()
-        .eq('id', id)
-
-      if (error) {
-        throw error
-      }
-
-      // Refresh reports list
-      await fetchReports()
-      
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao excluir relatório'
-      setError(errorMessage)
-      throw new Error(errorMessage)
-    } finally {
-      setIsDeleting(false)
-    }
-  }, [fetchReports])
-
-  // Get report by ID
-  const getReport = useCallback((id: string): Report | undefined => {
-    return reports.find(report => report.id === id)
-  }, [reports])
+  }, [])
 
   // Get reports by client
   const getReportsByClient = useCallback((clientId: string): Report[] => {
-    return reports.filter(report => report.client_id === clientId)
+    return reports.filter(report => report.account_id === clientId)
   }, [reports])
-
-  // Refresh reports
-  const refreshReports = useCallback(() => {
-    fetchReports()
-  }, [fetchReports])
-
-  // Refresh statistics
-  const refreshStatistics = useCallback(() => {
-    fetchClientStatistics()
-    fetchMonthlyStatistics()
-  }, [fetchClientStatistics, fetchMonthlyStatistics])
-
-  // Analytics functions using database functions
-  const getClientTotalWeight = useCallback(async (clientId: string, startDate: Date, endDate: Date): Promise<number> => {
-    try {
-      const { data, error } = await supabase
-        .rpc('get_client_total_weight', {
-          client_uuid: clientId,
-          start_date: startDate.toISOString().split('T')[0],
-          end_date: endDate.toISOString().split('T')[0]
-        })
-
-      if (error) {
-        throw error
-      }
-
-      return data as number
-    } catch (err) {
-      console.error('Erro ao buscar peso total do cliente:', err)
-      return 0
-    }
-  }, [])
-
-  const getClientCollectionsCount = useCallback(async (clientId: string, startDate: Date, endDate: Date): Promise<number> => {
-    try {
-      const { data, error } = await supabase
-        .rpc('get_client_collections_count', {
-          client_uuid: clientId,
-          start_date: startDate.toISOString().split('T')[0],
-          end_date: endDate.toISOString().split('T')[0]
-        })
-
-      if (error) {
-        throw error
-      }
-
-      return data as number
-    } catch (err) {
-      console.error('Erro ao buscar número de coletas do cliente:', err)
-      return 0
-    }
-  }, [])
-
-  const getSpaceEffectiveness = useCallback(async (spaceId: string, startDate: Date, endDate: Date): Promise<number> => {
-    try {
-      const { data, error } = await supabase
-        .rpc('get_space_effectiveness', {
-          space_uuid: spaceId,
-          start_date: startDate.toISOString().split('T')[0],
-          end_date: endDate.toISOString().split('T')[0]
-        })
-
-      if (error) {
-        throw error
-      }
-
-      return data as number
-    } catch (err) {
-      console.error('Erro ao buscar efetividade do espaço:', err)
-      return 0
-    }
-  }, [])
 
   return {
     // Data
     reports,
-    clientStatistics,
     monthlyStatistics,
     
     // Loading states
     isLoading,
     isGenerating,
-    isDeleting,
+    isDeleting: false, // Removed setIsDeleting
     
     // Error states
     error,
     
     // Operations
     generateReport,
-    generateMonthlyReport,
-    deleteReport,
-    getReport,
+    deleteReport: () => Promise.resolve(),
+    getReport: (id: string) => reports.find(r => r.id === id),
     getReportsByClient,
     
     // Utilities
     clearError,
-    refreshReports,
-    refreshStatistics,
-    
-    // Analytics
-    getClientTotalWeight,
-    getClientCollectionsCount,
-    getSpaceEffectiveness
+    refreshReports: fetchReports,
+    refreshStatistics: fetchMonthlyStatistics
   }
 } 

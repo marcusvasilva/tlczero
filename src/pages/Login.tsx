@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Navigate, Link } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { Eye, EyeOff, LogIn, AlertCircle, CheckCircle } from 'lucide-react'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useForm } from '@/hooks'

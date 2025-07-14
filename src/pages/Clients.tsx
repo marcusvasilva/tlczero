@@ -1,614 +1,148 @@
-import { useState, useMemo, useEffect } from 'react'
-import { useClients, usePagination } from '@/hooks'
-import { formatPhone, formatCNPJ, formatDateTime } from '@/lib/formatters'
-import { ClientForm } from '@/components/forms/ClientForm'
-import { ConfirmDialog } from '@/components/common/ConfirmDialog'
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  SortAsc, 
-  SortDesc, 
-  Users,
-  UserCheck,
-  UserX,
-  RefreshCw,
-  Download,
-  Edit2,
-  Trash2
-} from 'lucide-react'
-import type { Account } from '@/types'
-import { supabase } from '@/lib/supabase'
-import { useAuthContext } from '@/contexts/AuthContext'
-
-type SortField = 'company_name' | 'email' | 'created_at'
-type SortOrder = 'asc' | 'desc'
+import { useState } from 'react'
+import { Search, Building2, Users, MapPin } from 'lucide-react'
+import { useClients } from '@/hooks/useClients'
+import { formatPhone } from '@/lib/formatters'
 
 export function Clients() {
-  const { userType } = useAuthContext()
+  const { clients, isLoading } = useClients()
   
-  // Memoizar options para evitar loops de renderização
-  const clientOptions = useMemo(() => ({ filterActive: true }), [])
-  
-  const { 
-    filteredClients,
-    totalClients,
-    activeClients,
-    inactiveClients,
-    isLoading,
-    isCreating,
-    isUpdating,
-    isDeleting,
-    error,
-    createClient,
-    updateClient,
-    deleteClient,
-    searchClients,
-    sortClients,
-    clearError,
-    refreshClients
-  } = useClients(clientOptions)
-
   // Estados locais
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortField, setSortField] = useState<SortField>('company_name')
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
-  const [showActiveOnly, setShowActiveOnly] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [editingClient, setEditingClient] = useState<Account | null>(null)
-  const [deletingClient, setDeletingClient] = useState<Account | null>(null)
-  const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set())
+  
+  // Filtrar clientes
+  const filteredClients = clients.filter(client => 
+    client.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
+  )
 
-  // Paginação
-  const ITEMS_PER_PAGE = 10
-  const {
-    currentPage,
-    totalPages,
-    goToPage,
-    nextPage,
-    previousPage,
-    getVisibleItems
-  } = usePagination({
-    totalItems: filteredClients.length,
-    itemsPerPage: ITEMS_PER_PAGE
-  })
-
-  // Dados paginados
-  const paginatedClients = useMemo(() => {
-    return getVisibleItems(filteredClients)
-  }, [filteredClients, getVisibleItems])
-
-  // Handlers de busca e filtros
-  const handleSearch = (term: string) => {
-    setSearchTerm(term)
-    searchClients(term)
-    goToPage(1) // Volta para primeira página ao buscar
-  }
-
-  const handleSort = (field: SortField) => {
-    const newOrder = field === sortField && sortOrder === 'asc' ? 'desc' : 'asc'
-    setSortField(field)
-    setSortOrder(newOrder)
-    sortClients(field, newOrder)
-  }
-
-  const handleFilterToggle = () => {
-    setShowActiveOnly(!showActiveOnly)
-    // Aqui você implementaria o filtro no hook useClients
-  }
-
-  // Handlers de CRUD
-  const handleCreate = () => {
-    setEditingClient(null)
-    setShowForm(true)
-    clearError()
-  }
-
-  const handleEdit = (client: Account) => {
-    setEditingClient(client)
-    setShowForm(true)
-    clearError()
-  }
-
-  const handleDelete = (client: Account) => {
-    setDeletingClient(client)
-    setShowDeleteDialog(true)
-    clearError()
-  }
-
-  const handleSubmit = async (data: Partial<Account>) => {
-    try {
-      if (editingClient) {
-        await updateClient(editingClient.id, data)
-      } else {
-        await createClient(data as Omit<Account, "id" | "created_at" | "updated_at">)
-      }
-      setShowForm(false)
-      setEditingClient(null)
-    } catch (err) {
-      // Erro já está no estado do hook
-    }
-  }
-
-  const confirmDelete = async () => {
-    if (!deletingClient) return
-    
-    try {
-      await deleteClient(deletingClient.id)
-      setShowDeleteDialog(false)
-      setDeletingClient(null)
-    } catch (err) {
-      // Erro já está no estado do hook
-    }
-  }
-
-  const handleCancel = () => {
-    setShowForm(false)
-    setEditingClient(null)
-    setShowDeleteDialog(false)
-    setDeletingClient(null)
-    clearError()
-  }
-
-  // Seleção em massa
-  const handleSelectAll = () => {
-    if (selectedClients.size === paginatedClients.length) {
-      setSelectedClients(new Set())
-    } else {
-      setSelectedClients(new Set(paginatedClients.map(client => client.id)))
-    }
-  }
-
-  const handleSelectClient = (clientId: string) => {
-    const newSelected = new Set(selectedClients)
-    if (newSelected.has(clientId)) {
-      newSelected.delete(clientId)
-    } else {
-      newSelected.add(clientId)
-    }
-    setSelectedClients(newSelected)
-  }
-
-  // Exportar dados (placeholder)
-  const handleExport = () => {
-    // Implementar exportação CSV/Excel
-    console.log('Exportar clientes:', selectedClients.size > 0 ? selectedClients : 'todos')
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando clientes...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="responsive-spacing">
-      {/* Header */}
-      <div className="responsive-flex justify-between items-start">
-        <div className="min-w-0 flex-1">
-          <h1 className="mobile-header text-gray-900 dark:text-white">
-            Clientes
-          </h1>
-          <p className="mobile-text text-gray-600 dark:text-gray-300">
-            Gestão completa de clientes cadastrados no sistema
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 flex-shrink-0">
-          <button
-            onClick={handleExport}
-            className="mobile-button flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 touch-target"
-          >
-            <Download className="h-4 w-4" />
-            <span className="hidden sm:inline">Exportar</span>
-          </button>
-          <button
-            onClick={handleCreate}
-            className="mobile-button flex items-center gap-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 touch-target"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Novo Cliente</span>
-          </button>
-        </div>
+    <div className="p-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Clientes</h1>
+        <p className="text-gray-600">Gerencie os clientes do sistema</p>
       </div>
 
-      {/* DEBUG: Temporariamente removido para focar no problema das coletas */}
-
-      {/* Cards de estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+      {/* Estatísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <Users className="h-8 w-8 text-blue-600" />
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Building2 className="w-6 h-6 text-blue-600" />
             </div>
             <div className="ml-4">
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                Total de Clientes
-              </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {totalClients}
-              </div>
+              <p className="text-sm text-gray-600">Total de Clientes</p>
+              <p className="text-2xl font-bold text-gray-900">{clients.length}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <UserCheck className="h-8 w-8 text-green-600" />
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Users className="w-6 h-6 text-green-600" />
             </div>
             <div className="ml-4">
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                Clientes Ativos
-              </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {activeClients}
-              </div>
+              <p className="text-sm text-gray-600">Clientes Ativos</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {clients.filter(c => c.status === 'active').length}
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <UserX className="h-8 w-8 text-red-600" />
+            <div className="p-2 bg-yellow-100 rounded-lg">
+              <MapPin className="w-6 h-6 text-yellow-600" />
             </div>
             <div className="ml-4">
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                Clientes Inativos
-              </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {inactiveClients}
-              </div>
+              <p className="text-sm text-gray-600">Localidades</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {new Set(clients.map(c => c.city).filter(Boolean)).size}
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filtros e busca */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Busca */}
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar por nome, email, telefone ou CNPJ..."
-                value={searchTerm}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-            </div>
-          </div>
-
-          {/* Filtros */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleFilterToggle}
-              className={`flex items-center gap-2 px-3 py-2 text-sm rounded-md border ${
-                showActiveOnly
-                  ? 'bg-green-50 dark:bg-green-900 border-green-200 dark:border-green-700 text-green-700 dark:text-green-300'
-                  : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              <Filter className="h-4 w-4" />
-              {showActiveOnly ? 'Apenas Ativos' : 'Todos'}
-            </button>
-
-            <button
-              onClick={() => window.location.reload()}
-              className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Atualizar
-            </button>
-          </div>
+      {/* Busca */}
+      <div className="mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <input
+            type="text"
+            placeholder="Buscar clientes..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
         </div>
-
-        {/* Seleção em massa */}
-        {selectedClients.size > 0 && (
-          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900 rounded-md">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-blue-700 dark:text-blue-300">
-                {selectedClients.size} cliente(s) selecionado(s)
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleExport}
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
-                >
-                  Exportar Selecionados
-                </button>
-                <button
-                  onClick={() => setSelectedClients(new Set())}
-                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-                >
-                  Limpar Seleção
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Erro */}
-      {error && (
-        <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-md p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-            <button
-              onClick={clearError}
-              className="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200"
-            >
-              Fechar
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Tabela de clientes */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-        {isLoading ? (
-          <div className="p-8 text-center">
-            <RefreshCw className="h-8 w-8 animate-spin mx-auto text-gray-400" />
-            <p className="mt-2 text-gray-500 dark:text-gray-400">Carregando clientes...</p>
-          </div>
-        ) : paginatedClients.length === 0 ? (
-          <div className="p-8 text-center">
-            <Users className="h-12 w-12 mx-auto text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-              {searchTerm ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
-            </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {searchTerm 
-                ? `Nenhum resultado para "${searchTerm}"`
-                : 'Comece criando um novo cliente.'
-              }
-            </p>
-            {!searchTerm && (
-              <div className="mt-6">
-                <button
-                  onClick={handleCreate}
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Cliente
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <>
-            {/* Header da tabela */}
-            <div className="px-6 py-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={selectedClients.size === paginatedClients.length && paginatedClients.length > 0}
-                  onChange={handleSelectAll}
-                  className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                />
-                <div className="ml-6 grid grid-cols-12 gap-4 w-full">
-                  <div className="col-span-4">
-                    <button
-                      onClick={() => handleSort('company_name')}
-                      className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      Cliente
-                      {sortField === 'company_name' && (
-                        sortOrder === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />
-                      )}
-                    </button>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Telefone
-                    </span>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      CNPJ
-                    </span>
-                  </div>
-                  <div className="col-span-2">
-                    <button
-                      onClick={() => handleSort('created_at')}
-                      className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      Cadastrado
-                      {sortField === 'created_at' && (
-                        sortOrder === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />
-                      )}
-                    </button>
-                  </div>
-                  <div className="col-span-1">
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Status
-                    </span>
-                  </div>
-                  <div className="col-span-1">
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Ações
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Linhas da tabela */}
-            <div className="divide-y divide-gray-200 dark:divide-gray-700">
-              {paginatedClients.map((client) => (
-                <div key={client.id} className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700">
+      {/* Lista de clientes */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Empresa
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Contato
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Telefone
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {filteredClients.map((client) => (
+              <tr key={client.id}>
+                <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedClients.has(client.id)}
-                      onChange={() => handleSelectClient(client.id)}
-                      className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                    />
-                    <div className="ml-6 grid grid-cols-12 gap-4 w-full">
-                      {/* Cliente */}
-                      <div className="col-span-4">
-                        <div className="flex items-center">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {client.company_name}
-                            </div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              {client.email || 'Sem email'}
-                            </div>
-                                                          {client.contact_person && (
-                                <div className="text-xs text-gray-400 dark:text-gray-500">
-                                  Contato: {client.contact_person}
-                                </div>
-                              )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Telefone */}
-                      <div className="col-span-2">
-                        <div className="text-sm text-gray-900 dark:text-white">
-                          {client.phone ? formatPhone(client.phone) : '-'}
-                        </div>
-                      </div>
-
-                      {/* CNPJ */}
-                      <div className="col-span-2">
-                        <div className="text-sm text-gray-900 dark:text-white">
-                          {client.cnpj ? formatCNPJ(client.cnpj) : '-'}
-                        </div>
-                      </div>
-
-                      {/* Data de cadastro */}
-                      <div className="col-span-2">
-                        <div className="text-sm text-gray-900 dark:text-white">
-                          {client.created_at ? formatDateTime(client.created_at) : '-'}
-                        </div>
-                      </div>
-
-                      {/* Status */}
-                      <div className="col-span-1">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          client.status === 'active'
-                            ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
-                        }`}>
-                          {client.status === 'active' ? 'Ativo' : 'Inativo'}
-                        </span>
-                      </div>
-
-                      {/* Ações */}
-                      <div className="col-span-1">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleEdit(client)}
-                            className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-                            title="Editar cliente"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(client)}
-                            className="text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-                            title="Excluir cliente"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
+                    <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-3">
+                      <Building2 className="w-4 h-4 text-gray-600" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">{client.company_name}</div>
+                      <div className="text-sm text-gray-500">{client.email || 'Sem email'}</div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{client.contact_person}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">
+                    {client.phone ? formatPhone(client.phone) : '-'}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    client.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {client.status === 'active' ? 'Ativo' : 'Inativo'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-
-      {/* Paginação */}
-      {totalPages > 1 && (
-        <div className="bg-white dark:bg-gray-800 px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center text-sm text-gray-700 dark:text-gray-300">
-              <span>
-                Mostrando {(currentPage - 1) * ITEMS_PER_PAGE + 1} a{' '}
-                {Math.min(currentPage * ITEMS_PER_PAGE, filteredClients.length)} de{' '}
-                {filteredClients.length} resultados
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={previousPage}
-                disabled={currentPage === 1}
-                className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 dark:text-gray-300"
-              >
-                Anterior
-              </button>
-              
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const page = i + 1
-                  return (
-                    <button
-                      key={page}
-                      onClick={() => goToPage(page)}
-                      className={`px-3 py-1 text-sm rounded-md ${
-                        currentPage === page
-                          ? 'bg-green-600 text-white'
-                          : 'border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  )
-                })}
-                {totalPages > 5 && (
-                  <>
-                    <span className="px-2 text-gray-500">...</span>
-                    <button
-                      onClick={() => goToPage(totalPages)}
-                      className={`px-3 py-1 text-sm rounded-md ${
-                        currentPage === totalPages
-                          ? 'bg-green-600 text-white'
-                          : 'border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      {totalPages}
-                    </button>
-                  </>
-                )}
-              </div>
-
-              <button
-                onClick={nextPage}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 dark:text-gray-300"
-              >
-                Próximo
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Formulário de cliente */}
-      {showForm && (
-        <ClientForm
-          client={editingClient || undefined}
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-          isLoading={isCreating || isUpdating}
-        />
-      )}
-
-      {/* Diálogo de confirmação de exclusão */}
-      <ConfirmDialog
-        isOpen={showDeleteDialog}
-        title="Excluir Cliente"
-        message={`Tem certeza que deseja excluir o cliente "${deletingClient?.company_name}"? Esta ação marcará o cliente como inativo e não pode ser desfeita.`}
-        confirmText="Excluir"
-        cancelText="Cancelar"
-        onConfirm={confirmDelete}
-        onCancel={handleCancel}
-        isLoading={isDeleting}
-        variant="danger"
-      />
     </div>
   )
 } 

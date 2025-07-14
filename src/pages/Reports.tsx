@@ -55,7 +55,7 @@ const Badge = ({ children, variant = 'default' }: any) => (
 )
 
 export default function Reports() {
-  const { userType, clientContext, user } = useAuthContext()
+  const { userType, user } = useAuthContext()
   const { collections } = useCollections()
   const { spaces } = useClientSpaces()
   const { clients } = useClients()
@@ -66,9 +66,9 @@ export default function Reports() {
   // Obter cliente atual
   const currentClient = useMemo(() => {
     if (userType === 'admin') return null
-    const clientId = clientContext || user?.clientId
-    return clients.find(c => c.id === clientId)
-  }, [userType, clientContext, user?.clientId, clients])
+    const accountId = user?.account_id
+    return clients.find(c => c.id === accountId)
+  }, [userType, user?.account_id, clients])
 
   // Calcular datas do período
   const periodDates = useMemo(() => {
@@ -341,7 +341,7 @@ export default function Reports() {
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             {currentClient 
-              ? `Demonstrativo de performance do mata-moscas TLC - ${currentClient.name}`
+              ? `Demonstrativo de performance do mata-moscas TLC - ${currentClient.company_name}`
               : 'Relatórios consolidados de todos os clientes'
             }
           </p>

@@ -4,7 +4,7 @@ export * from './space'
 export * from './collection' 
 export * from './operator'  // Nova estrutura de users (inclui compatibilidade Operator)
 export * from './dashboard'
-// export * from './auth'
+export type { ProtectedRouteProps } from './auth'  // Exportando apenas ProtectedRouteProps para evitar conflito
 export * from './database' // Tipos da database
 
 // Common utility types

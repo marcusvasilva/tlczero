@@ -30,18 +30,15 @@ export type Updates<T extends keyof Database['public']['Tables']> = Database['pu
 
 // Tipos específicos das tabelas
 export type User = Tables<'users'>
-export type Client = Tables<'clients'>
-export type Operator = Tables<'operators'>
+export type Account = Tables<'accounts'>  // Mudando de Client para Account
 export type Space = Tables<'spaces'>
 export type Collection = Tables<'collections'>
 export type Report = Tables<'reports'>
 
 // Tipos para inserção
 export type UserInsert = Inserts<'users'>
-export type ClientInsert = Inserts<'clients'>
-export type ClientUpdate = Updates<'clients'>
-export type OperatorInsert = Inserts<'operators'>
-export type OperatorUpdate = Updates<'operators'>
+export type AccountInsert = Inserts<'accounts'>  // Mudando de Client para Account
+export type AccountUpdate = Updates<'accounts'>  // Mudando de Client para Account
 export type SpaceInsert = Inserts<'spaces'>
 export type SpaceUpdate = Updates<'spaces'>
 export type CollectionInsert = Inserts<'collections'>
@@ -50,12 +47,4 @@ export type ReportInsert = Inserts<'reports'>
 export type ReportUpdate = Updates<'reports'>
 
 // Views
-export type ClientStatistics = Database['public']['Views']['client_statistics']['Row']
-export type CollectionDetailed = Database['public']['Views']['collections_detailed']['Row']
-export type MonthlyStatistics = {
-  month: string | null
-  total_collections: number | null
-  total_weight: number | null
-  avg_weight: number | null
-  active_clients: number | null
-} 
+export type MonthlyStatistics = Database['public']['Views']['monthly_statistics']['Row'] 

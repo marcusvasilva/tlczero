@@ -66,6 +66,7 @@ export function Collect() {
     const mappedSpace: Space & { client?: Client } = {
       id: supabaseSpace.id,
       clientId: (supabaseSpace as any).client_id || '',
+      accountId: (supabaseSpace as any).account_id || '',  // Adicionando accountId
       name: supabaseSpace.name || '',
       description: supabaseSpace.description || undefined,
       areaSize: (supabaseSpace as any).area_size || undefined,
@@ -359,7 +360,7 @@ export function Collect() {
             <div className="flex items-center">
               <User className="h-4 w-4 text-gray-400 mr-2" />
               <span className="text-gray-600 dark:text-gray-300">
-                <strong>Cliente:</strong> {space?.client?.name}
+                <strong>Cliente:</strong> {(space?.client as any)?.company_name}
               </span>
             </div>
             

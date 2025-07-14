@@ -24,18 +24,19 @@ export const mapSupabaseAccountToLegacy = (supabaseAccount: Tables<'accounts'>):
 export const mapSupabaseUserToLegacy = (supabaseUser: Tables<'users'>): User => {
   console.log('🔄 Mapeando usuário do Supabase:', supabaseUser)
   
-  const mappedUser = {
+  const mappedUser: User = {
     id: supabaseUser.id,
     name: supabaseUser.name,
     email: supabaseUser.email,
-    phone: supabaseUser.phone || '',
-    cpf: supabaseUser.cpf || '',
+    phone: supabaseUser.phone,
+    cpf: supabaseUser.cpf,
     role: supabaseUser.role as 'admin' | 'supervisor' | 'operator',
     account_id: supabaseUser.account_id,
     supervisor_id: supabaseUser.supervisor_id,
     status: supabaseUser.status || 'active',
     created_at: supabaseUser.created_at,
-    updated_at: supabaseUser.updated_at
+    updated_at: supabaseUser.updated_at,
+    password_change_required: supabaseUser.password_change_required || false
   }
   
   console.log('📤 Usuário mapeado para frontend:', mappedUser)

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuthContext } from '@/contexts/AuthContext'
+import type { ProtectedRouteProps } from '@/types'
 import AuthEmergencyReset from './AuthEmergencyReset'
+
 // Função de permissões inline (substituindo import removido)
 const rolePermissions = {
   admin: [
@@ -19,18 +21,17 @@ const rolePermissions = {
     { resource: 'collections', actions: ['create', 'read', 'update'] },
     { resource: 'reports', actions: ['read'] }
   ],
-  operador: [
+  operator: [
     { resource: 'collections', actions: ['create', 'read'] },
     { resource: 'spaces', actions: ['read'] }
   ]
 }
 
-const hasPermission = (role: 'admin' | 'supervisor' | 'operador', resource: string, action: string): boolean => {
+const hasPermission = (role: 'admin' | 'supervisor' | 'operator', resource: string, action: string): boolean => {
   const permissions = rolePermissions[role]
   const resourcePermission = permissions.find(p => p.resource === resource)
   return resourcePermission?.actions.includes(action) ?? false
 }
-import type { ProtectedRouteProps } from '@/types'
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
@@ -137,7 +138,7 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
     return <>{fallback}</>
   }
 
-  const hasAccess = hasPermission(user.role, resource, action)
+  const hasAccess = hasPermission(user.role as 'admin' | 'supervisor' | 'operator', resource, action)
 
   return hasAccess ? <>{children}</> : <>{fallback}</>
 }
@@ -148,7 +149,7 @@ export const usePermissions = () => {
 
   const checkPermission = (resource: string, action: string): boolean => {
     if (!user) return false
-    return hasPermission(user.role, resource, action)
+    return hasPermission(user.role as 'admin' | 'supervisor' | 'operator', resource, action)
   }
 
   const canCreate = (resource: string) => checkPermission(resource, 'create')

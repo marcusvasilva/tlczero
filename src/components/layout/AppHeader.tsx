@@ -155,15 +155,7 @@ export function AppHeader() {
               className="flex items-center space-x-2 p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
             >
               <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-                {user?.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="w-8 h-8 rounded-full"
-                  />
-                ) : (
-                  <User className="h-4 w-4 text-white" />
-                )}
+                <User className="h-4 w-4 text-white" />
               </div>
               <div className="hidden sm:block text-left">
                 <div className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</div>

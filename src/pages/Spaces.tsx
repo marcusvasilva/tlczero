@@ -32,51 +32,32 @@ type FilterAttractive = 'all' | 'moscas' | 'outros'
 
 export function Spaces() {
   // Hooks de gerenciamento de estado
-  const {
-    filteredSpaces,
-    isLoading,
-    isCreating,
-    isUpdating,
-    isDeleting,
-    error,
-    createSpace,
-    updateSpace,
-    deleteSpace,
-    searchSpaces,
-    sortSpaces,
-    clearError,
-    totalSpaces,
-    activeSpaces,
-    // getSpacesByClient
+  const { 
+    spaces, 
+    isLoading, 
+    error, 
+    createSpace, 
+    updateSpace, 
+    deleteSpace, 
+    refreshSpaces 
   } = useSpaces()
 
   // Memoizar options para evitar loops de renderização
-  const clientOptions = useMemo(() => ({ filterActive: true }), [])
+  const spaceOptions = useMemo(() => ({ filterActive: true }), [])
   
-  const { 
-    filteredClients: clients, 
-    activeClients,
-    isLoading: clientsLoading,
-    error: clientsError
-  } = useClients(clientOptions)
-
   // Estados locais
   const [searchTerm, setSearchTerm] = useState('')
   const [sortField, setSortField] = useState<SortField>('name')
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
-  const [filterClient, setFilterClient] = useState<FilterClient>('all')
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
-  const [filterAttractive, setFilterAttractive] = useState<FilterAttractive>('all')
   const [showForm, setShowForm] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showQRDialog, setShowQRDialog] = useState(false)
   const [editingSpace, setEditingSpace] = useState<Space | null>(null)
   const [deletingSpace, setDeletingSpace] = useState<Space | null>(null)
   const [viewingQRSpace, setViewingQRSpace] = useState<Space | null>(null)
-  const [selectedSpaces, setSelectedSpaces] = useState<Set<string>>(new Set())
 
   // Paginação
-  const ITEMS_PER_PAGE = 12 // Grid de 3x4
+  const ITEMS_PER_PAGE = 10
   const {
     currentPage,
     totalPages,
@@ -85,35 +66,27 @@ export function Spaces() {
     previousPage,
     getVisibleItems
   } = usePagination({
-    totalItems: filteredSpaces.length,
+    totalItems: spaces.length,
     itemsPerPage: ITEMS_PER_PAGE
   })
 
-  // Mapa de clientes para lookup rápido
-  const clientsMap = useMemo(() => {
-    return clients.reduce((acc, client) => {
-      acc[client.id] = client
-      return acc
-    }, {} as Record<string, Client>)
-  }, [clients])
-
   // Dados paginados
   const paginatedSpaces = useMemo(() => {
-    return getVisibleItems(filteredSpaces)
-  }, [filteredSpaces, getVisibleItems])
+    return getVisibleItems(spaces)
+  }, [spaces, getVisibleItems])
 
   // Estatísticas por tipo de atrativo
   const attractiveStats = useMemo(() => {
     const stats = { moscas: 0, outros: 0 }
     // Assumindo que todos os espaços são para moscas por padrão
-    stats.moscas = filteredSpaces.length
+    stats.moscas = spaces.length
     return stats
-  }, [filteredSpaces])
+  }, [spaces])
 
   // Handlers de busca e filtros
   const handleSearch = (term: string) => {
     setSearchTerm(term)
-    searchSpaces(term)
+    refreshSpaces()
     goToPage(1)
   }
 
@@ -121,23 +94,20 @@ export function Spaces() {
     const newOrder = field === sortField && sortOrder === 'asc' ? 'desc' : 'asc'
     setSortField(field)
     setSortOrder(newOrder)
-    sortSpaces(field, newOrder)
+    refreshSpaces()
   }
 
-  const handleFilterClient = (clientId: FilterClient) => {
-    setFilterClient(clientId)
+  const handleFilterClient = (clientId: string) => {
     // Implementar filtro no hook se necessário
     goToPage(1)
   }
 
-  const handleFilterStatus = (status: FilterStatus) => {
-    setFilterStatus(status)
+  const handleFilterStatus = (status: string) => {
     // Implementar filtro no hook se necessário
     goToPage(1)
   }
 
-  const handleFilterAttractive = (type: FilterAttractive) => {
-    setFilterAttractive(type)
+  const handleFilterAttractive = (type: string) => {
     // Implementar filtro no hook se necessário
     goToPage(1)
   }
@@ -146,19 +116,16 @@ export function Spaces() {
   const handleCreate = () => {
     setEditingSpace(null)
     setShowForm(true)
-    clearError()
   }
 
   const handleEdit = (space: Space) => {
     setEditingSpace(space)
     setShowForm(true)
-    clearError()
   }
 
   const handleDelete = (space: Space) => {
     setDeletingSpace(space)
     setShowDeleteDialog(true)
-    clearError()
   }
 
   const handleViewQR = (space: Space) => {
@@ -199,7 +166,6 @@ export function Spaces() {
     setDeletingSpace(null)
     setShowQRDialog(false)
     setViewingQRSpace(null)
-    clearError()
   }
 
   // Seleção em massa
@@ -254,7 +220,7 @@ export function Spaces() {
           </button>
           <button
             onClick={handleCreate}
-            disabled={isCreating}
+            disabled={isLoading}
             className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-target mobile-button"
           >
             <Plus className="h-4 w-4" />
@@ -275,7 +241,7 @@ export function Spaces() {
                 Total de Espaços
               </div>
               <div className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
-                {totalSpaces || 0}
+                {spaces.length || 0}
               </div>
             </div>
           </div>
@@ -388,7 +354,7 @@ export function Spaces() {
             </div>
 
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => refreshSpaces()}
               className="flex items-center justify-center gap-2 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 touch-target mobile-button"
             >
               <RefreshCw className="h-4 w-4" />
@@ -430,7 +396,7 @@ export function Spaces() {
           <div className="flex items-center justify-between">
             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             <button
-              onClick={clearError}
+              onClick={() => refreshSpaces()}
               className="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200"
             >
               Fechar
@@ -628,8 +594,8 @@ export function Spaces() {
             <div className="flex items-center text-sm text-gray-700 dark:text-gray-300">
               <span>
                 Mostrando {(currentPage - 1) * ITEMS_PER_PAGE + 1} a{' '}
-                {Math.min(currentPage * ITEMS_PER_PAGE, filteredSpaces.length)} de{' '}
-                {filteredSpaces.length} resultados
+                {Math.min(currentPage * ITEMS_PER_PAGE, spaces.length)} de{' '}
+                {spaces.length} resultados
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -702,7 +668,7 @@ export function Spaces() {
           address: client.address || undefined,
           status: client.status
         }))}
-        isLoading={isCreating || isUpdating}
+        isLoading={isLoading}
       />
 
       {/* Diálogo de confirmação de exclusão */}
@@ -714,7 +680,7 @@ export function Spaces() {
         cancelText="Cancelar"
         onConfirm={confirmDelete}
         onCancel={handleCancel}
-        isLoading={isDeleting}
+        isLoading={isLoading}
         variant="danger"
       />
 

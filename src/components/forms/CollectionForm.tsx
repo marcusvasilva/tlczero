@@ -105,62 +105,10 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
     return accountContext || user?.account_id
   }, [accountContext, user?.account_id])
   
-  const filteredSpaces = useMemo(() => {
-    console.log('🎯 Filtrando espaços. AccountId:', targetAccountId, 'UserType:', userType)
-    console.log('🎯 Espaços recebidos:', spaces.map(s => ({ id: s.id, name: s.name, accountId: s.accountId, clientId: s.clientId })))
-    
-    if (userType === 'admin') {
-      console.log('✅ Admin: mostrando todos os espaços')
-      return spaces
-    }
-    
-    const filtered = spaces.filter(space => {
-      // Verificar ambas as propriedades para compatibilidade
-      const spaceAccountId = space.accountId || space.clientId
-      return spaceAccountId === targetAccountId
-    })
-    console.log(`📋 Espaços filtrados: ${filtered.length} de ${spaces.length}`)
-    console.log('📋 Espaços filtrados detalhes:', filtered.map(s => ({ id: s.id, name: s.name, accountId: s.accountId, clientId: s.clientId })))
-    return filtered
-  }, [spaces, userType, targetAccountId])
-
-  const filteredOperators = useMemo(() => {
-    console.log('🎯 Filtrando operadores. AccountId:', targetAccountId, 'UserType:', userType)
-    console.log('🎯 Operadores recebidos:', operators.map(o => ({ id: o.id, name: o.name, account_id: o.account_id, role: o.role })))
-    
-    if (userType === 'admin') {
-      console.log('✅ Admin: mostrando todos os operadores')
-      return operators
-    }
-    
-    const filtered = operators.filter(operator => operator.account_id === targetAccountId)
-    console.log(`📋 Operadores filtrados: ${filtered.length} de ${operators.length}`)
-    console.log('📋 Operadores filtrados detalhes:', filtered.map(o => ({ id: o.id, name: o.name, account_id: o.account_id, role: o.role })))
-    return filtered
-  }, [operators, userType, targetAccountId])
-
-  // Mapas para lookup rápido - memoizados
-  const spacesMap = useMemo(() => {
-    return filteredSpaces.reduce((acc, space) => {
-      acc[space.id] = space
-      return acc
-    }, {} as Record<string, Space>)
-  }, [filteredSpaces])
-
-  const clientsMap = useMemo(() => {
-    return clients.reduce((acc, client) => {
-      acc[client.id] = client
-      return acc
-    }, {} as Record<string, Client>)
-  }, [clients])
-
-  const selectedSpace = useMemo(() => {
-    return spacesMap[values.spaceId]
-  }, [spacesMap, values.spaceId])
-
-  const selectedOperator = useMemo(() => {
-    return filteredOperators.find(operator => operator.id === values.operatorId)
-  }, [filteredOperators, values.operatorId])
+  // Derived state
+  const selectedClient = clients.find(c => c.id === values.clientId)
+  const filteredSpaces = selectedClient ? spaces.filter(s => s.clientId === selectedClient.id) : []
+  const filteredOperators = selectedClient ? operators.filter(o => o.account_id === targetAccountId) : []
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault()

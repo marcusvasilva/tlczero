@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import type { ChangeEvent, FocusEvent } from 'react'
 
 export interface UseFormOptions<T> {
