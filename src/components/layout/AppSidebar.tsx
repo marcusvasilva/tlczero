@@ -5,14 +5,14 @@ import {
   LayoutDashboard,
   Users,
   Building2,
-  Bug,
   FileText,
   Settings,
   ChevronLeft,
   Menu,
   MapPin,
   Shield, // Novo ícone para gestão de usuários
-  X
+  X,
+  ClipboardList
 } from 'lucide-react'
 import { APP_CONFIG } from '@/lib/constants'
 import { useAuthContext } from '@/contexts/AuthContext'
@@ -90,7 +90,7 @@ const navigationItems: NavItem[] = [
   {
     title: 'Coletas',
     href: '/collections',
-    icon: Bug,
+    icon: ClipboardList,
     description: 'Registro de coletas',
     resource: 'collections',
     action: 'read'
@@ -196,7 +196,7 @@ export function AppSidebar() {
         {/* Logo - sempre mostrar em mobile, condicional em desktop */}
         {(!isCollapsed || isMobile) && (
           <div className="flex items-center gap-2 flex-1">
-            <Bug className="h-6 w-6 text-green-600 flex-shrink-0" />
+            <img src="/logo.svg" alt="TLC Zero" className="h-6 w-6 flex-shrink-0" />
             <div className="min-w-0">
               <h1 className="text-lg font-bold text-gray-900 dark:text-white truncate">
                 {APP_CONFIG.name}

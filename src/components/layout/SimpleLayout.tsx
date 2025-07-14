@@ -4,7 +4,7 @@ import {
   LayoutDashboard, 
   Users, 
   Building2, 
-  Bug, 
+  ClipboardList, 
   MapPin, 
   FileText,
   Menu,
@@ -18,7 +18,7 @@ const navigationItems = [
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { title: 'Clientes', href: '/clients', icon: Users },
   { title: 'Espaços', href: '/spaces', icon: Building2 },
-  { title: 'Coletas', href: '/collections', icon: Bug },
+  { title: 'Coletas', href: '/collections', icon: ClipboardList },
   { title: 'Operadores', href: '/operators', icon: MapPin },
   { title: 'Relatórios', href: '/reports', icon: FileText },
 ]
@@ -34,7 +34,7 @@ export function SimpleLayout() {
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200 pt-5 pb-4 overflow-y-auto">
           {/* Logo */}
           <div className="flex items-center flex-shrink-0 px-4">
-            <Bug className="h-8 w-8 text-green-600" />
+            <img src="/logo.svg" alt="TLC Zero" className="h-8 w-8" />
             <span className="ml-2 text-xl font-bold text-gray-900">TLC Zero</span>
           </div>
           
@@ -81,7 +81,7 @@ export function SimpleLayout() {
             
             <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
               <div className="flex items-center flex-shrink-0 px-4">
-                <Bug className="h-8 w-8 text-green-600" />
+                <img src="/logo.svg" alt="TLC Zero" className="h-8 w-8" />
                 <span className="ml-2 text-xl font-bold text-gray-900">TLC Zero</span>
               </div>
               
