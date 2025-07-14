@@ -11,7 +11,7 @@ import {
   ChevronLeft,
   Menu,
   MapPin,
-
+  Shield, // Novo ícone para gestão de usuários
   X
 } from 'lucide-react'
 import { APP_CONFIG } from '@/lib/constants'
@@ -105,6 +105,13 @@ const navigationItems: NavItem[] = [
     allowedRoles: ['admin', 'supervisor']
   },
   {
+    title: 'Gestão de Usuários',
+    href: '/user-management',
+    icon: Shield,
+    description: 'Gerenciar usuários e senhas',
+    allowedRoles: ['admin']
+  },
+  {
     title: 'Relatórios',
     href: '/reports',
     icon: FileText,
@@ -113,7 +120,6 @@ const navigationItems: NavItem[] = [
     action: 'read',
     allowedRoles: ['admin', 'supervisor']
   },
-
 ]
 
 export function AppSidebar() {

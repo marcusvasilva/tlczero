@@ -289,6 +289,7 @@ export type Database = {
           status: string | null
           supervisor_id: string | null
           updated_at: string | null
+          password_change_required: boolean | null
         }
         Insert: {
           account_id?: string | null
@@ -302,6 +303,7 @@ export type Database = {
           status?: string | null
           supervisor_id?: string | null
           updated_at?: string | null
+          password_change_required?: boolean | null
         }
         Update: {
           account_id?: string | null
@@ -315,6 +317,7 @@ export type Database = {
           status?: string | null
           supervisor_id?: string | null
           updated_at?: string | null
+          password_change_required?: boolean | null
         }
         Relationships: [
           {

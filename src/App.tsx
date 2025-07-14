@@ -16,6 +16,7 @@ import { Spaces } from './pages/Spaces'
 import { Collections } from './pages/Collections'
 import { Collect } from './pages/Collect'
 import { Operators } from './pages/Operators'
+import { UserManagement } from './pages/UserManagement'
 // Importações normais para todos os componentes
 import Dashboard from './pages/Dashboard'
 import Reports from './pages/Reports'
@@ -45,7 +46,13 @@ function App() {
           <Routes>
             {/* Rotas públicas */}
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            
+            {/* Rota de registro protegida - apenas admins */}
+            <Route path="/register" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Register />
+              </ProtectedRoute>
+            } />
             
             {/* Rotas protegidas com layout */}
             <Route path="/" element={
@@ -74,6 +81,13 @@ function App() {
               <Route path="operators" element={
                 <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
                   <Operators />
+                </ProtectedRoute>
+              } />
+              
+              {/* Gestão de Usuários - apenas admin */}
+              <Route path="user-management" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <UserManagement />
                 </ProtectedRoute>
               } />
               

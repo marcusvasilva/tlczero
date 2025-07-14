@@ -21,6 +21,7 @@ const pageTitles: Record<string, string> = {
   '/spaces': 'Espaços',
   '/collections': 'Coletas',
   '/operators': 'Operadores',
+  '/user-management': 'Gestão de Usuários',
   '/reports': 'Relatórios',
   '/settings': 'Configurações'
 }

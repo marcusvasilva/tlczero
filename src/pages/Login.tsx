@@ -3,7 +3,7 @@ import { Navigate, Link } from 'react-router-dom'
 import { Eye, EyeOff, LogIn, AlertCircle, CheckCircle } from 'lucide-react'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useForm } from '@/hooks'
-import type { LoginCredentials } from '@/types'
+import type { LoginCredentials } from '@/types/auth'
 
 export function Login() {
   const { isAuthenticated, login, error, clearError, isLoading } = useAuthContext()
@@ -206,13 +206,13 @@ export function Login() {
             </button>
           </form>
 
-          {/* Link para Registro */}
+          {/* Informação sobre credenciais */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Não tem uma conta?{' '}
-              <Link to="/register" className="text-green-600 hover:text-green-700 underline font-medium">
-                Criar conta
-              </Link>
+              Credenciais fornecidas pelo administrador do sistema
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+              Entre em contato com o suporte se não possui acesso
             </p>
           </div>
 

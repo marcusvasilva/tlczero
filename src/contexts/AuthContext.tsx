@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useRef 
 import type { AuthUser, AuthContextType, LoginCredentials, RegisterData } from '@/types/auth'
 import { supabase } from '@/lib/supabase'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
+import { PasswordChangeRequired } from '../components/auth/PasswordChangeRequired'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -14,6 +15,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [accountContext, setAccountContext] = useState<string | null>(null)
+  const [passwordChangeRequired, setPasswordChangeRequired] = useState(false)
+  const [tempUser, setTempUser] = useState<AuthUser | null>(null)
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
   
   // Referencias para controle de timeout e debug
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -86,6 +90,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           phone,
           cpf,
           status,
+          password_change_required,
           created_at,
           updated_at
         `)
@@ -112,6 +117,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         phone: dbUserData.phone,
         cpf: dbUserData.cpf,
         status: dbUserData.status,
+        password_change_required: dbUserData.password_change_required || false,
         created_at: dbUserData.created_at,
         updated_at: dbUserData.updated_at,
       }
@@ -287,7 +293,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           await supabase.auth.signOut()
           throw new Error('Conta desativada. Entre em contato com o administrador.')
         }
-        setUser(userData)
+        
+        // Verificar se o usuário precisa alterar a senha
+        if (userData.password_change_required) {
+          setTempUser(userData)
+          setPasswordChangeRequired(true)
+        } else {
+          setUser(userData)
+        }
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao fazer login'
@@ -438,6 +451,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
+  // Função para lidar com a mudança de senha bem-sucedida
+  const handlePasswordChanged = async () => {
+    if (!tempUser) return
+    
+    try {
+      setIsChangingPassword(true)
+      
+      // Atualizar o campo password_change_required para false
+      const { error } = await supabase
+        .from('users')
+        .update({ password_change_required: false })
+        .eq('id', tempUser.id)
+      
+      if (error) {
+        throw error
+      }
+      
+      // Atualizar o usuário e limpar estados temporários
+      const updatedUser = { ...tempUser, password_change_required: false }
+      setUser(updatedUser)
+      setTempUser(null)
+      setPasswordChangeRequired(false)
+      setError(null)
+      
+    } catch (err) {
+      console.error('Erro ao atualizar status de mudança de senha:', err)
+      setError('Erro ao finalizar mudança de senha. Tente novamente.')
+    } finally {
+      setIsChangingPassword(false)
+    }
+  }
+
+  // Função para lidar com erros na mudança de senha
+  const handlePasswordChangeError = (error: string) => {
+    setError(error)
+  }
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
@@ -453,7 +503,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setAccountContext,
   }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      {passwordChangeRequired && tempUser && (
+        <PasswordChangeRequired
+          user={tempUser}
+          onPasswordChanged={handlePasswordChanged}
+          onError={handlePasswordChangeError}
+          isLoading={isChangingPassword}
+        />
+      )}
+    </AuthContext.Provider>
+  )
 }
 
 export const useAuthContext = (): AuthContextType => {
