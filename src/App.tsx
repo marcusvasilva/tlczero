@@ -12,8 +12,8 @@ import { Register } from './pages/Register'
 
 // Importações não-lazy para componentes sem export default
 import { Clients } from './pages/Clients'
-import { Spaces } from './pages/Spaces'
-import { Collections } from './pages/Collections'
+import Spaces from './pages/Spaces'
+import Collections from './pages/Collections'
 import { Collect } from './pages/Collect'
 import { Operators } from './pages/Operators'
 import { UserManagement } from './pages/UserManagement'
