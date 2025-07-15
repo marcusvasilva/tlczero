@@ -1,72 +1,110 @@
-import { useEffect, useState } from 'react'
-import { Wifi, WifiOff } from 'lucide-react'
-import { useOfflineSync } from '@/hooks'
+import React from 'react'
+import { useConnectionNotifications } from '../../hooks/useConnectionMonitor'
+import { RefreshCw, Wifi, WifiOff, AlertTriangle } from 'lucide-react'
 
-export function ConnectionStatus() {
-  const { online, pendingItems, syncPending, isSyncing } = useOfflineSync()
-  const [showStatus, setShowStatus] = useState(false)
+export const ConnectionStatus: React.FC = () => {
+  const { status, isHealthy, shouldShowWarning } = useConnectionNotifications()
 
-  // Mostrar status quando estiver offline ou houver itens pendentes
-  useEffect(() => {
-    if (!online || pendingItems.length > 0) {
-      setShowStatus(true)
-    } else {
-      // Esconder após um tempo quando voltar online e não houver itens pendentes
-      const timer = setTimeout(() => {
-        setShowStatus(false)
-      }, 3000)
-      
-      return () => clearTimeout(timer)
+  // Não mostrar nada se a conexão estiver saudável
+  if (isHealthy) {
+    return null
+  }
+
+  // Não mostrar no primeiro check ou se não deve mostrar warning
+  if (!shouldShowWarning || !status.lastChecked) {
+    return null
+  }
+
+  const getStatusMessage = () => {
+    if (!status.isOnline) {
+      return 'Sem conexão com a internet'
     }
-  }, [online, pendingItems])
+    if (!status.isSupabaseConnected) {
+      return 'Problema de conexão com o servidor'
+    }
+    return 'Problemas de conectividade detectados'
+  }
 
-  if (!showStatus) return null
+  const getStatusIcon = () => {
+    if (!status.isOnline) {
+      return <WifiOff className="h-4 w-4" />
+    }
+    if (!status.isSupabaseConnected) {
+      return <AlertTriangle className="h-4 w-4" />
+    }
+    return <Wifi className="h-4 w-4" />
+  }
+
+  const handleRefresh = () => {
+    window.location.reload()
+  }
 
   return (
-    <div className={`fixed bottom-4 left-4 z-50 rounded-lg p-3 shadow-lg flex items-center gap-2 ${
-      online ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' : 
-      'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-    }`}>
-      {online ? (
-        <Wifi className="h-5 w-5 text-green-500 dark:text-green-400" />
-      ) : (
-        <WifiOff className="h-5 w-5 text-red-500 dark:text-red-400" />
-      )}
-      
-      <div className="text-sm">
-        {!online && (
-          <p className="font-medium text-red-700 dark:text-red-300">
-            Você está offline
-          </p>
-        )}
-        
-        {online && pendingItems.length > 0 && (
-          <div className="flex flex-col">
-            <p className="font-medium text-green-700 dark:text-green-300">
-              Online
-            </p>
-            <p className="text-xs text-green-600 dark:text-green-400">
-              {pendingItems.length} {pendingItems.length === 1 ? 'coleta pendente' : 'coletas pendentes'}
-            </p>
+    <div className="fixed top-4 right-4 z-50 max-w-md">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 shadow-lg dark:bg-red-900/20 dark:border-red-800">
+        <div className="flex items-center space-x-2">
+          {getStatusIcon()}
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <span className="text-red-800 dark:text-red-300 font-medium">
+                {getStatusMessage()}
+              </span>
+              <button
+                onClick={handleRefresh}
+                className="ml-2 bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-1 rounded flex items-center space-x-1"
+              >
+                <RefreshCw className="h-3 w-3" />
+                <span>Tentar novamente</span>
+              </button>
+            </div>
+            {status.consecutiveFailures > 0 && (
+              <div className="text-xs mt-1 text-red-600 dark:text-red-400 opacity-75">
+                {status.consecutiveFailures} tentativa(s) falharam
+              </div>
+            )}
           </div>
-        )}
-        
-        {online && pendingItems.length > 0 && !isSyncing && (
-          <button 
-            onClick={() => syncPending()}
-            className="mt-1 text-xs bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded"
-          >
-            Sincronizar agora
-          </button>
-        )}
-        
-        {isSyncing && (
-          <div className="flex items-center gap-1 mt-1">
-            <div className="animate-spin h-3 w-3 border-2 border-green-500 border-t-transparent rounded-full"></div>
-            <span className="text-xs text-green-600 dark:text-green-400">Sincronizando...</span>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   )
+}
+
+// Componente mais simples para mostrar apenas o status
+export const ConnectionIndicator: React.FC = () => {
+  const { status, isHealthy } = useConnectionNotifications()
+
+  if (isHealthy) {
+    return (
+      <div className="flex items-center space-x-1 text-green-600">
+        <Wifi className="h-4 w-4" />
+        <span className="text-xs">Online</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center space-x-1 text-red-600">
+      {!status.isOnline ? (
+        <WifiOff className="h-4 w-4" />
+      ) : (
+        <AlertTriangle className="h-4 w-4" />
+      )}
+      <span className="text-xs">
+        {!status.isOnline ? 'Offline' : 'Instável'}
+      </span>
+    </div>
+  )
+}
+
+// Hook para usar em outros componentes
+export function useConnectionStatus() {
+  const { status, isHealthy } = useConnectionNotifications()
+  
+  return {
+    isOnline: status.isOnline,
+    isSupabaseConnected: status.isSupabaseConnected,
+    isHealthy,
+    consecutiveFailures: status.consecutiveFailures,
+    lastChecked: status.lastChecked
+  }
 } 

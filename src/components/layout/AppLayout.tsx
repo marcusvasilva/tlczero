@@ -2,6 +2,7 @@ import { useState, createContext, useContext, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { AppSidebar } from './AppSidebar'
 import { AppHeader } from './AppHeader'
+import { ConnectionStatus } from '../common/ConnectionStatus'
 import { useMobile } from '@/hooks/use-mobile'
 
 interface SidebarContextType {
@@ -29,56 +30,55 @@ export function AppLayout() {
   // Ajustar sidebar baseado no tamanho da tela
   useEffect(() => {
     if (isMobile) {
-      setIsCollapsed(true)
+      setIsCollapsed(false)
+      setIsMobileMenuOpen(false)
+    } else {
+      setIsCollapsed(false)
+    }
+  }, [isMobile])
+
+  // Fechar menu mobile quando redimensionar para desktop
+  useEffect(() => {
+    if (!isMobile) {
       setIsMobileMenuOpen(false)
     }
   }, [isMobile])
 
-  // Fechar menu mobile quando clicar em overlay
+  // Overlay para mobile quando menu estiver aberto
   const handleOverlayClick = () => {
-    setIsMobileMenuOpen(false)
+    if (isMobile) {
+      setIsMobileMenuOpen(false)
+    }
   }
 
   return (
-    <SidebarContext.Provider value={{ 
-      isCollapsed, 
-      setIsCollapsed, 
-      isMobileMenuOpen, 
-      setIsMobileMenuOpen 
+    <SidebarContext.Provider value={{
+      isCollapsed,
+      setIsCollapsed,
+      isMobileMenuOpen,
+      setIsMobileMenuOpen
     }}>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        {/* Sidebar Desktop */}
-        <div className="hidden lg:block">
-          <AppSidebar />
-        </div>
-        
-        {/* Sidebar Mobile - Overlay */}
-        {isMobileMenuOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden">
-            {/* Overlay */}
-            <div 
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-              onClick={handleOverlayClick}
-            />
-            
-            {/* Sidebar */}
-            <div className="fixed left-0 top-0 h-full w-72 bg-white dark:bg-gray-800 shadow-xl">
+      <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
         <AppSidebar />
-            </div>
-          </div>
-        )}
         
-        {/* Conteúdo principal */}
-        <div className={`flex flex-col min-h-screen transition-all duration-300 ${
-          !isMobile ? (isCollapsed ? 'lg:ml-16' : 'lg:ml-64') : 'ml-0'
-        }`}>
+        <div className="flex-1 flex flex-col">
           <AppHeader />
-          <main className="flex-1 p-3 sm:p-4 lg:p-6">
-            <div className="max-w-7xl mx-auto">
-              <Outlet />
-            </div>
+          
+          <main className="flex-1 overflow-auto">
+            <Outlet />
           </main>
         </div>
+        
+        {/* Overlay para mobile */}
+        {isMobile && isMobileMenuOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            onClick={handleOverlayClick}
+          />
+        )}
+        
+        {/* Status de conexão */}
+        <ConnectionStatus />
       </div>
     </SidebarContext.Provider>
   )
