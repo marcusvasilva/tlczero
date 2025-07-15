@@ -135,10 +135,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
                 <li>Envie os dados - não é necessário login!</li>
               </ol>
             </div>
-            <div class="dev-note">
-              <strong>💡 Importante:</strong> Este QR Code usa localhost para desenvolvimento. 
-              Em produção, será gerada uma URL pública acessível de qualquer lugar.
-            </div>
+
           </body>
         </html>
       `)
@@ -209,12 +206,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
             {getCollectionUrl()}
           </p>
         </div>
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-          <p className="text-xs text-blue-700 dark:text-blue-300">
-            💡 <strong>Dica:</strong> Em desenvolvimento, o QR Code usa localhost. 
-            Em produção, será uma URL pública acessível de qualquer lugar.
-          </p>
-        </div>
+
       </div>
 
       <div className="flex gap-2 justify-center">

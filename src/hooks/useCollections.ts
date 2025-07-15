@@ -43,9 +43,13 @@ export const useCollections = (): UseCollectionsReturn => {
   const { userType, accountContext } = useAuthContext()
   const [collections, setCollections] = useState<FrontendCollection[]>([])
   const [collectionsDetailed, setCollectionsDetailed] = useState<any[]>([]) // Usar any temporariamente
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true) // Iniciar como true para evitar flash
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  // Refs para controle
+  const isMountedRef = useRef(true)
+  const fetchingRef = useRef(false)
   
   // Usar ref para evitar recarregamentos desnecessários
   const lastUserTypeRef = useRef(userType)

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Space as SupabaseSpace } from '@/lib/supabase'
 import type { Space, CreateSpaceData } from '@/types'
@@ -49,7 +49,7 @@ interface UseSpacesReturn {
 export const useSpaces = (options: UseSpacesOptions = {}): UseSpacesReturn => {
   const { user, userType, accountContext } = useAuthContext()
   const [supabaseSpaces, setSupabaseSpaces] = useState<SupabaseSpace[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true) // Iniciar como true para evitar flash
   const [isCreating, setIsCreating] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -57,6 +57,10 @@ export const useSpaces = (options: UseSpacesOptions = {}): UseSpacesReturn => {
   const [searchTerm] = useState(options.searchTerm || '')
   const [sortBy, setSortBy] = useState<'name' | 'client_id' | 'created_at'>(options.sortBy || 'name')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(options.sortOrder || 'asc')
+  
+  // Refs para controle
+  const isMountedRef = useRef(true)
+  const fetchingRef = useRef(false)
 
   // Mapear espaços Supabase para frontend
   const spaces = useMemo(() => {

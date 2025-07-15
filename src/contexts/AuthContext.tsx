@@ -79,24 +79,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return null
       }
 
-      // Busca simples sem lógica complexa
-      const { data: dbUserData, error } = await supabase
-        .from('users')
-        .select(`
-          id,
-          email,
-          name,
-          role,
-          account_id,
-          supervisor_id,
-          phone,
-          cpf,
-          status,
-          password_change_required,
-          created_at,
-          updated_at
-        `)
-        .eq('id', supabaseUser.id)
+      // Usar função personalizada para evitar problemas de RLS
+      const { data: dbUserData, error } = await (supabase as any)
+        .rpc('get_user_data', { user_id: supabaseUser.id })
         .single()
 
       if (error) {

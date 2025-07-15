@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Account } from '@/types'
 
@@ -43,7 +43,7 @@ interface UseClientsReturn {
 
 export const useClients = (options: UseClientsOptions = {}): UseClientsReturn => {
   const [clients, setClients] = useState<Account[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true) // Iniciar como true para evitar flash
   const [isCreating, setIsCreating] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -51,12 +51,23 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
   const [searchTerm, setSearchTerm] = useState(options.searchTerm || '')
   const [sortBy, setSortBy] = useState<'company_name' | 'email' | 'created_at'>(options.sortBy || 'company_name')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(options.sortOrder || 'asc')
+  
+  // Refs para controle
+  const isMountedRef = useRef(true)
+  const fetchingRef = useRef(false)
 
   // Fetch clients from Supabase
   const fetchClients = useCallback(async () => {
+    // Evitar múltiplas chamadas simultâneas
+    if (fetchingRef.current) {
+      console.log('⚠️ Fetch já em andamento, pulando...')
+      return
+    }
     console.log('📋 Iniciando fetchClients...')
     console.log('📋 Opções de filtro:', options)
     console.log('📋 sortBy:', sortBy, 'sortOrder:', sortOrder)
+    
+    fetchingRef.current = true
     setIsLoading(true)
     setError(null)
     
@@ -85,6 +96,12 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
       console.log('📊 Dados brutos do Supabase:', data)
       console.log('📊 Número de registros retornados:', data?.length || 0)
       
+      // Verificar se o componente ainda está montado antes de atualizar o estado
+      if (!isMountedRef.current) {
+        console.log('⚠️ Componente desmontado, cancelando atualização de estado')
+        return
+      }
+      
       // Mapear dados para formato compatível
       const mappedClients: Account[] = (data || []).map(account => ({
         id: account.id,
@@ -105,18 +122,38 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
       setClients(mappedClients)
       console.log('✅ fetchClients concluído com sucesso, clientes:', mappedClients.length)
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar clientes'
-      setError(errorMessage)
       console.error('Erro ao buscar clientes:', err)
+      
+      // Verificar se ainda está montado antes de definir erro
+      if (isMountedRef.current) {
+        const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar clientes'
+        setError(errorMessage)
+      }
     } finally {
-      setIsLoading(false)
+      fetchingRef.current = false
+      
+      // Verificar se ainda está montado antes de definir loading
+      if (isMountedRef.current) {
+        setIsLoading(false)
+      }
     }
   }, [sortBy, sortOrder, options.filterActive])
 
-  // Initial load
+  // Initial load e cleanup
   useEffect(() => {
+    // Resetar flags ao montar
+    isMountedRef.current = true
+    fetchingRef.current = false
+    
+    // Chamar fetchClients
     fetchClients()
-  }, []) // Removido fetchClients das dependências para evitar loops
+    
+    // Cleanup ao desmontar
+    return () => {
+      isMountedRef.current = false
+      fetchingRef.current = false
+    }
+  }, [fetchClients])
 
   // Clear error
   const clearError = useCallback(() => {
@@ -167,9 +204,11 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
       console.log('✅ Cliente criado no Supabase:', newClient)
       console.log('🔄 Atualizando lista de clientes...')
       
-      // Refresh clients list
-      await fetchClients()
-      console.log('✅ Lista atualizada, retornando cliente...')
+      // Refresh clients list apenas se ainda estiver montado
+      if (isMountedRef.current) {
+        await fetchClients()
+        console.log('✅ Lista atualizada, retornando cliente...')
+      }
       
       return {
         id: newClient.id,
@@ -237,8 +276,10 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
         throw error
       }
 
-      // Refresh clients list
-      await fetchClients()
+      // Refresh clients list apenas se ainda estiver montado
+      if (isMountedRef.current) {
+        await fetchClients()
+      }
       
       return {
         id: updatedClient.id,
@@ -280,8 +321,10 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
         throw error
       }
       
-      // Refresh clients list
-      await fetchClients()
+      // Refresh clients list apenas se ainda estiver montado
+      if (isMountedRef.current) {
+        await fetchClients()
+      }
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao excluir cliente'
