@@ -214,7 +214,7 @@ export default function Collections() {
 
   if (error) {
     return (
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
           <div className="flex">
             <div className="ml-3">
@@ -234,7 +234,7 @@ export default function Collections() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
         <div className="flex items-center">
