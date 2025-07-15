@@ -14,6 +14,8 @@ export interface Space {
   areaSize?: number // maps to area_size
   environmentType?: 'indoor' | 'outdoor' | 'mixed' // maps to environment_type
   active: boolean // maps to status
+  publicToken?: string // maps to public_token
+  qrCodeEnabled: boolean // maps to qr_code_enabled
   createdAt: Date
   updatedAt: Date
 }
@@ -25,6 +27,7 @@ export interface CreateSpaceData {
   description?: string
   areaSize?: number
   environmentType?: 'indoor' | 'outdoor' | 'mixed'
+  qrCodeEnabled?: boolean
 }
 
 export interface UpdateSpaceData extends Partial<CreateSpaceData> {

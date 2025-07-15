@@ -45,18 +45,25 @@ export const mapSupabaseUserToLegacy = (supabaseUser: Tables<'users'>): User => 
 
 // Mapear Espaço do Supabase para tipo legado
 export const mapSupabaseSpaceToLegacy = (supabaseSpace: Tables<'spaces'>): Space => {
-  return {
+  console.log('🔄 Mapeando espaço do Supabase:', supabaseSpace)
+  
+  const mappedSpace = {
     id: supabaseSpace.id,
-    name: supabaseSpace.name,
-    clientId: supabaseSpace.account_id, // Compatibilidade: account_id -> clientId
+    clientId: supabaseSpace.account_id, // account_id -> clientId para compatibilidade
     accountId: supabaseSpace.account_id, // Novo campo
-    description: supabaseSpace.description || '',
+    name: supabaseSpace.name,
+    description: supabaseSpace.description || undefined,
     areaSize: supabaseSpace.area_size || undefined,
-    environmentType: supabaseSpace.environment_type as 'indoor' | 'outdoor' | 'mixed' || 'indoor',
+    environmentType: (supabaseSpace.environment_type as 'indoor' | 'outdoor' | 'mixed') || undefined,
     active: supabaseSpace.status === 'active',
-    createdAt: supabaseSpace.created_at ? new Date(supabaseSpace.created_at) : new Date(),
-    updatedAt: supabaseSpace.updated_at ? new Date(supabaseSpace.updated_at) : new Date()
+    publicToken: supabaseSpace.public_token || undefined,
+    qrCodeEnabled: supabaseSpace.qr_code_enabled ?? true,
+    createdAt: new Date(supabaseSpace.created_at || new Date()),
+    updatedAt: new Date(supabaseSpace.updated_at || new Date())
   }
+  
+  console.log('📤 Espaço mapeado para frontend:', mappedSpace)
+  return mappedSpace
 }
 
 // Mapear Coleta do Supabase para tipo legado

@@ -17,6 +17,7 @@ import Collections from './pages/Collections'
 import { Collect } from './pages/Collect'
 import { Operators } from './pages/Operators'
 import { UserManagement } from './pages/UserManagement'
+import AnonymousCollect from './pages/AnonymousCollect'
 // Importações normais para todos os componentes
 import Dashboard from './pages/Dashboard'
 import Reports from './pages/Reports'
@@ -46,6 +47,7 @@ function App() {
           <Routes>
             {/* Rotas públicas */}
             <Route path="/login" element={<Login />} />
+            <Route path="/collect/:token" element={<AnonymousCollect />} />
             
             {/* Rota de registro protegida - apenas admins */}
             <Route path="/register" element={
@@ -76,6 +78,8 @@ function App() {
               
               {/* Nova Coleta - página mobile para apontamentos */}
               <Route path="collect" element={<Collect />} />
+              
+              {/* Coleta Anônima - página para apontamentos anônimos */}
               
               {/* Operadores - admin e supervisor podem gerenciar */}
               <Route path="operators" element={

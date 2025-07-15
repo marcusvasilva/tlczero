@@ -241,6 +241,8 @@ export type Database = {
           environment_type: string | null
           id: string
           name: string
+          public_token: string
+          qr_code_enabled: boolean
           status: string
           updated_at: string | null
         }
@@ -252,6 +254,8 @@ export type Database = {
           environment_type?: string | null
           id?: string
           name: string
+          public_token?: string
+          qr_code_enabled?: boolean
           status?: string
           updated_at?: string | null
         }
@@ -263,6 +267,8 @@ export type Database = {
           environment_type?: string | null
           id?: string
           name?: string
+          public_token?: string
+          qr_code_enabled?: boolean
           status?: string
           updated_at?: string | null
         }
@@ -335,6 +341,80 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      anonymous_collections: {
+        Row: {
+          id: string
+          space_id: string
+          weight_collected: number
+          photo_url: string | null
+          notes: string | null
+          collection_date: string
+          collection_time: string
+          device_info: Json | null
+          ip_address: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          space_id: string
+          weight_collected: number
+          photo_url?: string | null
+          notes?: string | null
+          collection_date?: string
+          collection_time?: string
+          device_info?: Json | null
+          ip_address?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          space_id?: string
+          weight_collected?: number
+          photo_url?: string | null
+          notes?: string | null
+          collection_date?: string
+          collection_time?: string
+          device_info?: Json | null
+          ip_address?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anonymous_collections_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          id: string
+          name: string
+          email: string | null
+          phone: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          email?: string | null
+          phone?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string | null
+          phone?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {

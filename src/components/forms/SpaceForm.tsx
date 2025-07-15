@@ -10,7 +10,8 @@ const spaceSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   description: z.string().optional(),
   areaSize: z.number().positive('Área deve ser positiva').optional(),
-  environmentType: z.enum(['indoor', 'outdoor', 'mixed']).optional()
+  environmentType: z.enum(['indoor', 'outdoor', 'mixed']).optional(),
+  qrCodeEnabled: z.boolean().optional()
 })
 
 interface SpaceFormProps {
@@ -46,7 +47,8 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({
       name: '',
       description: '',
       areaSize: undefined,
-      environmentType: 'indoor'
+      environmentType: 'indoor',
+      qrCodeEnabled: false
     },
     validate: (values) => {
       const result = spaceSchema.safeParse(values)
@@ -71,6 +73,7 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({
       setFieldValue('description', initialData.description || '')
       setFieldValue('areaSize', initialData.areaSize)
       setFieldValue('environmentType', initialData.environmentType || 'indoor')
+      setFieldValue('qrCodeEnabled', initialData.qrCodeEnabled ?? false)
     } else if (!initialData && previousInitialDataRef.current) {
       previousInitialDataRef.current = null
       reset()
@@ -249,6 +252,26 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({
                 <option value="mixed">Misto</option>
               </select>
             </div>
+          </div>
+
+          {/* QR Code */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <label className="flex items-center space-x-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={values.qrCodeEnabled ?? true}
+                onChange={(e) => handleInputChange('qrCodeEnabled', e.target.checked)}
+                className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+              />
+              <div className="flex-1">
+                <span className="text-sm font-medium text-gray-700">
+                  Habilitar QR Code para Coleta Anônima
+                </span>
+                <p className="text-xs text-gray-500 mt-1">
+                  Permite que operadores façam coletas sem login através de QR Code
+                </p>
+              </div>
+            </label>
           </div>
 
           {/* Botões */}
