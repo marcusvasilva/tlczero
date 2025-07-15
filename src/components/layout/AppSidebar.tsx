@@ -125,7 +125,7 @@ const navigationItems: NavItem[] = [
 export function AppSidebar() {
   const location = useLocation()
   const { user } = useAuthContext()
-  const { isCollapsed, setIsCollapsed, setIsMobileMenuOpen } = useSidebar()
+  const { isCollapsed, setIsCollapsed, isMobileMenuOpen, setIsMobileMenuOpen } = useSidebar()
   const isMobile = useMobile()
 
   // Memoizar o cálculo dos itens visíveis
@@ -188,8 +188,9 @@ export function AppSidebar() {
       // Desktop styles
       "lg:fixed lg:left-0 lg:top-0 lg:h-screen lg:z-40",
       !isMobile && (isCollapsed ? "lg:w-16" : "lg:w-64"),
-      // Mobile styles - full width na sidebar mobile
-      isMobile && "w-full"
+      // Mobile styles - precisa estar hidden por padrão e só aparecer quando aberto
+      isMobile && isMobileMenuOpen && "fixed inset-y-0 left-0 z-50 w-64",
+      isMobile && !isMobileMenuOpen && "hidden"
     )}>
       {/* Header da Sidebar */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
