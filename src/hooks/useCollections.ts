@@ -56,7 +56,14 @@ export const useCollections = (): UseCollectionsReturn => {
   const lastAccountContextRef = useRef(accountContext)
 
   const loadCollections = useCallback(async () => {
+    // Evitar múltiplas chamadas simultâneas
+    if (fetchingRef.current) {
+      console.log('⚠️ Fetch já em andamento, pulando...')
+      return
+    }
+    
     try {
+      fetchingRef.current = true
       setIsLoading(true)
       console.log('🔄 Carregando coletas...')
 
@@ -99,6 +106,12 @@ export const useCollections = (): UseCollectionsReturn => {
       console.log('📦 Dados brutos do Supabase:', data)
 
       if (data) {
+        // Verificar se o componente ainda está montado antes de atualizar o estado
+        if (!isMountedRef.current) {
+          console.log('⚠️ Componente desmontado, cancelando atualização de estado')
+          return
+        }
+        
         // Mapear os dados para o tipo frontend
         const mappedData = data.map(item => {
           const mapped = mapSupabaseCollectionToLegacy(item as DatabaseCollection)
@@ -113,16 +126,36 @@ export const useCollections = (): UseCollectionsReturn => {
       }
     } catch (error) {
       console.error('❌ Erro ao carregar coletas:', error)
-      setError(error instanceof Error ? error.message : 'Erro desconhecido')
+      
+      // Verificar se ainda está montado antes de definir erro
+      if (isMountedRef.current) {
+        setError(error instanceof Error ? error.message : 'Erro desconhecido')
+      }
     } finally {
-      setIsLoading(false)
+      fetchingRef.current = false
+      
+      // Verificar se ainda está montado antes de definir loading
+      if (isMountedRef.current) {
+        setIsLoading(false)
+      }
     }
   }, []) // Remover dependências para evitar loops
 
-  // Initial load apenas na montagem
+  // Initial load e cleanup
   useEffect(() => {
+    // Resetar flags ao montar
+    isMountedRef.current = true
+    fetchingRef.current = false
+    
+    // Chamar loadCollections
     loadCollections()
-  }, []) // Sem dependências para carregar apenas uma vez
+    
+    // Cleanup ao desmontar
+    return () => {
+      isMountedRef.current = false
+      fetchingRef.current = false
+    }
+  }, [loadCollections])
 
   // Recarregar quando contexto mudar significativamente
   useEffect(() => {

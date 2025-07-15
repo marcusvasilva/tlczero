@@ -69,6 +69,13 @@ export const useSpaces = (options: UseSpacesOptions = {}): UseSpacesReturn => {
 
   // Fetch spaces from Supabase
   const fetchSpaces = useCallback(async () => {
+    // Evitar múltiplas chamadas simultâneas
+    if (fetchingRef.current) {
+      console.log('⚠️ Fetch já em andamento, pulando...')
+      return
+    }
+    
+    fetchingRef.current = true
     setIsLoading(true)
     setError(null)
     
@@ -103,20 +110,46 @@ export const useSpaces = (options: UseSpacesOptions = {}): UseSpacesReturn => {
         throw error
       }
 
+      // Verificar se o componente ainda está montado antes de atualizar o estado
+      if (!isMountedRef.current) {
+        console.log('⚠️ Componente desmontado, cancelando atualização de estado')
+        return
+      }
+
       setSupabaseSpaces(data || [])
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar espaços'
-      setError(errorMessage)
       console.error('Erro ao buscar espaços:', err)
+      
+      // Verificar se ainda está montado antes de definir erro
+      if (isMountedRef.current) {
+        const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar espaços'
+        setError(errorMessage)
+      }
     } finally {
-      setIsLoading(false)
+      fetchingRef.current = false
+      
+      // Verificar se ainda está montado antes de definir loading
+      if (isMountedRef.current) {
+        setIsLoading(false)
+      }
     }
   }, [sortBy, sortOrder, options.clientId, userType, accountContext, user?.account_id])
 
-  // Initial load
+  // Initial load e cleanup
   useEffect(() => {
+    // Resetar flags ao montar
+    isMountedRef.current = true
+    fetchingRef.current = false
+    
+    // Chamar fetchSpaces
     fetchSpaces()
-  }, []) // Removido fetchSpaces das dependências para evitar loops
+    
+    // Cleanup ao desmontar
+    return () => {
+      isMountedRef.current = false
+      fetchingRef.current = false
+    }
+  }, [fetchSpaces])
 
   // Clear error
   const clearError = useCallback(() => {
