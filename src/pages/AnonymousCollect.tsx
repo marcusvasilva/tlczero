@@ -48,8 +48,10 @@ export function AnonymousCollect() {
     operatorId?: string
   }>({})
 
-  // Hook para buscar operadores
-  const { operators, isLoading: isLoadingOperators } = useOperators()
+  // Hook para buscar operadores (com accountId do espaço quando disponível)
+  const { operators, isLoading: isLoadingOperators } = useOperators({
+    accountId: spaceInfo?.accountId
+  })
 
   // Buscar informações do espaço pelo token
   useEffect(() => {
@@ -95,8 +97,16 @@ export function AnonymousCollect() {
     fetchSpaceInfo()
   }, [token])
 
-  // Filtrar operadores pela conta do espaço
+  // Filtrar operadores pela conta do espaço (já filtrado no hook, mas garantindo)
   const availableOperators = spaceInfo ? operators.filter(op => op.account_id === spaceInfo.accountId) : []
+  
+  // Debug: verificar se operadores foram carregados
+  useEffect(() => {
+    if (spaceInfo && !isLoadingOperators) {
+      console.log('🔍 Operadores carregados para conta:', spaceInfo.accountId)
+      console.log('📋 Operadores disponíveis:', availableOperators)
+    }
+  }, [spaceInfo, isLoadingOperators, availableOperators])
 
   // Manipular upload de foto
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -309,15 +319,27 @@ export function AnonymousCollect() {
               }`}
               disabled={isSubmitting || isLoadingOperators}
             >
-              <option value="">Selecionar operador</option>
+              <option value="">
+                {isLoadingOperators ? 'Carregando operadores...' : 'Selecionar operador'}
+              </option>
               {availableOperators.map(operator => (
                 <option key={operator.id} value={operator.id}>
                   {operator.name}
                 </option>
               ))}
+              {!isLoadingOperators && availableOperators.length === 0 && (
+                <option value="" disabled>
+                  Nenhum operador disponível
+                </option>
+              )}
             </select>
             {validationErrors.operatorId && (
               <p className="mt-1 text-sm text-red-600">{validationErrors.operatorId}</p>
+            )}
+            {!isLoadingOperators && availableOperators.length === 0 && (
+              <p className="mt-1 text-sm text-yellow-600">
+                Nenhum operador encontrado para esta conta. Verifique com o administrador.
+              </p>
             )}
           </div>
 

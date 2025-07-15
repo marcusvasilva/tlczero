@@ -45,7 +45,7 @@ interface UseOperatorsReturn {
   inactiveOperators: number
 }
 
-export const useOperators = (options: UseOperatorsOptions = {}): UseOperatorsReturn => {
+export const useOperators = (options: UseOperatorsOptions & { accountId?: string } = {}): UseOperatorsReturn => {
   const { user, userType, accountContext } = useAuthContext()
   const [supabaseUsers, setSupabaseUsers] = useState<SupabaseUser[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -74,19 +74,21 @@ export const useOperators = (options: UseOperatorsOptions = {}): UseOperatorsRet
         .from('users')
         .select('*')
         .in('role', ['supervisor', 'operator'])
+        .eq('status', 'active')
         .order(sortBy, { ascending: sortOrder === 'asc' })
 
-      // Apply automatic account filtering based on user context
-      const targetAccountId = accountContext || user?.account_id
+      // Apply automatic account filtering based on user context or provided accountId
+      const targetAccountId = options.accountId || accountContext || user?.account_id
       
-      // For non-admin users, filter by their account
-      if (userType !== 'admin' && targetAccountId) {
-        query = query.eq('account_id', targetAccountId)
+      // For non-admin users or when accountId is provided, filter by their account
+      if ((userType !== 'admin' && targetAccountId) || options.accountId) {
+        query = query.eq('account_id', targetAccountId!)
       }
 
       const { data, error } = await query
 
       if (error) {
+        console.error('❌ Erro ao carregar operadores:', error)
         throw error
       }
 
@@ -99,7 +101,7 @@ export const useOperators = (options: UseOperatorsOptions = {}): UseOperatorsRet
     } finally {
       setIsLoading(false)
     }
-  }, [sortBy, sortOrder, userType, accountContext, user?.account_id])
+  }, [sortBy, sortOrder, userType, accountContext, user?.account_id, options.accountId])
 
   // Initial load
   useEffect(() => {
