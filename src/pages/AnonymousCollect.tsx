@@ -105,8 +105,9 @@ export function AnonymousCollect() {
     if (spaceInfo && !isLoadingOperators) {
       console.log('🔍 Operadores carregados para conta:', spaceInfo.accountId)
       console.log('📋 Operadores disponíveis:', availableOperators)
+      console.log('🎯 Operador selecionado atual:', operatorId)
     }
-  }, [spaceInfo, isLoadingOperators, availableOperators])
+  }, [spaceInfo, isLoadingOperators, availableOperators, operatorId])
 
   // Manipular upload de foto
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,6 +145,8 @@ export function AnonymousCollect() {
     
     if (!operatorId) {
       errors.operatorId = 'Operador é obrigatório'
+    } else {
+      console.log('✅ Operador válido:', operatorId)
     }
     
     setValidationErrors(errors)
@@ -167,12 +170,20 @@ export function AnonymousCollect() {
       // Upload da foto se houver
       let photoUrl = null
       if (photo) {
-        const fileName = `collections/${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`
+        // Determinar extensão do arquivo baseado no tipo MIME
+        const fileExtension = photo.type.split('/')[1] || 'jpg'
+        const fileName = `collections/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExtension}`
+        
+        console.log('📸 Fazendo upload da foto:', fileName, 'tamanho:', photo.size)
+        
         const { error: uploadError } = await supabase.storage
           .from('collection-photos')
           .upload(fileName, photo)
         
-        if (uploadError) throw uploadError
+        if (uploadError) {
+          console.error('❌ Erro no upload da foto:', uploadError)
+          throw uploadError
+        }
         
         // Obter URL pública
         const { data: { publicUrl } } = supabase.storage
@@ -180,21 +191,29 @@ export function AnonymousCollect() {
           .getPublicUrl(fileName)
         
         photoUrl = publicUrl
+        console.log('✅ Foto enviada com sucesso:', photoUrl)
       }
 
       // Inserir coleta na tabela principal collections
+      const collectionData = {
+        space_id: spaceInfo.spaceId,
+        user_id: operatorId,
+        weight_collected: weightValue,
+        photo_url: photoUrl,
+        notes: notes || null,
+        collection_date: new Date().toISOString().split('T')[0]
+      }
+      
+      console.log('📝 Inserindo coleta:', collectionData)
+      
       const { error: insertError } = await supabase
         .from('collections')
-        .insert({
-          space_id: spaceInfo.spaceId,
-          user_id: operatorId,
-          weight_collected: weightValue,
-          photo_url: photoUrl,
-          notes: notes || null,
-          collection_date: new Date().toISOString().split('T')[0]
-        })
+        .insert(collectionData)
 
-      if (insertError) throw insertError
+      if (insertError) {
+        console.error('❌ Erro ao inserir coleta:', insertError)
+        throw insertError
+      }
 
       // Sucesso!
       setShowSuccess(true)
@@ -305,11 +324,18 @@ export function AnonymousCollect() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <User className="inline w-4 h-4 mr-1" />
               Operador *
+              {operatorId && (
+                <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                  Selecionado
+                </span>
+              )}
             </label>
             <select
               value={operatorId}
               onChange={(e) => {
-                setOperatorId(e.target.value)
+                const selectedValue = e.target.value
+                console.log('🔄 Operador selecionado:', selectedValue)
+                setOperatorId(selectedValue)
                 setValidationErrors({})
               }}
               className={`w-full px-4 py-3 border rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white ${
