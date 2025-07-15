@@ -72,6 +72,7 @@ export function Collect() {
       areaSize: (supabaseSpace as any).area_size || undefined,
       environmentType: (supabaseSpace as any).environment_type as 'indoor' | 'outdoor' | 'mixed' || 'indoor',
       active: (supabaseSpace as any).status === 'active',
+      qrCodeEnabled: (supabaseSpace as any).qr_code_enabled || false,
       createdAt: new Date((supabaseSpace as any).created_at || new Date()),
       updatedAt: new Date((supabaseSpace as any).updated_at || new Date()),
     }

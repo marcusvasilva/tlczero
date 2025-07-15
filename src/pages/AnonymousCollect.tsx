@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { formatDate } from '@/lib/formatters'
 import { useOperators } from '@/hooks/useOperators'
@@ -25,7 +25,6 @@ interface SpaceInfo {
 
 export function AnonymousCollect() {
   const { token } = useParams<{ token: string }>()
-  const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const weightInputRef = useRef<HTMLInputElement>(null)
 
@@ -159,7 +158,7 @@ export function AnonymousCollect() {
       let photoUrl = null
       if (photo) {
         const fileName = `collections/${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('collection-photos')
           .upload(fileName, photo)
         

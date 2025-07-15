@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { Download, Printer, Link, QrCode as QrIcon, X } from 'lucide-react'
 
@@ -11,7 +11,6 @@ interface QRCodeDisplayProps {
 }
 
 export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
-  spaceId,
   spaceName,
   publicToken,
   size = 200,

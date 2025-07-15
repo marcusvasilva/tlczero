@@ -16,18 +16,14 @@ import {
   Trash2, 
   Eye,
   Scale,
-  User,
-  Building2,
   Calendar,
-  Filter,
   Download
 } from 'lucide-react'
 import type { Collection, CreateCollectionData } from '@/types'
 
 export default function Collections() {
-  const { user, userType } = useAuthContext()
+  const { userType } = useAuthContext()
   const { 
-    collections, 
     filteredCollections,
     isLoading, 
     error, 
