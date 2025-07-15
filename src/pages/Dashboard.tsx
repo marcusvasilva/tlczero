@@ -3,14 +3,10 @@ import { format, subDays, startOfDay, endOfDay, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { 
   Users, 
-  Building2, 
   Bug, 
-  TrendingUp,
   RefreshCw,
   MapPin,
   Scale,
-  Calendar,
-  Filter,
   Info,
   ChevronDown
 } from 'lucide-react'
@@ -437,7 +433,7 @@ export default function Dashboard() {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {pieData.map((entry, index) => (
+                  {pieData.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
