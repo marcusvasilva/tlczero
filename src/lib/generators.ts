@@ -1,10 +1,10 @@
 import QRCode from 'qrcode'
 import { QR_CODE_CONFIG } from './constants'
 
-// Geração de ID único baseado em timestamp
-export const generateId = (): string => {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-}
+// Geração de ID único baseado em timestamp (movido para utils.ts)
+// export const generateId = (): string => {
+//   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+// }
 
 // Geração de ID numérico sequencial
 export const generateNumericId = (prefix = '', length = 6): string => {

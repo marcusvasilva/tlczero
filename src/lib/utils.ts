@@ -48,6 +48,56 @@ export function isValidEmail(email: string): boolean {
   return emailRegex.test(email)
 }
 
+// Constante do fuso horário do Brasil
+export const BRAZIL_TIMEZONE = 'America/Sao_Paulo'
+
+// Função para obter a data atual no fuso horário do Brasil
+export function getCurrentBrazilDate(): Date {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: BRAZIL_TIMEZONE }))
+}
+
+// Função para formatar data/hora local para input datetime-local
+export function formatBrazilDateTimeLocal(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  const brazilDate = new Date(d.toLocaleString('en-US', { timeZone: BRAZIL_TIMEZONE }))
+  
+  // Formatar para datetime-local (YYYY-MM-DDTHH:mm)
+  const year = brazilDate.getFullYear()
+  const month = String(brazilDate.getMonth() + 1).padStart(2, '0')
+  const day = String(brazilDate.getDate()).padStart(2, '0')
+  const hours = String(brazilDate.getHours()).padStart(2, '0')
+  const minutes = String(brazilDate.getMinutes()).padStart(2, '0')
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
+// Função para fazer parse de datetime-local para Date
+export function parseBrazilDateTime(dateTimeLocal: string): Date {
+  if (!dateTimeLocal) return new Date()
+  
+  // dateTimeLocal está no formato "YYYY-MM-DDTHH:mm"
+  const localDate = new Date(dateTimeLocal)
+  
+  // Ajustar para o fuso horário do Brasil
+  const brazilOffset = -3 * 60 // UTC-3 em minutos
+  const localOffset = localDate.getTimezoneOffset()
+  const offsetDifference = localOffset - brazilOffset
+  
+  return new Date(localDate.getTime() + offsetDifference * 60 * 1000)
+}
+
+// Função para gerar senha temporária
+export function generateTemporaryPassword(length: number = 12): string {
+  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  let password = ''
+  
+  for (let i = 0; i < length; i++) {
+    password += charset.charAt(Math.floor(Math.random() * charset.length))
+  }
+  
+  return password
+}
+
 export function isValidPhone(phone: string): boolean {
   const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/
   return phoneRegex.test(phone.replace(/\D/g, ''))

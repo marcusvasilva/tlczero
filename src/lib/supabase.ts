@@ -180,61 +180,52 @@ export async function executeQuery<T>(
   }
 }
 
-/**
- * Função para verificar o status da conexão com o Supabase
- */
+// Função para verificar conectividade com Supabase
 export async function checkSupabaseConnection(): Promise<boolean> {
   try {
-    const { data, error } = await executeQuery(
-      () => supabase.from('accounts').select('id').limit(1),
-      { timeout: 5000, maxRetries: 1, context: 'Connection Check' }
+    const result = await executeQuery(
+      async () => {
+        return await supabase
+          .from('accounts')
+          .select('id')
+          .limit(1)
+      },
+      {
+        timeout: 5000,
+        maxRetries: 1,
+        context: 'Connection Check'
+      }
     )
     
-    return !error
+    return result.success
   } catch (error) {
-    console.error('Erro ao verificar conexão com Supabase:', error)
+    console.error('❌ Erro na verificação de conectividade:', error)
     return false
   }
 }
 
-/**
- * Função para renovar a sessão do Supabase se necessário
- */
+// Função para refresh de sessão se necessário
 export async function refreshSessionIfNeeded(): Promise<boolean> {
   try {
     const { data: { session }, error } = await supabase.auth.getSession()
     
     if (error) {
-      console.error('Erro ao obter sessão:', error)
+      console.error('❌ Erro ao verificar sessão:', error)
       return false
     }
     
+    // Se não há sessão, tentar refresh
     if (!session) {
-      console.log('Nenhuma sessão encontrada')
-      return false
-    }
-    
-    // Verificar se o token está próximo do vencimento (5 minutos)
-    const now = Date.now()
-    const expiresAt = session.expires_at ? session.expires_at * 1000 : 0
-    const timeUntilExpiry = expiresAt - now
-    
-    if (timeUntilExpiry < 5 * 60 * 1000) { // 5 minutos
-      console.log('Token próximo do vencimento, renovando sessão...')
-      const { data, error: refreshError } = await supabase.auth.refreshSession()
-      
+      const { error: refreshError } = await supabase.auth.refreshSession()
       if (refreshError) {
-        console.error('Erro ao renovar sessão:', refreshError)
+        console.error('❌ Erro ao refresh da sessão:', refreshError)
         return false
       }
-      
-      console.log('✅ Sessão renovada com sucesso')
-      return true
     }
     
     return true
   } catch (error) {
-    console.error('Erro ao renovar sessão:', error)
+    console.error('❌ Erro no refresh da sessão:', error)
     return false
   }
 }

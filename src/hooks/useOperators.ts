@@ -134,7 +134,7 @@ export const useOperators = (options: UseOperatorsOptions & { accountId?: string
       const accountId = data.account_id
       
       // Gerar email se não fornecido
-      let operatorEmail = data.email
+      let operatorEmail: string = data.email || ''
       if (!operatorEmail) {
         // Gerar email baseado no nome + timestamp
         const cleanName = data.name.toLowerCase()
@@ -146,7 +146,7 @@ export const useOperators = (options: UseOperatorsOptions & { accountId?: string
       }
       
       // Usar senha fornecida ou gerar automaticamente
-      let operatorPassword = data.password
+      let operatorPassword: string = data.password || ''
       if (!operatorPassword) {
         operatorPassword = generateTemporaryPassword(12)
         console.log('🔐 Senha gerada automaticamente')

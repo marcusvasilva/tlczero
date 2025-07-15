@@ -42,6 +42,7 @@ export interface UseClientsOptions {
 export interface UseClientsReturn {
   // Data
   clients: Account[]
+  filteredClients: Account[]
   
   // Loading states
   isLoading: boolean

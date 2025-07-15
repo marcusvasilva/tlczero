@@ -8,7 +8,7 @@ import {
   type PendingCollection 
 } from '@/lib/serviceWorker'
 import { useCollections } from './useCollections'
-import { generateId } from '@/lib/generators'
+import { generateId } from '@/lib/utils'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 

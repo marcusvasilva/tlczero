@@ -5,6 +5,7 @@ import { useAuthContext } from '@/contexts/AuthContext'
 import { SpaceForm } from '@/components/forms/SpaceForm'
 import { QRCodeDisplay } from '@/components/common/QRCodeDisplay'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import type { Account } from '@/types/client'
 import { 
   Building2, 
   Plus, 
@@ -263,7 +264,7 @@ export default function Spaces() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayedSpaces.map((space) => {
             // Buscar cliente
-            const client = filteredClients.find(c => c.id === space.clientId)
+            const client = filteredClients.find((c: Account) => c.id === space.clientId)
             
             return (
               <div key={space.id} className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow">
@@ -375,7 +376,7 @@ export default function Spaces() {
           }}
           onSubmit={editingSpace ? handleUpdateSpace : handleCreateSpace}
           initialData={editingSpace || undefined}
-          clients={filteredClients.map(client => ({
+          clients={filteredClients.map((client: Account) => ({
             id: client.id,
             company_name: client.company_name,
             cnpj: client.cnpj || undefined,

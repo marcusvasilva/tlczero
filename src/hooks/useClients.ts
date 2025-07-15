@@ -185,6 +185,10 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
         throw new Error(errorInfo.message)
       }
 
+      if (!result.data) {
+        throw new Error('Erro ao criar cliente: dados não retornados')
+      }
+
       console.log('✅ Cliente criado no Supabase:', result.data)
       console.log('🔄 Atualizando lista de clientes...')
       
@@ -236,13 +240,17 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
         throw new Error(errorInfo.message)
       }
 
+      if (!result.data) {
+        throw new Error('Erro ao atualizar cliente: dados não retornados')
+      }
+
       console.log('✅ Cliente atualizado no Supabase:', result.data)
       
       // Atualizar no estado local
       if (isMountedRef.current) {
         setClients(prev => 
           prev.map(client => 
-            client.id === id ? result.data : client
+            client.id === id ? result.data! : client
           )
         )
       }
@@ -303,6 +311,7 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
 
   return {
     clients: filteredClients,
+    filteredClients,
     isLoading,
     isCreating,
     isUpdating,
