@@ -45,11 +45,8 @@ export function UserManagement() {
     updateUser,
     deleteUser,
     clearError,
-    refreshUsers,
     totalUsers,
     activeUsers,
-    inactiveUsers,
-    adminUsers,
     supervisorUsers,
     operatorUsers
   } = useUsers()

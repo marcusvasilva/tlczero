@@ -115,7 +115,7 @@ export default function UserForm({
   const { userType, accountContext, user: currentUser } = useAuthContext()
   const { clients } = useClients()
   const [availableSupervisors, setAvailableSupervisors] = useState<User[]>([])
-  const [showPasswordField, setShowPasswordField] = useState(!user) // Mostrar senha apenas na criação
+  const [showPasswordField] = useState(!user) // Mostrar senha apenas na criação
 
   // Filtrar clientes baseado no contexto do usuário
   const availableClients = userType === 'admin' 
