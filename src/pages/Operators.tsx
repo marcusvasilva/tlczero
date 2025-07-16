@@ -18,7 +18,7 @@ function Button({ children, variant = 'default', size = 'default', onClick, clas
 }) {
   const baseClasses = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2'
   const variantClasses = variant === 'outline' 
-    ? 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50' 
+    ? 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700' 
     : 'bg-green-600 text-white hover:bg-green-700'
   const sizeClasses = size === 'sm' ? 'px-3 py-1.5 text-sm' : 'px-4 py-2'
   
@@ -44,14 +44,14 @@ function Input({ placeholder, value, onChange, className = '' }: {
       placeholder={placeholder}
       value={value}
       onChange={onChange}
-      className={`block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-green-500 focus:outline-none focus:ring-green-500 ${className}`}
+      className={`block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-800 focus:border-green-500 focus:outline-none focus:ring-green-500 ${className}`}
     />
   )
 }
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 shadow-sm ${className}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm ${className}`}>
       {children}
     </div>
   )
@@ -59,8 +59,8 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
 
 function Badge({ children, variant = 'default' }: { children: React.ReactNode; variant?: 'default' | 'secondary' }) {
   const classes = variant === 'secondary' 
-    ? 'bg-gray-100 text-gray-800' 
-    : 'bg-green-100 text-green-800'
+    ? 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300' 
+    : 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400'
   
   return (
     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${classes}`}>
@@ -77,10 +77,10 @@ function Modal({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => 
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onClose} />
-        <div className="relative bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10"
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 z-10"
           >
             <X className="h-6 w-6" />
           </button>
@@ -274,8 +274,8 @@ export function Operators() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Operadores</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Operadores</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
             {userType === 'admin' 
               ? 'Gerencie todos os operadores do sistema'
               : 'Gerencie sua equipe de campo'
@@ -293,30 +293,30 @@ export function Operators() {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
             </div>
-            <UserCheck className="h-8 w-8 text-blue-600" />
+            <UserCheck className="h-8 w-8 text-blue-600 dark:text-blue-400" />
           </div>
         </Card>
         
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Ativos</p>
-              <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Ativos</p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.active}</p>
             </div>
-            <UserCheck className="h-8 w-8 text-green-600" />
+            <UserCheck className="h-8 w-8 text-green-600 dark:text-green-400" />
           </div>
         </Card>
         
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Inativos</p>
-              <p className="text-2xl font-bold text-gray-600">{stats.inactive}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Inativos</p>
+              <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">{stats.inactive}</p>
             </div>
-            <UserX className="h-8 w-8 text-gray-600" />
+            <UserX className="h-8 w-8 text-gray-600 dark:text-gray-400" />
           </div>
         </Card>
       </div>
@@ -369,59 +369,59 @@ export function Operators() {
       <Card>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Operador
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Função
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Contato
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Criado em
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Ações
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                     Carregando operadores...
                   </td>
                 </tr>
               ) : filteredOperators.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                     Nenhum operador encontrado
                   </td>
                 </tr>
               ) : (
                 filteredOperators.map((operator) => (
-                  <tr key={operator.id} className="hover:bg-gray-50">
+                  <tr key={operator.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                            <span className="text-sm font-medium text-gray-700">
+                          <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                               {operator.name.charAt(0).toUpperCase()}
                             </span>
                           </div>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
                             {operator.name}
                           </div>
                           {operator.email && (
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
                               {operator.email}
                             </div>
                           )}
@@ -433,7 +433,7 @@ export function Operators() {
                         {operator.role === 'supervisor' ? 'Supervisor' : 'Operador'}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {operator.phone || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -441,7 +441,7 @@ export function Operators() {
                         {operator.status === 'active' ? 'Ativo' : 'Inativo'}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {formatDate(operator.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -457,7 +457,7 @@ export function Operators() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleToggleStatus(operator)}
-                          className={operator.status === 'active' ? 'text-red-600' : 'text-green-600'}
+                          className={operator.status === 'active' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}
                         >
                           {operator.status === 'active' ? (
                             <UserX className="h-4 w-4" />
@@ -472,7 +472,7 @@ export function Operators() {
                             setOperatorToDelete(operator)
                             setShowDeleteDialog(true)
                           }}
-                          className="text-red-600"
+                          className="text-red-600 dark:text-red-400"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

@@ -78,7 +78,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     if (metaThemeColor) {
       metaThemeColor.setAttribute(
         'content', 
-        actualTheme === 'dark' ? '#0f172a' : '#ffffff'
+        actualTheme === 'dark' ? '#00322E' : '#00322E'
       )
     }
   }, [actualTheme])

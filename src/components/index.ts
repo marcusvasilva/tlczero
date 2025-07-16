@@ -1,6 +1,7 @@
 // Componentes comuns
 export * from './common/DataTable'
 export * from './common/ConfirmDialog'
+export * from './common/Logo'
 export * from './common/MultiSelect'
 export * from './common/ThemeToggle'
 export * from './common/GlobalLoading'

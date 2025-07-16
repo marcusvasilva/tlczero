@@ -14,7 +14,7 @@ export default defineConfig({
         name: 'TLC Zero - Controle de Pragas',
         short_name: 'TLC Zero',
         description: 'Aplicativo para controle e gestão de pragas com atrativos, QR codes e relatórios',
-        theme_color: '#0f172a',
+        theme_color: '#00322E',
         icons: [
           {
             src: 'icons/icon-192x192.png',

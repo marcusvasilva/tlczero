@@ -47,19 +47,19 @@ export function DataTable<T extends { id: string | number }>({
 
   const getActionStyles = (variant: TableAction<T>['variant'] = 'secondary') => {
     const styles = {
-      primary: 'text-green-600 hover:text-green-800 hover:bg-green-50',
-      secondary: 'text-gray-600 hover:text-gray-800 hover:bg-gray-50',
-      danger: 'text-red-600 hover:text-red-800 hover:bg-red-50'
+      primary: 'text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20',
+      secondary: 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700',
+      danger: 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20'
     }
     return styles[variant]
   }
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg border">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         <div className="p-8 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Carregando...</p>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">Carregando...</p>
         </div>
       </div>
     )
@@ -67,8 +67,8 @@ export function DataTable<T extends { id: string | number }>({
 
   if (data.length === 0) {
     return (
-      <div className="bg-white rounded-lg border">
-        <div className="p-8 text-center text-gray-500">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
           {emptyMessage}
         </div>
       </div>
@@ -76,16 +76,16 @@ export function DataTable<T extends { id: string | number }>({
   }
 
   return (
-    <div className="bg-white rounded-lg border overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
               {columns.map((column) => (
                 <th
                   key={String(column.key)}
-                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
-                    column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
+                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${
+                    column.sortable ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600' : ''
                   }`}
                   style={{ width: column.width }}
                   onClick={() => handleSort(column)}
@@ -93,7 +93,7 @@ export function DataTable<T extends { id: string | number }>({
                   <div className="flex items-center gap-1">
                     {column.label}
                     {column.sortable && sortColumn === column.key && (
-                      <span className="text-green-600">
+                      <span className="text-green-600 dark:text-green-400">
                         {sortDirection === 'asc' ? '↑' : '↓'}
                       </span>
                     )}
@@ -101,17 +101,17 @@ export function DataTable<T extends { id: string | number }>({
                 </th>
               ))}
               {actions.length > 0 && (
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Ações
                 </th>
               )}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {data.map((item, index) => (
-              <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+              <tr key={item.id} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700'}>
                 {columns.map((column) => (
-                  <td key={String(column.key)} className="px-6 py-4 whitespace-nowrap">
+                  <td key={String(column.key)} className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-white">
                     {column.render 
                       ? column.render(
                           typeof column.key === 'string' && column.key.includes('.') 
