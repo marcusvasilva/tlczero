@@ -7,6 +7,7 @@ export interface ConnectionStatus {
   lastChecked: Date | null
   consecutiveFailures: number
   isChecking: boolean
+  lastApiError?: Date | null // Nova propriedade para rastrear erros de API
 }
 
 export interface UseConnectionMonitorOptions {
@@ -14,6 +15,7 @@ export interface UseConnectionMonitorOptions {
   maxConsecutiveFailures?: number
   onConnectionLost?: () => void
   onConnectionRestored?: () => void
+  enablePassiveMonitoring?: boolean
 }
 
 export interface UseConnectionMonitorReturn {
@@ -21,80 +23,191 @@ export interface UseConnectionMonitorReturn {
   checkConnection: () => Promise<void>
   forceRefresh: () => Promise<void>
   isHealthy: boolean
+  reportApiError: () => void // Nova função para reportar erros de API
 }
 
-export function useConnectionMonitor(options: UseConnectionMonitorOptions = {}): UseConnectionMonitorReturn {
-  const {
-    checkInterval = 30000, // 30 segundos
-    maxConsecutiveFailures = 3,
-    onConnectionLost,
-    onConnectionRestored
-  } = options
-
-  const [status, setStatus] = useState<ConnectionStatus>({
+// Singleton para gerenciar o estado global de conectividade
+class ConnectionManager {
+  private static instance: ConnectionManager
+  private listeners: Set<(status: ConnectionStatus) => void> = new Set()
+  private currentStatus: ConnectionStatus = {
     isOnline: navigator.onLine,
     isSupabaseConnected: false,
     lastChecked: null,
     consecutiveFailures: 0,
-    isChecking: false
-  })
+    isChecking: false,
+    lastApiError: null
+  }
+  private lastCheckTime = 0
+  private isChecking = false
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
-  const isMountedRef = useRef(true)
-  const lastHealthyRef = useRef(true)
+  static getInstance() {
+    if (!ConnectionManager.instance) {
+      ConnectionManager.instance = new ConnectionManager()
+    }
+    return ConnectionManager.instance
+  }
 
-  // Verificar conexão com Supabase
-  const checkConnection = useCallback(async () => {
-    if (!isMountedRef.current || status.isChecking) return
+  subscribe(listener: (status: ConnectionStatus) => void) {
+    this.listeners.add(listener)
+    // Enviar status atual imediatamente
+    listener(this.currentStatus)
+    
+    return () => {
+      this.listeners.delete(listener)
+    }
+  }
 
-    setStatus(prev => ({ ...prev, isChecking: true }))
+  private notifyListeners() {
+    this.listeners.forEach(listener => listener(this.currentStatus))
+  }
+
+  private updateStatus(updates: Partial<ConnectionStatus>) {
+    this.currentStatus = { ...this.currentStatus, ...updates }
+    this.notifyListeners()
+  }
+
+  async checkConnection(force = false): Promise<boolean> {
+    const now = Date.now()
+    
+    // Evitar verificações muito frequentes
+    if (!force && now - this.lastCheckTime < 5000) {
+      return this.currentStatus.isSupabaseConnected
+    }
+
+    if (this.isChecking) {
+      return this.currentStatus.isSupabaseConnected
+    }
+
+    this.isChecking = true
+    this.lastCheckTime = now
+    this.updateStatus({ isChecking: true })
 
     try {
-      // Verificar se está online
       const isOnline = navigator.onLine
       
-      // Verificar conexão com Supabase
-      const isSupabaseConnected = await checkSupabaseConnection()
-      
-      const now = new Date()
-      const wasConnected = status.isSupabaseConnected
-
-      setStatus(prev => ({
-        ...prev,
-        isOnline,
-        isSupabaseConnected,
-        lastChecked: now,
-        consecutiveFailures: isSupabaseConnected ? 0 : prev.consecutiveFailures + 1,
-        isChecking: false
-      }))
-
-      // Callbacks para mudanças de estado
-      if (!wasConnected && isSupabaseConnected && onConnectionRestored) {
-        onConnectionRestored()
-      } else if (wasConnected && !isSupabaseConnected && onConnectionLost) {
-        onConnectionLost()
+      if (!isOnline) {
+        this.updateStatus({
+          isOnline: false,
+          isSupabaseConnected: false,
+          lastChecked: new Date(),
+          consecutiveFailures: this.currentStatus.consecutiveFailures + 1,
+          isChecking: false
+        })
+        return false
       }
 
+      const isSupabaseConnected = await checkSupabaseConnection()
+      const newFailures = isSupabaseConnected ? 0 : this.currentStatus.consecutiveFailures + 1
+
+      this.updateStatus({
+        isOnline,
+        isSupabaseConnected,
+        lastChecked: new Date(),
+        consecutiveFailures: newFailures,
+        isChecking: false
+      })
+
+      return isSupabaseConnected
     } catch (error) {
       console.error('Erro ao verificar conexão:', error)
-      setStatus(prev => ({
-        ...prev,
-        consecutiveFailures: prev.consecutiveFailures + 1,
+      this.updateStatus({
+        consecutiveFailures: this.currentStatus.consecutiveFailures + 1,
         isChecking: false
-      }))
+      })
+      return false
+    } finally {
+      this.isChecking = false
     }
-  }, [status.isChecking, status.isSupabaseConnected, onConnectionLost, onConnectionRestored])
+  }
+
+  reportApiError() {
+    this.updateStatus({
+      lastApiError: new Date(),
+      consecutiveFailures: this.currentStatus.consecutiveFailures + 1
+    })
+    
+    // Verificar conexão após erro de API
+    setTimeout(() => {
+      this.checkConnection(true)
+    }, 1000)
+  }
+
+  getStatus() {
+    return this.currentStatus
+  }
+}
+
+const connectionManager = ConnectionManager.getInstance()
+
+export function useConnectionMonitor(options: UseConnectionMonitorOptions = {}): UseConnectionMonitorReturn {
+  const {
+    checkInterval = 60000,
+    maxConsecutiveFailures = 5,
+    onConnectionLost,
+    onConnectionRestored,
+    enablePassiveMonitoring = true
+  } = options
+
+  const [status, setStatus] = useState<ConnectionStatus>(connectionManager.getStatus())
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const lastHealthyRef = useRef(true)
+  const isActivelyUsing = useRef(false)
+
+  // Detectar uso ativo da aplicação
+  useEffect(() => {
+    const handleUserActivity = () => {
+      isActivelyUsing.current = true
+      
+      // Se há problemas de conexão e o usuário está ativo, verificar
+      if (!status.isSupabaseConnected && Date.now() - (status.lastChecked?.getTime() || 0) > 10000) {
+        connectionManager.checkConnection(true)
+      }
+    }
+
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click']
+    events.forEach(event => {
+      document.addEventListener(event, handleUserActivity, { passive: true })
+    })
+
+    // Reset flag de uso ativo periodicamente
+    const activityTimer = setInterval(() => {
+      isActivelyUsing.current = false
+    }, 30000)
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleUserActivity)
+      })
+      clearInterval(activityTimer)
+    }
+  }, [status.isSupabaseConnected, status.lastChecked])
+
+  // Subscrever ao manager global
+  useEffect(() => {
+    return connectionManager.subscribe(setStatus)
+  }, [])
+
+  // Verificação manual
+  const checkConnection = useCallback(async () => {
+    await connectionManager.checkConnection(true)
+  }, [])
 
   // Forçar refresh da sessão
   const forceRefresh = useCallback(async () => {
     console.log('🔄 Forçando refresh da sessão...')
     try {
       await refreshSessionIfNeeded()
-      await checkConnection()
+      await connectionManager.checkConnection(true)
     } catch (error) {
       console.error('Erro ao forçar refresh:', error)
     }
-  }, [checkConnection])
+  }, [])
+
+  // Reportar erro de API
+  const reportApiError = useCallback(() => {
+    connectionManager.reportApiError()
+  }, [])
 
   // Verificar se a conexão está saudável
   const isHealthy = status.isOnline && 
@@ -104,70 +217,103 @@ export function useConnectionMonitor(options: UseConnectionMonitorOptions = {}):
   // Monitorar mudanças no status de saúde
   useEffect(() => {
     if (lastHealthyRef.current !== isHealthy) {
-      console.log(`🔔 Status da conexão mudou: ${isHealthy ? 'Saudável' : 'Problemática'}`)
+      if (!isHealthy && onConnectionLost) {
+        onConnectionLost()
+      } else if (isHealthy && !lastHealthyRef.current && onConnectionRestored) {
+        onConnectionRestored()
+      }
       lastHealthyRef.current = isHealthy
     }
-  }, [isHealthy])
+  }, [isHealthy, onConnectionLost, onConnectionRestored])
 
   // Listeners para eventos de conectividade
   useEffect(() => {
     const handleOnline = () => {
       console.log('🌐 Conexão de internet restaurada')
-      setStatus(prev => ({ ...prev, isOnline: true }))
-      // Verificar conexão com Supabase quando voltar online
-      setTimeout(() => checkConnection(), 1000)
+      setTimeout(() => connectionManager.checkConnection(true), 2000)
     }
 
     const handleOffline = () => {
       console.log('⚠️ Conexão de internet perdida')
-      setStatus(prev => ({ ...prev, isOnline: false }))
+      // O manager será atualizado na próxima verificação
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        setTimeout(() => connectionManager.checkConnection(), 1000)
+      }
     }
 
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
-    }
-  }, [checkConnection])
-
-  // Intervalo de verificação
-  useEffect(() => {
-    // Verificação inicial
-    checkConnection()
-
-    // Configurar intervalo
-    intervalRef.current = setInterval(checkConnection, checkInterval)
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-    }
-  }, [checkConnection, checkInterval])
-
-  // Cleanup
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
+
+  // Intervalo de verificação inteligente
+  useEffect(() => {
+    if (!enablePassiveMonitoring) return
+
+    // Verificação inicial
+    connectionManager.checkConnection()
+
+    // Configurar intervalo adaptativo
+    const setupInterval = () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+
+      let adaptiveInterval = checkInterval
+      
+      if (!status.isSupabaseConnected) {
+        adaptiveInterval = Math.max(30000, checkInterval / 2)
+      } else if (status.consecutiveFailures === 0) {
+        adaptiveInterval = Math.min(120000, checkInterval * 1.5)
+      }
+
+      intervalRef.current = setInterval(() => {
+        // Verificar se há necessidade de verificação
+        const needsCheck = 
+          isActivelyUsing.current || 
+          !status.isSupabaseConnected || 
+          status.consecutiveFailures > 0 ||
+          (status.lastApiError && Date.now() - status.lastApiError.getTime() < 60000)
+
+        if (needsCheck) {
+          connectionManager.checkConnection()
+        }
+      }, adaptiveInterval)
+    }
+
+    setupInterval()
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [checkInterval, enablePassiveMonitoring, status.isSupabaseConnected, status.consecutiveFailures, status.lastApiError])
 
   return {
     status,
     checkConnection,
     forceRefresh,
-    isHealthy
+    isHealthy,
+    reportApiError
   }
 }
 
-// Hook para mostrar notificações de conexão
+// Hook simplificado para notificações de conexão
 export function useConnectionNotifications() {
-  const { status, isHealthy } = useConnectionMonitor({
+  const { status, isHealthy, reportApiError } = useConnectionMonitor({
+    enablePassiveMonitoring: true,
+    checkInterval: 60000,
+    maxConsecutiveFailures: 5,
     onConnectionLost: () => {
       console.warn('🔴 Conexão com o servidor perdida')
     },
@@ -179,6 +325,31 @@ export function useConnectionNotifications() {
   return {
     status,
     isHealthy,
-    shouldShowWarning: !isHealthy && status.consecutiveFailures >= 2
+    reportApiError,
+    shouldShowWarning: !isHealthy && status.consecutiveFailures >= 3
+  }
+}
+
+// Hook para integrar com APIs
+export function useApiConnectionMonitor() {
+  const { reportApiError } = useConnectionNotifications()
+  
+  return {
+    reportApiError,
+    // Função para wrapper de chamadas de API
+    wrapApiCall: async <T>(apiCall: () => Promise<T>): Promise<T> => {
+      try {
+        return await apiCall()
+      } catch (error) {
+        // Reportar erro se parece ser de conectividade
+        if (error && typeof error === 'object' && 'message' in error) {
+          const message = (error as any).message?.toLowerCase() || ''
+          if (message.includes('network') || message.includes('connection') || message.includes('timeout')) {
+            reportApiError()
+          }
+        }
+        throw error
+      }
+    }
   }
 } 

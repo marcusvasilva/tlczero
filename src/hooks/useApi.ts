@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useApiConnectionMonitor } from './useConnectionMonitor'
 import type { ApiResponse } from '@/types'
 
 export interface UseApiState<T> {
@@ -14,6 +15,7 @@ export interface UseApiActions<T> {
 
 /**
  * Hook para gerenciar chamadas de API com estado de loading, erro e dados
+ * Integra automaticamente o monitoramento de erros de conectividade
  */
 export function useApi<T = any>(
   apiFunction: (...args: any[]) => Promise<ApiResponse<T>>
@@ -24,12 +26,15 @@ export function useApi<T = any>(
     error: null,
   })
 
+  const { wrapApiCall } = useApiConnectionMonitor()
+
   const execute = useCallback(
     async (...args: any[]) => {
       try {
         setState(prev => ({ ...prev, loading: true, error: null }))
         
-        const response = await apiFunction(...args)
+        // Envolver a chamada da API com monitoramento de conectividade
+        const response = await wrapApiCall(() => apiFunction(...args))
         
         if (response.success) {
           setState({
@@ -37,7 +42,7 @@ export function useApi<T = any>(
             loading: false,
             error: null,
           })
-          return response.data || null || null || null
+          return response.data || null
         } else {
           setState({
             data: null,
@@ -56,7 +61,7 @@ export function useApi<T = any>(
         return null
       }
     },
-    [apiFunction]
+    [apiFunction, wrapApiCall]
   )
 
   const reset = useCallback(() => {
@@ -92,6 +97,8 @@ export function useMultipleApi<T extends Record<string, any>>(
     return initialStates
   })
 
+  const { wrapApiCall } = useApiConnectionMonitor()
+
   const executeAll = useCallback(
     async (args: Record<keyof T, any[]> = {} as Record<keyof T, any[]>) => {
       const keys = Object.keys(apiCalls) as (keyof T)[]
@@ -105,10 +112,10 @@ export function useMultipleApi<T extends Record<string, any>>(
         return newStates
       })
 
-      // Executar todas as chamadas
+      // Executar todas as chamadas com monitoramento
       const promises = keys.map(async key => {
         try {
-          const response = await apiCalls[key](...(args[key] || []))
+          const response = await wrapApiCall(() => apiCalls[key](...(args[key] || [])))
           return { key, response }
         } catch (error) {
           return { 
@@ -146,7 +153,7 @@ export function useMultipleApi<T extends Record<string, any>>(
 
       return results
     },
-    [apiCalls]
+    [apiCalls, wrapApiCall]
   )
 
   const execute = useCallback(
@@ -157,7 +164,7 @@ export function useMultipleApi<T extends Record<string, any>>(
       }))
 
       try {
-        const response = await apiCalls[key](...args)
+        const response = await wrapApiCall(() => apiCalls[key](...args))
         
         if (response.success) {
           setStates(prev => ({
@@ -168,7 +175,7 @@ export function useMultipleApi<T extends Record<string, any>>(
               error: null,
             }
           }))
-          return response.data || null || null || null
+          return response.data || null
         } else {
           setStates(prev => ({
             ...prev,
@@ -193,7 +200,7 @@ export function useMultipleApi<T extends Record<string, any>>(
         return null
       }
     },
-    [apiCalls]
+    [apiCalls, wrapApiCall]
   )
 
   const reset = useCallback((key?: keyof T) => {
@@ -225,6 +232,102 @@ export function useMultipleApi<T extends Record<string, any>>(
     states,
     execute,
     executeAll,
+    reset,
+  }
+}
+
+/**
+ * Hook utilitário para executar chamadas de API com retry automático
+ */
+export function useApiWithRetry<T = any>(
+  apiFunction: (...args: any[]) => Promise<ApiResponse<T>>,
+  options: {
+    maxRetries?: number
+    retryDelay?: number
+    shouldRetry?: (error: any) => boolean
+  } = {}
+) {
+  const {
+    maxRetries = 3,
+    retryDelay = 1000,
+    shouldRetry = (error) => {
+      const message = error?.message?.toLowerCase() || ''
+      return message.includes('network') || message.includes('timeout') || message.includes('connection')
+    }
+  } = options
+
+  const [state, setState] = useState<UseApiState<T>>({
+    data: null,
+    loading: false,
+    error: null,
+  })
+
+  const { wrapApiCall } = useApiConnectionMonitor()
+
+  const execute = useCallback(
+    async (...args: any[]) => {
+      setState(prev => ({ ...prev, loading: true, error: null }))
+
+      let lastError: any = null
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const response = await wrapApiCall(() => apiFunction(...args))
+          
+          if (response.success) {
+            setState({
+              data: response.data || null,
+              loading: false,
+              error: null,
+            })
+            return response.data || null
+          } else {
+            lastError = new Error(response.error || 'Erro desconhecido')
+            
+            // Se não deve fazer retry ou é a última tentativa
+            if (!shouldRetry(lastError) || attempt === maxRetries) {
+              break
+            }
+            
+            // Aguardar antes de tentar novamente
+            await new Promise(resolve => setTimeout(resolve, retryDelay * attempt))
+          }
+        } catch (error) {
+          lastError = error
+          
+          // Se não deve fazer retry ou é a última tentativa
+          if (!shouldRetry(error) || attempt === maxRetries) {
+            break
+          }
+          
+          // Aguardar antes de tentar novamente
+          await new Promise(resolve => setTimeout(resolve, retryDelay * attempt))
+        }
+      }
+      
+      // Se chegou aqui, todas as tentativas falharam
+      const errorMessage = lastError instanceof Error ? lastError.message : 'Erro na requisição'
+      setState({
+        data: null,
+        loading: false,
+        error: errorMessage,
+      })
+      return null
+    },
+    [apiFunction, wrapApiCall, maxRetries, retryDelay, shouldRetry]
+  )
+
+  const reset = useCallback(() => {
+    setState({
+      data: null,
+      loading: false,
+      error: null,
+    })
+  }, [])
+
+  return {
+    ...state,
+    execute,
     reset,
   }
 } 

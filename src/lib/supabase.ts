@@ -180,9 +180,24 @@ export async function executeQuery<T>(
   }
 }
 
-// Função para verificar conectividade com Supabase
+// Função otimizada para verificar conectividade com Supabase
 export async function checkSupabaseConnection(): Promise<boolean> {
   try {
+    // Usar uma abordagem mais leve - verificar apenas a sessão ativa
+    const { data: { session }, error } = await supabase.auth.getSession()
+    
+    if (error) {
+      console.warn('⚠️ Erro na verificação de sessão:', error)
+      return false
+    }
+    
+    // Se há sessão ativa, considerar conectado
+    if (session) {
+      return true
+    }
+    
+    // Se não há sessão, fazer uma verificação mínima no banco
+    // Usar uma query muito simples que não consome recursos
     const result = await executeQuery(
       async () => {
         return await supabase
@@ -191,7 +206,7 @@ export async function checkSupabaseConnection(): Promise<boolean> {
           .limit(1)
       },
       {
-        timeout: 5000,
+        timeout: 3000, // Timeout menor para verificação rápida
         maxRetries: 1,
         context: 'Connection Check'
       }
@@ -200,6 +215,25 @@ export async function checkSupabaseConnection(): Promise<boolean> {
     return result.success
   } catch (error) {
     console.error('❌ Erro na verificação de conectividade:', error)
+    return false
+  }
+}
+
+// Função para verificação de conectividade ainda mais leve (apenas para usuários anônimos)
+export async function checkBasicConnectivity(): Promise<boolean> {
+  try {
+    // Verificar apenas se consegue fazer uma requisição básica
+    const response = await fetch(supabaseUrl + '/rest/v1/', {
+      method: 'HEAD',
+      headers: {
+        'apikey': supabaseAnonKey
+      },
+      signal: AbortSignal.timeout(2000) // Timeout de 2 segundos
+    })
+    
+    return response.ok
+  } catch (error) {
+    console.warn('⚠️ Verificação básica de conectividade falhou:', error)
     return false
   }
 }

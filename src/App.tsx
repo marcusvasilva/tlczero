@@ -6,7 +6,6 @@ import { AppLayout } from './components/layout/AppLayout'
 import { GlobalLoading } from './components/common/GlobalLoading'
 import { PWAInstallPrompt } from './components/common/PWAInstallPrompt'
 import { ToastContainer } from './components/common/Toast'
-import { ConnectionStatus } from './components/common/ConnectionStatus'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
 
@@ -121,9 +120,6 @@ function App() {
           
           {/* Sistema de notificações */}
           <ToastContainer />
-          
-          {/* Status de conexão */}
-          <ConnectionStatus />
         </Router>
       </ToastProvider>
     </AuthProvider>
