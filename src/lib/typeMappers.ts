@@ -135,13 +135,30 @@ export const mapLegacyUserToSupabase = (user: Partial<User>) => {
 export const mapLegacySpaceToSupabase = (space: Partial<Space>) => {
   console.log('🔄 Mapeando espaço para Supabase:', space)
   
-  const supabaseData = {
-    name: space.name || '',
-    account_id: space.accountId || space.clientId || '', // Suporta ambos os campos
-    description: space.description || null,
-    area_size: space.areaSize || null,
-    environment_type: space.environmentType || 'indoor',
-    status: space.active ? 'active' : 'inactive'
+  const supabaseData: any = {}
+  
+  if (space.name !== undefined) {
+    supabaseData.name = space.name
+  }
+  
+  if (space.accountId !== undefined || space.clientId !== undefined) {
+    supabaseData.account_id = space.accountId || space.clientId
+  }
+  
+  if (space.description !== undefined) {
+    supabaseData.description = space.description
+  }
+  
+  if (space.areaSize !== undefined) {
+    supabaseData.area_size = space.areaSize
+  }
+  
+  if (space.environmentType !== undefined) {
+    supabaseData.environment_type = space.environmentType
+  }
+  
+  if (space.active !== undefined) {
+    supabaseData.status = space.active ? 'active' : 'inactive'
   }
   
   console.log('📤 Dados de espaço convertidos para Supabase:', supabaseData)

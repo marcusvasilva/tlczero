@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Space as SupabaseSpace } from '@/lib/supabase'
-import type { Space, CreateSpaceData } from '@/types'
+import type { Space, CreateSpaceData, UpdateSpaceData } from '@/types'
 import { mapSupabaseSpaceToLegacy, mapLegacySpaceToSupabase } from '@/lib/typeMappers'
 import { useAuthContext } from '@/contexts/AuthContext'
 
@@ -29,7 +29,7 @@ interface UseSpacesReturn {
   
   // CRUD operations
   createSpace: (data: CreateSpaceData) => Promise<Space>
-  updateSpace: (id: string, data: Partial<CreateSpaceData>) => Promise<Space>
+  updateSpace: (id: string, data: UpdateSpaceData) => Promise<Space>
   deleteSpace: (id: string) => Promise<void>
   getSpace: (id: string) => Space | undefined
   getSpacesByClient: (clientId: string) => Space[]
@@ -221,7 +221,7 @@ export const useSpaces = (options: UseSpacesOptions = {}): UseSpacesReturn => {
   }, [fetchSpaces])
 
   // Update space
-  const updateSpace = useCallback(async (id: string, data: Partial<CreateSpaceData>): Promise<Space> => {
+  const updateSpace = useCallback(async (id: string, data: UpdateSpaceData): Promise<Space> => {
     console.log('🎯 Iniciando updateSpace com dados:', data)
     setIsUpdating(true)
     setError(null)
@@ -238,7 +238,7 @@ export const useSpaces = (options: UseSpacesOptions = {}): UseSpacesReturn => {
       }
       
       console.log('✅ Validação passou, convertendo dados...')
-      const supabaseData = mapLegacySpaceToSupabase({ ...data, active: true })
+      const supabaseData = mapLegacySpaceToSupabase(data)
       
       console.log('📡 Fazendo update no Supabase...')
       const { data: updatedSpace, error } = await supabase

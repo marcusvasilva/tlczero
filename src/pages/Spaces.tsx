@@ -5,6 +5,7 @@ import { useAuthContext } from '@/contexts/AuthContext'
 import { SpaceForm } from '@/components/forms/SpaceForm'
 import { QRCodeDisplay } from '@/components/common/QRCodeDisplay'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { ToggleSwitch } from '@/components/ui/toggle-switch'
 import type { Account } from '@/types/client'
 import { 
   Building2, 
@@ -17,9 +18,9 @@ import {
   Activity,
   Home,
   Trees,
-  Building 
+  Building
 } from 'lucide-react'
-import type { Space } from '@/types'
+import type { Space, UpdateSpaceData } from '@/types'
 
 export default function Spaces() {
   const { user, userType } = useAuthContext()
@@ -41,11 +42,14 @@ export default function Spaces() {
   const [deletingSpace, setDeletingSpace] = useState<Space | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterEnvironment, setFilterEnvironment] = useState<'all' | 'indoor' | 'outdoor' | 'mixed'>('all')
+  const [filterClient, setFilterClient] = useState<string>('all')
+  const [togglingSpaceId, setTogglingSpaceId] = useState<string | null>(null)
 
   // Permissões
   const canCreate = userType === 'admin' || userType === 'supervisor'
   const canEdit = userType === 'admin' || userType === 'supervisor'
   const canDelete = userType === 'admin'
+  const canToggleStatus = userType === 'admin' || userType === 'supervisor'
 
   // Filtrar espaços
   const displayedSpaces = useMemo(() => {
@@ -65,8 +69,13 @@ export default function Spaces() {
       spaces = spaces.filter(space => space.environmentType === filterEnvironment)
     }
 
+    // Filtro de cliente
+    if (filterClient !== 'all') {
+      spaces = spaces.filter(space => space.clientId === filterClient)
+    }
+
     return spaces
-  }, [filteredSpaces, searchTerm, filterEnvironment])
+  }, [filteredSpaces, searchTerm, filterEnvironment, filterClient])
 
   // Handlers
   const handleCreateSpace = async (data: any) => {
@@ -98,6 +107,21 @@ export default function Spaces() {
       setDeletingSpace(null)
     } catch (error) {
       console.error('Erro ao excluir espaço:', error)
+    }
+  }
+
+  const handleToggleSpaceStatus = async (space: Space) => {
+    if (!canToggleStatus) return
+    
+    setTogglingSpaceId(space.id)
+    
+    try {
+      const updateData: UpdateSpaceData = { active: !space.active }
+      await updateSpace(space.id, updateData)
+    } catch (error) {
+      console.error('Erro ao alterar status do espaço:', error)
+    } finally {
+      setTogglingSpaceId(null)
     }
   }
 
@@ -221,6 +245,20 @@ export default function Spaces() {
             </div>
           </div>
 
+          {/* Filtro de Cliente */}
+          <select
+            value={filterClient}
+            onChange={(e) => setFilterClient(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <option value="all">Todas as Empresas</option>
+            {filteredClients.map((client: Account) => (
+              <option key={client.id} value={client.id}>
+                {client.company_name}
+              </option>
+            ))}
+          </select>
+
           {/* Filtro de Ambiente */}
           <select
             value={filterEnvironment}
@@ -243,11 +281,11 @@ export default function Spaces() {
             Nenhum espaço encontrado
           </h3>
           <p className="text-gray-500 mb-6">
-            {searchTerm || filterEnvironment !== 'all' 
+            {searchTerm || filterEnvironment !== 'all' || filterClient !== 'all'
               ? 'Tente ajustar os filtros de busca' 
               : 'Comece criando um novo espaço'}
           </p>
-          {canCreate && !searchTerm && filterEnvironment === 'all' && (
+          {canCreate && !searchTerm && filterEnvironment === 'all' && filterClient === 'all' && (
             <button
               onClick={() => {
                 setEditingSpace(null)
@@ -279,13 +317,23 @@ export default function Spaces() {
                         {client?.company_name || 'Cliente não encontrado'}
                       </p>
                     </div>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      space.active 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {space.active ? 'Ativo' : 'Inativo'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        space.active 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {space.active ? 'Ativo' : 'Inativo'}
+                      </span>
+                      {canToggleStatus && (
+                        <ToggleSwitch
+                          checked={space.active}
+                          onChange={() => handleToggleSpaceStatus(space)}
+                          disabled={togglingSpaceId === space.id}
+                          size="sm"
+                        />
+                      )}
+                    </div>
                   </div>
 
                   {/* Informações */}
