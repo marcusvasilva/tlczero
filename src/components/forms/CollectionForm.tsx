@@ -79,7 +79,8 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
       initialDataRef.current = initialData
       setFieldValue('spaceId', initialData.spaceId)
       setFieldValue('operatorId', initialData.operatorId)
-      setFieldValue('weight', initialData.weight)
+      // Converter peso de gramas para kg para exibição
+      setFieldValue('weight', initialData.weight / 1000)
       setFieldValue('photoUrl', initialData.photoUrl || '')
       setFieldValue('observations', initialData.observations || '')
       setFieldValue('collectedAt', initialData.collectedAt)
@@ -113,8 +114,14 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault()
 
+    // Converter peso de kg para gramas antes de validar
+    const valuesWithGrams = {
+      ...values,
+      weight: (values.weight || 0) * 1000 // Converter kg para gramas
+    }
+
     // Validar usando schema
-    const result = collectionSchema.safeParse(values)
+    const result = collectionSchema.safeParse(valuesWithGrams)
     if (!result.success) {
       result.error.errors.forEach((error) => {
         const field = error.path[0] as keyof CreateCollectionData
@@ -123,7 +130,7 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
       return
     }
 
-    onSubmit(values)
+    onSubmit(valuesWithGrams)
   }, [values, setError, onSubmit])
 
   const handleInputChange = useCallback((field: keyof CreateCollectionData, value: any) => {

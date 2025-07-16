@@ -48,7 +48,7 @@ export default function Spaces() {
   // Permissões
   const canCreate = userType === 'admin' || userType === 'supervisor'
   const canEdit = userType === 'admin' || userType === 'supervisor'
-  const canDelete = userType === 'admin'
+  const canDelete = userType === 'admin' || userType === 'supervisor'
   const canToggleStatus = userType === 'admin' || userType === 'supervisor'
 
   // Filtrar espaços

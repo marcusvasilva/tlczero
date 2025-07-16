@@ -212,7 +212,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
       <div className="flex gap-2 justify-center">
         <button
           onClick={handleDownload}
-          className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+          className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
         >
           <Download className="w-4 h-4" />
           Baixar
@@ -220,7 +220,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
         
         <button
           onClick={handlePrint}
-          className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+          className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
         >
           <Printer className="w-4 h-4" />
           Imprimir
@@ -230,8 +230,8 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
           onClick={handleCopyLink}
           className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium border rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${
             linkCopied 
-              ? 'text-green-700 bg-green-50 border-green-300' 
-              : 'text-gray-700 bg-white border-gray-300 hover:bg-gray-50'
+              ? 'text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-600' 
+              : 'text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
           }`}
         >
           <Link className="w-4 h-4" />
@@ -249,7 +249,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
     <>
       <button
         onClick={() => setIsDialogOpen(true)}
-        className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+        className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
       >
         <QrIcon className="w-4 h-4" />
         QR Code

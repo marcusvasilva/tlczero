@@ -34,8 +34,8 @@ export const collectionSchema = z.object({
   operatorId: z.string().min(1, 'Operador é obrigatório'),
   clientId: z.string().min(1, 'Cliente é obrigatório'),
   weight: z.number()
-    .min(0.01, 'Peso deve ser maior que 0')
-    .max(50, 'Peso não pode exceder 50kg'),
+    .min(10, 'Peso deve ser maior que 0.01kg')
+    .max(50000, 'Peso não pode exceder 50kg'),
   photoUrl: z.string().optional(),
   observations: z.string().optional(),
   collectedAt: z.union([z.date(), z.string()]).transform((val) => {

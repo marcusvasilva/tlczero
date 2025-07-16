@@ -204,7 +204,7 @@ export function Collect() {
       const weight = parseFloat(formData.weight.replace(',', '.'))
       if (isNaN(weight) || weight <= 0) {
         errors.weight = 'Digite um peso válido maior que zero.'
-      } else if (weight > 1000) {
+      } else if (weight > 50) {
         errors.weight = 'Peso muito alto. Verifique se está correto.'
       }
     }
@@ -246,7 +246,7 @@ export function Collect() {
       const collectionData: CreateCollectionData = {
         spaceId: formData.spaceId || '',
         operatorId: formData.operatorId || '',
-        weight: parseFloat(formData.weight.replace(',', '.')),
+        weight: parseFloat(formData.weight.replace(',', '.')) * 1000, // Converter kg para gramas
         photoUrl: formData.photo ? URL.createObjectURL(formData.photo) : undefined,
         observations: formData.observations,
         collectedAt: new Date(),

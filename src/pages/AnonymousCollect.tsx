@@ -165,7 +165,7 @@ export function AnonymousCollect() {
     setError('')
 
     try {
-      const weightValue = parseFloat(weight.replace(',', '.'))
+      const weightValue = parseFloat(weight.replace(',', '.')) * 1000 // Converter kg para gramas
       
       // Upload da foto se houver
       let photoUrl = null
