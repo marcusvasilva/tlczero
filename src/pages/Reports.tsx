@@ -21,6 +21,7 @@ import { useCollections } from '@/hooks/useCollections'
 import { useClientSpaces } from '@/hooks/useSpaces'
 import { useClients } from '@/hooks/useClients'
 import { formatDate, formatWeight } from '@/lib/formatters'
+import { useMobile } from '@/hooks/use-mobile'
 
 // Componentes UI simples
 const Button = ({ children, variant = 'default', size = 'default', onClick, disabled, className = '' }: any) => (
@@ -59,6 +60,7 @@ export default function Reports() {
   const { collections } = useCollections()
   const { spaces } = useClientSpaces()
   const { clients } = useClients()
+  const isMobile = useMobile()
   
   const [selectedPeriod, setSelectedPeriod] = useState<'7d' | '30d' | '90d' | '1y'>('30d')
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
@@ -526,77 +528,118 @@ export default function Reports() {
        )}
 
        {/* Cronograma de Reaplicação */}
-       <Card className="p-6">
+       <Card className="p-6 overflow-hidden">
          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
            <Calendar className="h-5 w-5 mr-2 text-purple-600" />
            Cronograma de Reaplicação Inteligente
          </h3>
-         <div className="overflow-x-auto">
-           <table className="w-full">
-             <thead className="bg-gray-50 dark:bg-gray-700">
-               <tr>
-                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                   Espaço
-                 </th>
-                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                   Urgência
-                 </th>
-                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                   Prazo
-                 </th>
-                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                   Motivo
-                 </th>
-                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                   Ação
-                 </th>
-               </tr>
-             </thead>
-             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-               {reapplicationSchedule.map((item) => (
-                 <tr key={item.spaceId} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                   <td className="px-6 py-4 whitespace-nowrap">
-                     <div className="text-sm font-medium text-gray-900 dark:text-white">
-                       {item.spaceName}
-                     </div>
-                   </td>
-                   <td className="px-6 py-4 whitespace-nowrap">
-                     <Badge variant={
-                       item.urgency === 'immediate' ? 'danger' :
-                       item.urgency === 'soon' ? 'warning' :
-                       item.urgency === 'scheduled' ? 'default' : 'success'
-                     }>
-                       {item.urgency === 'immediate' ? 'Imediato' :
-                        item.urgency === 'soon' ? 'Em breve' :
-                        item.urgency === 'scheduled' ? 'Agendado' : 'Bom'}
-                     </Badge>
-                   </td>
-                   <td className="px-6 py-4 whitespace-nowrap">
-                     <div className="flex items-center">
-                       <Clock className="h-4 w-4 text-gray-400 mr-1" />
-                       <span className="text-sm text-gray-900 dark:text-white">
-                         {item.daysUntilReapplication === 0 ? 'Agora' : `${item.daysUntilReapplication} dias`}
-                       </span>
-                     </div>
-                   </td>
-                   <td className="px-6 py-4">
-                     <div className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
-                       {item.reason}
-                     </div>
-                   </td>
-                   <td className="px-6 py-4 whitespace-nowrap">
-                     <Button 
-                       size="sm" 
-                       variant={item.urgency === 'immediate' ? 'default' : 'outline'}
-                     >
-                       {item.urgency === 'immediate' ? 'Agendar' : 'Planejar'}
-                     </Button>
-                   </td>
+         {isMobile ? (
+           // Visualização em Cards para Mobile
+           <div className="grid grid-cols-1 gap-3">
+             {reapplicationSchedule.map((item) => (
+               <div key={item.spaceId} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                 <div className="flex items-center justify-between mb-3">
+                   <h4 className="font-medium text-gray-900 dark:text-white">{item.spaceName}</h4>
+                   <Badge variant={
+                     item.urgency === 'immediate' ? 'danger' :
+                     item.urgency === 'soon' ? 'warning' :
+                     item.urgency === 'scheduled' ? 'default' : 'success'
+                   }>
+                     {item.urgency === 'immediate' ? 'Imediato' :
+                      item.urgency === 'soon' ? 'Em breve' :
+                      item.urgency === 'scheduled' ? 'Agendado' : 'Bom'}
+                   </Badge>
+                 </div>
+                 <div className="space-y-2 text-sm">
+                   <div className="flex items-center text-gray-600 dark:text-gray-300">
+                     <Clock className="h-4 w-4 mr-2" />
+                     <span>Prazo: {item.daysUntilReapplication === 0 ? 'Agora' : `${item.daysUntilReapplication} dias`}</span>
+                   </div>
+                   <div className="text-gray-500 dark:text-gray-400">
+                     {item.reason}
+                   </div>
+                 </div>
+                 <div className="mt-3">
+                   <Button 
+                     size="sm" 
+                     variant={item.urgency === 'immediate' ? 'default' : 'outline'}
+                     className="w-full"
+                   >
+                     {item.urgency === 'immediate' ? 'Agendar' : 'Planejar'}
+                   </Button>
+                 </div>
+               </div>
+             ))}
+           </div>
+         ) : (
+           // Visualização em Tabela para Desktop
+           <div className="overflow-x-auto">
+             <table className="min-w-full">
+               <thead className="bg-gray-50 dark:bg-gray-700">
+                 <tr>
+                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                     Espaço
+                   </th>
+                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                     Urgência
+                   </th>
+                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                     Prazo
+                   </th>
+                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                     Motivo
+                   </th>
+                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                     Ação
+                   </th>
                  </tr>
-               ))}
-             </tbody>
-           </table>
-         </div>
+               </thead>
+               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                 {reapplicationSchedule.map((item) => (
+                   <tr key={item.spaceId} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                     <td className="px-6 py-4 whitespace-nowrap">
+                       <div className="text-sm font-medium text-gray-900 dark:text-white">
+                         {item.spaceName}
+                       </div>
+                     </td>
+                     <td className="px-6 py-4 whitespace-nowrap">
+                       <Badge variant={
+                         item.urgency === 'immediate' ? 'danger' :
+                         item.urgency === 'soon' ? 'warning' :
+                         item.urgency === 'scheduled' ? 'default' : 'success'
+                       }>
+                         {item.urgency === 'immediate' ? 'Imediato' :
+                          item.urgency === 'soon' ? 'Em breve' :
+                          item.urgency === 'scheduled' ? 'Agendado' : 'Bom'}
+                       </Badge>
+                     </td>
+                     <td className="px-6 py-4 whitespace-nowrap">
+                       <div className="flex items-center">
+                         <Clock className="h-4 w-4 text-gray-400 mr-1" />
+                         <span className="text-sm text-gray-900 dark:text-white">
+                           {item.daysUntilReapplication === 0 ? 'Agora' : `${item.daysUntilReapplication} dias`}
+                         </span>
+                       </div>
+                     </td>
+                     <td className="px-6 py-4">
+                       <div className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
+                         {item.reason}
+                       </div>
+                     </td>
+                     <td className="px-6 py-4 whitespace-nowrap">
+                       <Button 
+                         size="sm" 
+                         variant={item.urgency === 'immediate' ? 'default' : 'outline'}
+                       >
+                         {item.urgency === 'immediate' ? 'Agendar' : 'Planejar'}
+                       </Button>
+                     </td>
+                   </tr>
+                 ))}
+               </tbody>
+             </table>
+           </div>
+         )}
        </Card>
 
        {/* Insights Avançados */}
@@ -650,91 +693,147 @@ export default function Reports() {
        )}
 
        {/* Performance por Espaço */}
-       <Card className="p-6">
+       <Card className="p-6 overflow-hidden">
          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
            Performance por Espaço
          </h3>
-         <div className="overflow-x-auto">
-           <table className="w-full">
-             <thead className="bg-gray-50 dark:bg-gray-700">
-               <tr>
-                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                   Espaço
-                 </th>
-                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                   Total Eliminado
-                 </th>
-                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                   Coletas
-                 </th>
-                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                   Média por Coleta
-                 </th>
-                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                   Última Coleta
-                 </th>
-                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                   Status
-                 </th>
-               </tr>
-             </thead>
-             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-               {spaces.map((space) => {
-                 const spaceCollections = currentPeriodCollections.filter(c => c.spaceId === space.id)
-                 const totalWeight = spaceCollections.reduce((sum, c) => sum + c.weight, 0)
-                 const collectionsCount = spaceCollections.length
-                 const averageWeight = collectionsCount > 0 ? totalWeight / collectionsCount : 0
-                 const lastCollection = spaceCollections.length > 0 
-                   ? new Date(Math.max(...spaceCollections.map(c => new Date(c.collectedAt).getTime())))
-                   : null
+         {isMobile ? (
+           // Visualização em Cards para Mobile
+           <div className="grid grid-cols-1 gap-3">
+             {spaces.map((space) => {
+               const spaceCollections = currentPeriodCollections.filter(c => c.spaceId === space.id)
+               const totalWeight = spaceCollections.reduce((sum, c) => sum + c.weight, 0)
+               const collectionsCount = spaceCollections.length
+               const averageWeight = collectionsCount > 0 ? totalWeight / collectionsCount : 0
+               const lastCollection = spaceCollections.length > 0 
+                 ? new Date(Math.max(...spaceCollections.map(c => new Date(c.collectedAt).getTime())))
+                 : null
 
-                 return (
-                   <tr key={space.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                     <td className="px-6 py-4 whitespace-nowrap">
-                       <div className="text-sm font-medium text-gray-900 dark:text-white">
-                         {space.name}
-                       </div>
-                       <div className="text-sm text-gray-500 dark:text-gray-400">
-                         ID: {space.id}
-                       </div>
-                     </td>
-                     <td className="px-6 py-4 whitespace-nowrap">
-                       <div className="text-sm text-gray-900 dark:text-white font-semibold">
-                         {formatWeight(totalWeight)}
-                       </div>
-                     </td>
-                     <td className="px-6 py-4 whitespace-nowrap">
-                       <div className="text-sm text-gray-900 dark:text-white">
-                         {collectionsCount}
-                       </div>
-                     </td>
-                     <td className="px-6 py-4 whitespace-nowrap">
-                       <div className="text-sm text-gray-900 dark:text-white">
-                         {formatWeight(averageWeight)}
-                       </div>
-                     </td>
-                     <td className="px-6 py-4 whitespace-nowrap">
-                       <div className="text-sm text-gray-500 dark:text-gray-400">
+               return (
+                 <div key={space.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                   <div className="flex items-center justify-between mb-3">
+                     <div>
+                       <h4 className="font-medium text-gray-900 dark:text-white">{space.name}</h4>
+                       <p className="text-xs text-gray-500 dark:text-gray-400">ID: {space.id}</p>
+                     </div>
+                     <Badge variant={
+                       averageWeight >= 2 ? 'success' :
+                       averageWeight >= 1 ? 'warning' : 
+                       collectionsCount === 0 ? 'danger' : 'default'
+                     }>
+                       {averageWeight >= 2 ? 'Excelente' :
+                        averageWeight >= 1 ? 'Boa' :
+                        collectionsCount === 0 ? 'Sem dados' : 'Baixa'}
+                     </Badge>
+                   </div>
+                   <div className="grid grid-cols-2 gap-3 text-sm">
+                     <div>
+                       <p className="text-gray-600 dark:text-gray-400">Total Eliminado</p>
+                       <p className="font-semibold text-gray-900 dark:text-white">{formatWeight(totalWeight)}</p>
+                     </div>
+                     <div>
+                       <p className="text-gray-600 dark:text-gray-400">Coletas</p>
+                       <p className="font-semibold text-gray-900 dark:text-white">{collectionsCount}</p>
+                     </div>
+                     <div>
+                       <p className="text-gray-600 dark:text-gray-400">Média/Coleta</p>
+                       <p className="font-semibold text-gray-900 dark:text-white">{formatWeight(averageWeight)}</p>
+                     </div>
+                     <div>
+                       <p className="text-gray-600 dark:text-gray-400">Última Coleta</p>
+                       <p className="font-semibold text-gray-900 dark:text-white">
                          {lastCollection ? formatDate(lastCollection) : 'Nunca'}
-                       </div>
-                     </td>
-                     <td className="px-6 py-4 whitespace-nowrap">
-                       <Badge variant={
-                         averageWeight >= 2 ? 'success' :
-                         averageWeight >= 1 ? 'warning' : 
-                         collectionsCount === 0 ? 'danger' : 'default'
-                       }>
-                         {averageWeight >= 2 ? 'Excelente' :
-                          averageWeight >= 1 ? 'Boa' :
-                          collectionsCount === 0 ? 'Sem dados' : 'Baixa'}
-                       </Badge>
-                     </td>
-                   </tr>
-                 )
-               })}
-             </tbody>
-           </table>
-         </div>
+                       </p>
+                     </div>
+                   </div>
+                 </div>
+               )
+             })}
+           </div>
+         ) : (
+           // Visualização em Tabela para Desktop
+           <div className="overflow-x-auto">
+             <table className="min-w-full">
+               <thead className="bg-gray-50 dark:bg-gray-700">
+                 <tr>
+                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                     Espaço
+                   </th>
+                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                     Total Eliminado
+                   </th>
+                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                     Coletas
+                   </th>
+                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                     Média por Coleta
+                   </th>
+                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                     Última Coleta
+                   </th>
+                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                     Status
+                   </th>
+                 </tr>
+               </thead>
+               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                 {spaces.map((space) => {
+                   const spaceCollections = currentPeriodCollections.filter(c => c.spaceId === space.id)
+                   const totalWeight = spaceCollections.reduce((sum, c) => sum + c.weight, 0)
+                   const collectionsCount = spaceCollections.length
+                   const averageWeight = collectionsCount > 0 ? totalWeight / collectionsCount : 0
+                   const lastCollection = spaceCollections.length > 0 
+                     ? new Date(Math.max(...spaceCollections.map(c => new Date(c.collectedAt).getTime())))
+                     : null
+
+                   return (
+                     <tr key={space.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                       <td className="px-6 py-4 whitespace-nowrap">
+                         <div className="text-sm font-medium text-gray-900 dark:text-white">
+                           {space.name}
+                         </div>
+                         <div className="text-sm text-gray-500 dark:text-gray-400">
+                           ID: {space.id}
+                         </div>
+                       </td>
+                       <td className="px-6 py-4 whitespace-nowrap">
+                         <div className="text-sm text-gray-900 dark:text-white font-semibold">
+                           {formatWeight(totalWeight)}
+                         </div>
+                       </td>
+                       <td className="px-6 py-4 whitespace-nowrap">
+                         <div className="text-sm text-gray-900 dark:text-white">
+                           {collectionsCount}
+                         </div>
+                       </td>
+                       <td className="px-6 py-4 whitespace-nowrap">
+                         <div className="text-sm text-gray-900 dark:text-white">
+                           {formatWeight(averageWeight)}
+                         </div>
+                       </td>
+                       <td className="px-6 py-4 whitespace-nowrap">
+                         <div className="text-sm text-gray-500 dark:text-gray-400">
+                           {lastCollection ? formatDate(lastCollection) : 'Nunca'}
+                         </div>
+                       </td>
+                       <td className="px-6 py-4 whitespace-nowrap">
+                         <Badge variant={
+                           averageWeight >= 2 ? 'success' :
+                           averageWeight >= 1 ? 'warning' : 
+                           collectionsCount === 0 ? 'danger' : 'default'
+                         }>
+                           {averageWeight >= 2 ? 'Excelente' :
+                            averageWeight >= 1 ? 'Boa' :
+                            collectionsCount === 0 ? 'Sem dados' : 'Baixa'}
+                         </Badge>
+                       </td>
+                     </tr>
+                   )
+                 })}
+               </tbody>
+             </table>
+           </div>
+         )}
        </Card>
 
        {/* Resumo Executivo */}

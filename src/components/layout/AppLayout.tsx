@@ -3,7 +3,9 @@ import { Outlet } from 'react-router-dom'
 import { AppSidebar } from './AppSidebar'
 import { AppHeader } from './AppHeader'
 import { ConnectionStatus } from '../common/ConnectionStatus'
+import { ConnectionRetry } from '../common/ConnectionRetry'
 import { useMobile } from '@/hooks/use-mobile'
+import { useConnectionNotifications } from '@/hooks/useConnectionMonitor'
 
 interface SidebarContextType {
   isCollapsed: boolean
@@ -25,7 +27,16 @@ export const useSidebar = () => {
 export function AppLayout() {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [showConnectionRetry, setShowConnectionRetry] = useState(false)
   const isMobile = useMobile()
+  const { shouldShowWarning, status } = useConnectionNotifications()
+  
+  // Mostrar botão de retry quando houver problemas de conexão
+  useEffect(() => {
+    if (shouldShowWarning && !status.isChecking) {
+      setShowConnectionRetry(true)
+    }
+  }, [shouldShowWarning, status.isChecking])
 
   // Ajustar sidebar baseado no tamanho da tela
   useEffect(() => {
@@ -72,7 +83,7 @@ export function AppLayout() {
         }`}>
           <AppHeader />
           
-          <main className="flex-1 overflow-auto">
+          <main className="flex-1 overflow-x-hidden overflow-y-auto">
             <Outlet />
           </main>
         </div>
@@ -87,6 +98,15 @@ export function AppLayout() {
         
         {/* Status de conexão */}
         <ConnectionStatus />
+        
+        {/* Botão de retry de conexão */}
+        <ConnectionRetry 
+          show={showConnectionRetry}
+          onRetry={() => {
+            setShowConnectionRetry(false)
+            window.location.reload()
+          }}
+        />
       </div>
     </SidebarContext.Provider>
   )

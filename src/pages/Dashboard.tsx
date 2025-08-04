@@ -70,12 +70,12 @@ function MetricCard({ title, value, subtitle, icon: Icon, color, info, isLoading
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div className="bg-white dark:bg-gray-800 p-4 xs:p-5 sm:p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-center">
-        <div className={`p-2 rounded-lg ${color}`}>
-          <Icon className="h-6 w-6 text-white" />
+        <div className={`p-2 xs:p-3 rounded-lg ${color} flex-shrink-0`}>
+          <Icon className="h-5 w-5 xs:h-6 xs:w-6 text-white" />
         </div>
-        <div className="ml-4 flex-1">
+        <div className="ml-3 xs:ml-4 flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
               {title}
@@ -88,7 +88,7 @@ function MetricCard({ title, value, subtitle, icon: Icon, color, info, isLoading
                   onMouseLeave={() => setShowTooltip(false)}
                 />
                 {showTooltip && (
-                  <div className="absolute z-10 px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg -top-2 left-6 transform -translate-y-full w-64">
+                  <div className="absolute z-10 px-3 py-2 text-xs sm:text-sm text-white bg-gray-900 rounded-lg shadow-lg -top-2 left-6 transform -translate-y-full w-48 xs:w-56 sm:w-64">
                     {info}
                     <div className="absolute top-full left-4 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                   </div>
@@ -96,11 +96,11 @@ function MetricCard({ title, value, subtitle, icon: Icon, color, info, isLoading
               </div>
             )}
           </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">
+          <p className="text-xl xs:text-2xl font-bold text-gray-900 dark:text-white truncate">
             {typeof value === 'number' ? value.toLocaleString('pt-BR') : value}
           </p>
           {subtitle && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs xs:text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">
               {subtitle}
             </p>
           )}
@@ -112,9 +112,9 @@ function MetricCard({ title, value, subtitle, icon: Icon, color, info, isLoading
 
 function SimpleCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-      <div className="flex items-center gap-2 mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
+    <div className="bg-white dark:bg-gray-800 p-4 xs:p-5 sm:p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className="flex items-center gap-2 mb-3 xs:mb-4">
+        <h3 className="text-base xs:text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
       </div>
       {children}
     </div>
@@ -134,7 +134,7 @@ function SimpleSelect({ value, onValueChange, options, placeholder }: {
     <div className="relative">
       <button
         type="button"
-        className="w-full px-3 py-2 text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full px-3 xs:px-4 py-2.5 xs:py-3 text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary touch-target"
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex items-center justify-between">
@@ -290,36 +290,36 @@ export default function Dashboard() {
   const isLoading = collectionsLoading || spacesLoading || operatorsLoading || (userType === 'admin' && clientsLoading)
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="responsive-spacing mobile-container">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+      <div className="responsive-flex">
+        <div className="min-w-0 flex-1">
+          <h1 className="mobile-header">
             Dashboard TLC Zero
           </h1>
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="mobile-subheader mt-1">
             Bem-vindo, {user?.name}! Monitore a eficácia do mata-moscas TLC Agro.
           </p>
         </div>
         <button 
           onClick={refreshAllData} 
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          className="mobile-button bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 whitespace-nowrap"
         >
           <RefreshCw className="h-4 w-4" />
-          Atualizar
+          <span className="hidden xs:inline">Atualizar</span>
         </button>
       </div>
 
       {/* Filtros */}
       <SimpleCard title="Filtros">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 xs:gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">Data Inicial</label>
             <input
               type="date"
               value={filters.startDate}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              className="input-responsive"
             />
           </div>
           <div>
@@ -328,7 +328,7 @@ export default function Dashboard() {
               type="date"
               value={filters.endDate}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              className="input-responsive"
             />
           </div>
           {userType === 'admin' && (
@@ -346,7 +346,7 @@ export default function Dashboard() {
       </SimpleCard>
 
       {/* Cards de métricas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 xs:gap-4 sm:gap-5 lg:gap-6">
         <MetricCard
           title="Moscas Eliminadas"
           value={metrics.totalFlies}
@@ -383,10 +383,10 @@ export default function Dashboard() {
       </div>
 
       {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 xs:gap-5 sm:gap-6">
         {/* Gráfico de linha - Coletas por data */}
         <SimpleCard title="Coletas por Data">
-          <div className="h-80">
+          <div className="h-64 xs:h-72 sm:h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -420,7 +420,7 @@ export default function Dashboard() {
 
         {/* Gráfico de pizza - Coletas por espaço */}
         <SimpleCard title="Distribuição por Espaços">
-          <div className="h-80">
+          <div className="h-64 xs:h-72 sm:h-80">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -446,24 +446,24 @@ export default function Dashboard() {
 
       {/* Resumo do período */}
       <SimpleCard title="Resumo do Período">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center">
-            <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+        <div className="grid grid-cols-1 xs:grid-cols-3 gap-4 xs:gap-5 sm:gap-6">
+          <div className="text-center p-3 xs:p-4">
+            <p className="text-2xl xs:text-3xl font-bold text-green-600 dark:text-green-400">
               {metrics.totalCollections}
             </p>
-            <p className="text-gray-500 dark:text-gray-400">Total de Coletas</p>
+            <p className="text-xs xs:text-sm text-gray-500 dark:text-gray-400 mt-1">Total de Coletas</p>
           </div>
-          <div className="text-center">
-            <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+          <div className="text-center p-3 xs:p-4">
+            <p className="text-2xl xs:text-3xl font-bold text-blue-600 dark:text-blue-400">
               {metrics.totalWeight.toFixed(2)}g
             </p>
-            <p className="text-gray-500 dark:text-gray-400">Peso Total Coletado</p>
+            <p className="text-xs xs:text-sm text-gray-500 dark:text-gray-400 mt-1">Peso Total Coletado</p>
           </div>
-          <div className="text-center">
-            <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+          <div className="text-center p-3 xs:p-4">
+            <p className="text-2xl xs:text-3xl font-bold text-purple-600 dark:text-purple-400">
               {metrics.lastCollection}
             </p>
-            <p className="text-gray-500 dark:text-gray-400">Última Coleta</p>
+            <p className="text-xs xs:text-sm text-gray-500 dark:text-gray-400 mt-1">Última Coleta</p>
           </div>
         </div>
       </SimpleCard>

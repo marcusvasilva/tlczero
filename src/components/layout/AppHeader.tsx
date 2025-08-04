@@ -71,14 +71,15 @@ export function AppHeader() {
   }
 
   return (
-    <header className="border-b border-gray-200 bg-white dark:bg-gray-900 dark:border-gray-700 sticky top-0 z-40">
-      <div className="flex h-16 items-center justify-between px-4 sm:px-6">
+    <header className="border-b border-gray-200 bg-white dark:bg-gray-900 dark:border-gray-700 sticky-header z-40">
+      <div className="flex h-16 items-center justify-between mobile-container">
         {/* Mobile Menu Button + Title */}
         <div className="flex items-center gap-3 min-w-0 flex-1 lg:flex-initial">
           {/* Menu Mobile */}
           <button
             onClick={toggleMobileMenu}
-            className="lg:hidden p-2 -ml-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+            className="lg:hidden touch-target -ml-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-effect"
+            aria-label="Toggle menu"
           >
             {isMobileMenuOpen ? (
               <X className="h-5 w-5" />
@@ -117,7 +118,8 @@ export function AppHeader() {
           <ThemeToggle />
 
           {/* Notifications */}
-          <button className="relative p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+          <button className="relative touch-target text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-effect"
+            aria-label="Notifications">
             <Bell className="h-5 w-5" />
             <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
               3
@@ -128,12 +130,14 @@ export function AppHeader() {
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center space-x-2 p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+              className="flex items-center gap-2 touch-target text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-effect"
+              aria-label="User menu"
+              aria-expanded={showUserMenu}
             >
               <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
                 <User className="h-4 w-4 text-white" />
               </div>
-              <div className="hidden sm:block text-left">
+              <div className="hidden xs:block text-left">
                 <div className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</div>
               </div>
@@ -142,7 +146,7 @@ export function AppHeader() {
 
             {/* User Dropdown */}
             {showUserMenu && (
-              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
+              <div className="absolute right-0 mt-2 w-56 xs:w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50 slide-in-right">
                 {/* User Info */}
                 <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
@@ -154,14 +158,14 @@ export function AppHeader() {
                 <div className="py-1">
                   <button
                     onClick={() => setShowUserMenu(false)}
-                    className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="w-full flex items-center px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     <User className="h-4 w-4 mr-3" />
                     Meu Perfil
                   </button>
                   <button
                     onClick={() => setShowUserMenu(false)}
-                    className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="w-full flex items-center px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     <Settings className="h-4 w-4 mr-3" />
                     Configurações
@@ -172,7 +176,7 @@ export function AppHeader() {
                 <div className="border-t border-gray-100 dark:border-gray-700 py-1">
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    className="w-full flex items-center px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   >
                     <LogOut className="h-4 w-4 mr-3" />
                     Sair
@@ -189,7 +193,7 @@ export function AppHeader() {
       {/* Overlay para fechar menus */}
       {showUserMenu && (
           <div
-          className="fixed inset-0 z-30"
+          className="fixed inset-0 z-30 bg-black/20 backdrop-blur-sm lg:bg-transparent lg:backdrop-blur-none"
           onClick={() => {
             setShowUserMenu(false)
           }}

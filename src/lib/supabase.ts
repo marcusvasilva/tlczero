@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../types/database'
+import { getPerformanceConfig } from '../config/performance'
 
 const supabaseUrl = 'https://nfditawexkrwwhzbqfjt.supabase.co'
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mZGl0YXdleGtyd3doemJxZmp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4MjM4MzAsImV4cCI6MjA2NzM5OTgzMH0.X7jsQwk7c09RXr_wMnFtg_j-bWA4vuaKA5BiB9ZuDOs'
@@ -18,7 +19,40 @@ export const supabase = (() => {
       auth: {
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: true
+        detectSessionInUrl: true,
+        // Adicionar timeout de sessão mais longo
+        storageKey: 'tlc-zero-auth',
+        storage: window.localStorage
+      },
+      // Adicionar configurações de realtime e fetch
+      realtime: {
+        params: {
+          eventsPerSecond: 2
+        }
+      },
+      global: {
+        // Headers customizados para melhor rastreamento
+        headers: { 
+          'x-client-info': 'tlc-zero-app',
+          'x-request-source': 'web-app'
+        },
+        // Configuração de fetch com timeout reduzido
+        fetch: (url, init) => {
+          const controller = new AbortController()
+          const config = getPerformanceConfig()
+          const timeoutId = setTimeout(() => controller.abort(), config.timeouts.query)
+          
+          return fetch(url, {
+            ...init,
+            signal: controller.signal,
+            // Adicionar retry automático no nível do fetch
+            cache: 'no-cache'
+          }).finally(() => clearTimeout(timeoutId))
+        }
+      },
+      // Pool de conexões
+      db: {
+        schema: 'public'
       }
     })
     console.log('✅ Cliente Supabase criado (singleton)')
@@ -102,10 +136,11 @@ export async function executeQuery<T>(
   queryFn: () => Promise<{ data: T | null; error: any }>,
   options: QueryOptions = {}
 ): Promise<QueryResult<T>> {
+  const perfConfig = getPerformanceConfig()
   const {
-    timeout = 15000, // 15 segundos
-    maxRetries = 3,
-    retryDelay = 1000,
+    timeout = perfConfig.timeouts.query,
+    maxRetries = perfConfig.retry.maxAttempts,
+    retryDelay = perfConfig.retry.initialDelay,
     context = 'Query'
   } = options
 
@@ -131,8 +166,12 @@ export async function executeQuery<T>(
         
         // Se é erro de conectividade e não é a última tentativa, retry
         if (isConnectivityError(result.error) && attempt < maxRetries) {
-          console.warn(`🌐 ${context} - Erro de conectividade, tentando novamente em ${retryDelay}ms`)
-          await delay(retryDelay * attempt) // Backoff exponencial
+          const backoffDelay = Math.min(
+            retryDelay * Math.pow(perfConfig.retry.backoffMultiplier, attempt - 1), 
+            perfConfig.retry.maxDelay
+          )
+          console.warn(`🌐 ${context} - Erro de conectividade, tentando novamente em ${backoffDelay}ms`)
+          await delay(backoffDelay)
           continue
         }
         
@@ -160,8 +199,12 @@ export async function executeQuery<T>(
           error.message.includes('fetch')
         )
       )) {
-        console.warn(`⏱️ ${context} - Timeout/conectividade, tentando novamente em ${retryDelay}ms`)
-        await delay(retryDelay * attempt) // Backoff exponencial
+        const backoffDelay = Math.min(
+          retryDelay * Math.pow(perfConfig.retry.backoffMultiplier, attempt - 1), 
+          perfConfig.retry.maxDelay
+        )
+        console.warn(`⏱️ ${context} - Timeout/conectividade, tentando novamente em ${backoffDelay}ms`)
+        await delay(backoffDelay)
         continue
       }
       
@@ -198,6 +241,7 @@ export async function checkSupabaseConnection(): Promise<boolean> {
     
     // Se não há sessão, fazer uma verificação mínima no banco
     // Usar uma query muito simples que não consome recursos
+    const config = getPerformanceConfig()
     const result = await executeQuery(
       async () => {
         return await supabase
@@ -206,7 +250,7 @@ export async function checkSupabaseConnection(): Promise<boolean> {
           .limit(1)
       },
       {
-        timeout: 3000, // Timeout menor para verificação rápida
+        timeout: config.timeouts.quickCheck,
         maxRetries: 1,
         context: 'Connection Check'
       }

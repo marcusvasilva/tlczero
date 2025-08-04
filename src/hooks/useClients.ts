@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { supabase, executeQuery } from '../lib/supabase'
 import { handleError } from '../lib/utils'
+import { cache, getCacheKey } from '../lib/cache'
+import { useApiConnectionMonitor } from './useConnectionMonitor'
 import type { Account } from '../types/client'
 import type { UseClientsOptions, UseClientsReturn } from '../types/client'
 
@@ -15,6 +17,9 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
   // Refs para controle de montagem e evitar múltiplas requisições
   const isMountedRef = useRef(true)
   const fetchingRef = useRef(false)
+  
+  // Hook para monitorar conexão
+  const { reportApiError } = useApiConnectionMonitor()
   
   // Extrair opções para evitar re-renders desnecessários
   const { sortBy = 'company_name', sortOrder = 'asc' } = options
@@ -32,7 +37,7 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
   }, [clients, options.filterActive])
 
   // Fetch clients from Supabase
-  const fetchClients = useCallback(async () => {
+  const fetchClients = useCallback(async (forceRefresh = false) => {
     // Evitar múltiplas chamadas simultâneas
     if (fetchingRef.current) {
       console.log('⚠️ Fetch já em andamento, pulando...')
@@ -43,6 +48,36 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
     console.log('📋 sortBy:', sortBy, 'sortOrder:', sortOrder)
     
     fetchingRef.current = true
+    
+    // Gerar chave de cache baseada nos parâmetros
+    const cacheKey = getCacheKey('clients', {
+      sortBy,
+      sortOrder,
+      filterActive: options.filterActive
+    })
+    
+    // Tentar buscar do cache primeiro (se não for forçado refresh)
+    if (!forceRefresh) {
+      const cachedData = cache.get<Account[]>(cacheKey)
+      if (cachedData) {
+        console.log('📦 Dados encontrados no cache')
+        setClients(cachedData)
+        setIsLoading(false)
+        setError(null)
+        fetchingRef.current = false
+        
+        // Revalidar em background após 30 segundos
+        const cacheAge = cache.getAge(cacheKey)
+        if (cacheAge && cacheAge > 30000) { // 30 segundos
+          console.log('🔄 Cache antigo, revalidando em background...')
+          // Não esperar, apenas iniciar a revalidação
+          fetchClients(true).catch(console.error)
+        }
+        
+        return
+      }
+    }
+    
     setIsLoading(true)
     setError(null)
     
@@ -74,6 +109,8 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
       )
 
       if (!result.success) {
+        // Reportar erro de API para o monitor de conexão
+        reportApiError()
         const errorInfo = handleError(result.error, 'Fetch Clients')
         throw new Error(errorInfo.message)
       }
@@ -87,11 +124,24 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
         return
       }
 
-      setClients(result.data || [])
+      const clientsData = result.data || []
+      
+      // Salvar no cache
+      cache.set(cacheKey, clientsData, 5 * 60 * 1000) // Cache por 5 minutos
+      
+      setClients(clientsData)
       setError(null)
       
     } catch (err) {
       console.error('❌ Erro ao buscar clientes:', err)
+      
+      // Reportar erro se for problema de conexão
+      if (err instanceof Error && 
+          (err.message.includes('timeout') || 
+           err.message.includes('network') || 
+           err.message.includes('fetch'))) {
+        reportApiError()
+      }
       
       // Verificar se ainda está montado antes de definir erro
       if (isMountedRef.current) {
@@ -115,7 +165,7 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
     fetchingRef.current = false
     
     // Chamar fetchClients
-    fetchClients()
+    fetchClients(false) // Não forçar refresh no load inicial
     
     // Cleanup ao desmontar
     return () => {

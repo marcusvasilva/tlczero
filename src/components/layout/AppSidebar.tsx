@@ -182,7 +182,7 @@ export function AppSidebar() {
       isMobile && !isMobileMenuOpen && "hidden"
     )}>
       {/* Header da Sidebar */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 safe-top">
         {/* Logo - sempre mostrar em mobile, condicional em desktop */}
         {(!isCollapsed || isMobile) && (
           <div className="flex items-center gap-2 flex-1">
@@ -201,7 +201,8 @@ export function AppSidebar() {
           {isMobile && (
             <button
               onClick={closeMobileMenu}
-              className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg touch-target"
+              className="touch-target text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors touch-effect"
+              aria-label="Close menu"
             >
               <X className="h-5 w-5" />
             </button>
@@ -211,7 +212,8 @@ export function AppSidebar() {
           {!isMobile && (
         <button
           onClick={toggleCollapsed}
-              className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg touch-target"
+              className="touch-target text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {isCollapsed ? (
             <Menu className="h-4 w-4" />
@@ -226,7 +228,7 @@ export function AppSidebar() {
 
 
       {/* Navegação Principal */}
-      <nav className="p-2 space-y-1 flex-1 overflow-y-auto">
+      <nav className="p-2 space-y-1 flex-1 overflow-y-auto custom-scrollbar smooth-scroll">
         {visibleItems.map((item) => {
           const isActive = location.pathname === item.href
           const Icon = item.icon
@@ -235,11 +237,12 @@ export function AppSidebar() {
             <Link key={item.href} to={item.href} onClick={handleLinkClick(item.title, item.href)}>
               <div
                 className={cn(
-                  "flex items-center gap-3 h-12 px-3 rounded-md transition-colors touch-target",
+                  "flex items-center gap-3 min-h-[48px] px-3 rounded-lg transition-all touch-target no-select",
                   isActive 
-                    ? "bg-green-100 dark:bg-green-900/20 text-green-900 dark:text-green-400" 
+                    ? "bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-foreground font-medium" 
                     : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white",
-                  isCollapsed && !isMobile && "justify-center"
+                  isCollapsed && !isMobile && "justify-center",
+                  "active:scale-[0.98]"
                 )}
               >
                 <Icon className="h-5 w-5 flex-shrink-0" />
@@ -249,7 +252,7 @@ export function AppSidebar() {
                       <div className="font-medium truncate">{item.title}</div>
                   </div>
                     {item.badge && (
-                      <span className="ml-auto px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 rounded-full flex-shrink-0">
+                      <span className="ml-auto px-2.5 py-1 text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 rounded-full flex-shrink-0 font-medium">
                     {item.badge}
                   </span>
                     )}
@@ -265,7 +268,7 @@ export function AppSidebar() {
 
       {/* Rodapé da Sidebar - apenas desktop quando não colapsado */}
       {!isMobile && !isCollapsed && (
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 safe-bottom">
           <div className="text-center">
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {APP_CONFIG.description}

@@ -234,19 +234,19 @@ export default function Collections() {
   }
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="mobile-container">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
-        <div className="flex items-center">
-          <ClipboardList className="h-6 w-6 text-gray-400 mr-3" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+      <div className="responsive-flex mb-4 xs:mb-5 sm:mb-6">
+        <div className="flex items-center gap-3">
+          <ClipboardList className="h-5 w-5 xs:h-6 xs:w-6 text-gray-400 flex-shrink-0" />
+          <h1 className="mobile-header">
             Coletas
           </h1>
         </div>
         {canCreate && (
           <button
             onClick={handleCreateCollection}
-            className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            className="mobile-button bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2"
           >
             <Plus className="h-4 w-4 mr-2" />
             Nova Coleta
@@ -255,49 +255,49 @@ export default function Collections() {
       </div>
 
       {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+      <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 xs:gap-4 sm:gap-5 mb-4 xs:mb-5 sm:mb-6">
+        <div className="mobile-card">
           <div className="flex items-center">
-            <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
-              <ClipboardList className="h-6 w-6 text-green-600 dark:text-green-400" />
+            <div className="p-2 xs:p-2.5 bg-green-100 dark:bg-green-900/20 rounded-lg flex-shrink-0">
+              <ClipboardList className="h-4 w-4 xs:h-5 xs:h-5 text-green-600 dark:text-green-400" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                Total de Coletas
+            <div className="ml-3 min-w-0">
+              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                Total
               </p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+              <p className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                 {totalCollections}
               </p>
             </div>
           </div>
         </div>
         
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+        <div className="mobile-card">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-              <Scale className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            <div className="p-2 xs:p-2.5 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex-shrink-0">
+              <Scale className="h-4 w-4 xs:h-5 xs:h-5 text-blue-600 dark:text-blue-400" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                Peso Total
+            <div className="ml-3 min-w-0">
+              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                Peso
               </p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+              <p className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                 {formatWeight(totalWeight)}
               </p>
             </div>
           </div>
         </div>
         
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+        <div className="mobile-card">
           <div className="flex items-center">
-            <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
-              <Calendar className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+            <div className="p-2 xs:p-2.5 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex-shrink-0">
+              <Calendar className="h-4 w-4 xs:h-5 xs:h-5 text-purple-600 dark:text-purple-400" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                Este Mês
+            <div className="ml-3 min-w-0">
+              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                Mês
               </p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+              <p className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                 {formatWeight(thisMonthWeight)}
               </p>
             </div>
@@ -306,8 +306,8 @@ export default function Collections() {
       </div>
 
       {/* Filtros */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6 border border-gray-200 dark:border-gray-700">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-3 xs:p-4 mb-4 xs:mb-5 sm:mb-6 border border-gray-200 dark:border-gray-700">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 xs:gap-4">
           {/* Busca */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -316,7 +316,7 @@ export default function Collections() {
               placeholder="Buscar coletas..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+              className="w-full pl-10 pr-4 input-responsive"
             />
           </div>
 
@@ -325,7 +325,7 @@ export default function Collections() {
             <select
               value={filterPeriod}
               onChange={(e) => setFilterPeriod(e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+              className="select-responsive"
             >
               <option value="all">Todos os períodos</option>
               <option value="today">Hoje</option>
@@ -339,7 +339,7 @@ export default function Collections() {
             <select
               value={filterSpace}
               onChange={(e) => setFilterSpace(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+              className="select-responsive"
             >
               <option value="all">Todos os espaços</option>
               {filteredSpaces.map((space) => (
@@ -357,7 +357,7 @@ export default function Collections() {
                 // TODO: Implementar exportação
                 console.log('Exportar coletas')
               }}
-              className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              className="mobile-button bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 w-full flex items-center justify-center gap-2"
             >
               <Download className="h-4 w-4 mr-2" />
               Exportar
@@ -367,15 +367,47 @@ export default function Collections() {
       </div>
 
       {/* Tabela */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden border border-gray-200 dark:border-gray-700">
-        <DataTable
-          data={displayedCollections}
-          columns={columns}
-          actions={actions}
-          loading={isLoading}
-          emptyMessage="Nenhuma coleta encontrada"
-        />
-      </div>
+      <DataTable
+        data={displayedCollections}
+        columns={columns}
+        actions={actions}
+        loading={isLoading}
+        emptyMessage="Nenhuma coleta encontrada"
+        mobileCard={(collection) => (
+          <div className="space-y-2">
+            <div className="flex justify-between items-start">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {formatDate(new Date(collection.collectedAt))}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {filteredSpaces.find(s => s.id === collection.spaceId)?.name || 'Espaço não encontrado'}
+                </p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-lg font-bold text-primary">
+                  {formatWeight(collection.weight)}
+                </p>
+              </div>
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400">
+              <p>Operador: {operators.find(o => o.id === collection.operatorId)?.name || 'Não encontrado'}</p>
+              {collection.observations && (
+                <p className="truncate">Obs: {collection.observations}</p>
+              )}
+            </div>
+            {collection.photoUrl && (
+              <button 
+                onClick={() => window.open(collection.photoUrl, '_blank')}
+                className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+              >
+                <Eye className="h-3 w-3" />
+                Ver foto
+              </button>
+            )}
+          </div>
+        )}
+      />
 
       {/* Formulário de coleta */}
       {showCollectionForm && (

@@ -1,14 +1,16 @@
 import { useState } from 'react'
-import { Search, Building2, Users, MapPin, Plus } from 'lucide-react'
+import { Search, Building2, Users, MapPin, Plus, Edit, Phone, Mail } from 'lucide-react'
 import { useClients } from '@/hooks/useClients'
 import { formatPhone } from '@/lib/formatters'
 import { ClientForm } from '@/components/forms/ClientForm'
 import { useToast } from '@/contexts/ToastContext'
+import { useMobile } from '@/hooks/use-mobile'
 import type { Account } from '@/types'
 
 export function Clients() {
   const { clients, isLoading, createClient, updateClient } = useClients()
   const { toast } = useToast()
+  const isMobile = useMobile()
   
   // Estados locais
   const [searchTerm, setSearchTerm] = useState('')
@@ -67,17 +69,17 @@ export function Clients() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden">
-      <div className="p-4 sm:p-6 max-w-full">
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="min-h-screen">
+      <div className="mobile-container max-w-full">
+        <div className="mb-4 xs:mb-5 sm:mb-6 responsive-flex">
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">Clientes</h1>
-            <p className="text-gray-600 dark:text-gray-400">Gerencie os clientes do sistema</p>
+            <h1 className="mobile-header mb-1">Clientes</h1>
+            <p className="mobile-subheader">Gerencie os clientes do sistema</p>
           </div>
           <div className="flex-shrink-0">
             <button
               onClick={openCreateForm}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto"
+              className="mobile-button bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 w-full sm:w-auto justify-center"
             >
               <Plus className="w-4 h-4" />
               Adicionar Cliente
@@ -86,41 +88,41 @@ export function Clients() {
         </div>
 
                 {/* Estatísticas */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
-          <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+        <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 xs:gap-4 sm:gap-5 mb-4 xs:mb-5 sm:mb-6">
+          <div className="mobile-card">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
+              <div className="p-2 xs:p-2.5 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex-shrink-0">
+                <Building2 className="w-4 h-4 xs:w-5 xs:h-5 text-blue-600 dark:text-blue-400" />
               </div>
-              <div className="ml-3 sm:ml-4">
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total de Clientes</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{clients.length}</p>
+              <div className="ml-3 min-w-0">
+                <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Total</p>
+                <p className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{clients.length}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+          <div className="mobile-card">
             <div className="flex items-center">
-              <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
-                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />
+              <div className="p-2 xs:p-2.5 bg-green-100 dark:bg-green-900/20 rounded-lg flex-shrink-0">
+                <Users className="w-4 h-4 xs:w-5 xs:h-5 text-green-600 dark:text-green-400" />
               </div>
-              <div className="ml-3 sm:ml-4">
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Clientes Ativos</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="ml-3 min-w-0">
+                <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Ativos</p>
+                <p className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                   {clients.filter(c => c.status === 'active').length}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+          <div className="mobile-card">
             <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
-                <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 dark:text-yellow-400" />
+              <div className="p-2 xs:p-2.5 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex-shrink-0">
+                <MapPin className="w-4 h-4 xs:w-5 xs:h-5 text-yellow-600 dark:text-yellow-400" />
               </div>
-              <div className="ml-3 sm:ml-4">
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Localidades</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="ml-3 min-w-0">
+                <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Cidades</p>
+                <p className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                   {new Set(clients.map(c => c.city).filter(Boolean)).size}
                 </p>
               </div>
@@ -129,7 +131,7 @@ export function Clients() {
         </div>
 
         {/* Busca */}
-        <div className="mb-6">
+        <div className="mb-4 xs:mb-5 sm:mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
@@ -137,83 +139,141 @@ export function Clients() {
               placeholder="Buscar clientes..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm sm:text-base"
+              className="w-full pl-10 pr-4 input-responsive"
             />
           </div>
         </div>
 
         {/* Lista de clientes */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-          <div className="overflow-x-auto">
-            <table className="w-full table-auto">
-              <thead className="bg-gray-50 dark:bg-gray-900">
-                <tr>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                    Empresa
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                    Contato
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                    Telefone
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                    Status
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredClients.map((client) => (
-                  <tr key={client.id}>
-                    <td className="px-4 sm:px-6 py-4">
-                      <div className="flex items-center min-w-0">
-                        <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                          <Building2 className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                            {client.company_name}
-                          </div>
-                          <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
-                            {client.email || 'Sem email'}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 dark:text-white">{client.contact_person}</div>
-                    </td>
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 dark:text-white">
-                        {client.phone ? formatPhone(client.phone) : '-'}
-                      </div>
-                    </td>
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        client.status === 'active' 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
-                          : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-                      }`}>
-                        {client.status === 'active' ? 'Ativo' : 'Inativo'}
-                      </span>
-                    </td>
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => openEditForm(client)}
-                        className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 text-sm font-medium"
-                      >
-                        Editar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {isMobile ? (
+          // Visualização em Cards para Mobile
+          <div className="grid grid-cols-1 gap-3">
+            {filteredClients.map((client) => (
+              <div key={client.id} className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Building2 className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-medium text-gray-900 dark:text-white truncate">
+                        {client.company_name}
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {client.contact_person}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`badge-responsive flex-shrink-0 ${
+                    client.status === 'active' 
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
+                      : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                  }`}>
+                    {client.status === 'active' ? 'Ativo' : 'Inativo'}
+                  </span>
+                </div>
+                
+                <div className="space-y-2 text-sm">
+                  {client.phone && (
+                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                      <Phone className="w-4 h-4" />
+                      <span>{formatPhone(client.phone)}</span>
+                    </div>
+                  )}
+                  {client.email && (
+                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                      <Mail className="w-4 h-4" />
+                      <span className="truncate">{client.email}</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => openEditForm(client)}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                  >
+                    <Edit className="w-4 h-4" />
+                    Editar
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        ) : (
+          // Visualização em Tabela para Desktop
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead className="bg-gray-50 dark:bg-gray-900">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Empresa
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Contato
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Telefone
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Ações
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {filteredClients.map((client) => (
+                    <tr key={client.id}>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center mr-3">
+                            <Building2 className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              {client.company_name}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {client.email || 'Sem email'}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900 dark:text-white">{client.contact_person}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900 dark:text-white">
+                          {client.phone ? formatPhone(client.phone) : '-'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          client.status === 'active' 
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
+                            : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                        }`}>
+                          {client.status === 'active' ? 'Ativo' : 'Inativo'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => openEditForm(client)}
+                          className="text-primary hover:text-primary/80 text-sm font-medium"
+                        >
+                          Editar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Modal do formulário */}
         {showForm && (

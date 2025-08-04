@@ -43,30 +43,30 @@ export function ConfirmDialog({
   const styles = variantStyles[variant]
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-        <div className="flex items-center justify-between p-6 border-b">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-lg shadow-xl w-full max-w-md animate-slide-up sm:animate-none">
+        <div className="flex items-center justify-between p-4 xs:p-5 sm:p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <AlertTriangle className={`h-6 w-6 ${styles.icon}`} />
-            <h2 className="text-xl font-semibold">{title}</h2>
+            <h2 className="text-lg xs:text-xl font-semibold text-gray-900 dark:text-white">{title}</h2>
           </div>
           <button
             onClick={onCancel}
-            className="p-2 hover:bg-gray-100 rounded-full"
+            className="touch-target hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
             disabled={isLoading}
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="p-6">
-          <p className="text-gray-600 mb-6">{message}</p>
+        <div className="p-4 xs:p-5 sm:p-6 pb-safe">
+          <p className="text-gray-600 dark:text-gray-400 mb-4 xs:mb-5 sm:mb-6 mobile-text">{message}</p>
 
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-col-reverse xs:flex-row xs:justify-end gap-2 xs:gap-3">
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50"
+              className="mobile-button bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 w-full xs:w-auto"
               disabled={isLoading}
             >
               {cancelText}
@@ -74,7 +74,7 @@ export function ConfirmDialog({
             <button
               type="button"
               onClick={onConfirm}
-              className={`px-4 py-2 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 ${styles.button}`}
+              className={`mobile-button text-white disabled:opacity-50 disabled:cursor-not-allowed w-full xs:w-auto ${styles.button}`}
               disabled={isLoading}
             >
               {isLoading ? 'Processando...' : confirmText}

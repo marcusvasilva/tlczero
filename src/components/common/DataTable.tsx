@@ -25,6 +25,8 @@ interface DataTableProps<T> {
   onSort?: (column: keyof T | string, direction: 'asc' | 'desc') => void
   sortColumn?: keyof T | string
   sortDirection?: 'asc' | 'desc'
+  mobileCard?: (item: T) => React.ReactNode
+  className?: string
 }
 
 export function DataTable<T extends { id: string | number }>({
@@ -35,7 +37,9 @@ export function DataTable<T extends { id: string | number }>({
   emptyMessage = 'Nenhum item encontrado',
   onSort,
   sortColumn,
-  sortDirection
+  sortDirection,
+  mobileCard,
+  className = ''
 }: DataTableProps<T>) {
   const handleSort = (column: TableColumn<T>) => {
     if (!column.sortable || !onSort) return
@@ -47,7 +51,7 @@ export function DataTable<T extends { id: string | number }>({
 
   const getActionStyles = (variant: TableAction<T>['variant'] = 'secondary') => {
     const styles = {
-      primary: 'text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20',
+      primary: 'text-primary hover:text-primary/80 hover:bg-primary/10 dark:hover:bg-primary/20',
       secondary: 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700',
       danger: 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20'
     }
@@ -75,8 +79,41 @@ export function DataTable<T extends { id: string | number }>({
     )
   }
 
+  // Renderização mobile com cards
+  if (mobileCard) {
+    return (
+      <div className={`grid grid-cols-1 gap-3 xs:gap-4 ${className}`}>
+        {data.map((item) => (
+          <div key={item.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow">
+            {mobileCard(item)}
+            {actions.length > 0 && (
+              <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                {actions.map((action, actionIndex) => {
+                  if (action.show && !action.show(item)) return null
+                  
+                  const Icon = action.icon
+                  return (
+                    <button
+                      key={actionIndex}
+                      onClick={() => action.onClick(item)}
+                      className={`touch-target rounded-lg transition-colors ${getActionStyles(action.variant)}`}
+                      title={action.label}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // Renderização desktop com tabela
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden ${className}`}>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
@@ -84,7 +121,7 @@ export function DataTable<T extends { id: string | number }>({
               {columns.map((column) => (
                 <th
                   key={String(column.key)}
-                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${
+                  className={`px-3 xs:px-4 sm:px-6 py-2 xs:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap ${
                     column.sortable ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600' : ''
                   }`}
                   style={{ width: column.width }}
@@ -101,7 +138,7 @@ export function DataTable<T extends { id: string | number }>({
                 </th>
               ))}
               {actions.length > 0 && (
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-3 xs:px-4 sm:px-6 py-2 xs:py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Ações
                 </th>
               )}
@@ -111,7 +148,7 @@ export function DataTable<T extends { id: string | number }>({
             {data.map((item, index) => (
               <tr key={item.id} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700'}>
                 {columns.map((column) => (
-                  <td key={String(column.key)} className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-white">
+                  <td key={String(column.key)} className="px-3 xs:px-4 sm:px-6 py-3 xs:py-4 whitespace-nowrap mobile-text text-gray-900 dark:text-white">
                     {column.render 
                       ? column.render(
                           typeof column.key === 'string' && column.key.includes('.') 
@@ -128,7 +165,7 @@ export function DataTable<T extends { id: string | number }>({
                   </td>
                 ))}
                 {actions.length > 0 && (
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-3 xs:px-4 sm:px-6 py-3 xs:py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end gap-2">
                       {actions.map((action, actionIndex) => {
                         if (action.show && !action.show(item)) return null
@@ -138,7 +175,7 @@ export function DataTable<T extends { id: string | number }>({
                           <button
                             key={actionIndex}
                             onClick={() => action.onClick(item)}
-                            className={`p-2 rounded-full transition-colors ${getActionStyles(action.variant)}`}
+                            className={`touch-target rounded-lg transition-colors ${getActionStyles(action.variant)}`}
                             title={action.label}
                           >
                             <Icon className="h-4 w-4" />

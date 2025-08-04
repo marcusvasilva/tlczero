@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Button } from '../../../@/components/ui/button'
-import { Card } from '../../../@/components/ui/card'
-import { X } from 'lucide-react'
+import { X, Download, Smartphone } from 'lucide-react'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -72,30 +70,44 @@ export function PWAInstallPrompt() {
   }
 
   return (
-    <Card className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 p-4 shadow-lg z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-      <div className="flex justify-between items-start mb-2">
-        <h3 className="font-medium text-lg">Instalar TLC Zero</h3>
+    <div className="fixed bottom-0 left-0 right-0 xs:bottom-4 xs:left-4 xs:right-4 md:left-auto md:right-4 md:w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-t-2xl xs:rounded-lg shadow-xl z-50 animate-slide-up pb-safe">
+      <div className="p-4 xs:p-5">
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Smartphone className="h-5 w-5 text-primary" />
+            </div>
+            <h3 className="font-medium text-base xs:text-lg text-gray-900 dark:text-white">Instalar TLC Zero</h3>
+          </div>
         <button 
           onClick={handleDismiss}
-          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          className="touch-target -mr-2 -mt-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
           aria-label="Fechar"
         >
           <X size={20} />
         </button>
-      </div>
-      
-      <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
+        </div>
+        
+        <p className="text-gray-600 dark:text-gray-300 text-sm xs:text-base mb-4 xs:mb-5">
         Instale o TLC Zero para acesso rápido e modo offline, ideal para coletas em campo.
-      </p>
-      
-      <div className="flex space-x-2">
-        <Button onClick={handleInstall} className="flex-1">
-          Instalar Agora
-        </Button>
-        <Button variant="outline" onClick={handleDismiss} className="flex-1">
-          Mais Tarde
-        </Button>
+        </p>
+        
+        <div className="flex flex-col xs:flex-row gap-2 xs:gap-3">
+          <button 
+            onClick={handleInstall} 
+            className="mobile-button bg-primary text-primary-foreground hover:bg-primary/90 flex-1 flex items-center justify-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Instalar Agora
+          </button>
+          <button 
+            onClick={handleDismiss} 
+            className="mobile-button bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex-1"
+          >
+            Mais Tarde
+          </button>
+        </div>
       </div>
-    </Card>
+    </div>
   )
 } 
