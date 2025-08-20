@@ -27,25 +27,36 @@ const rolePermissions = {
     { resource: 'collections', actions: ['create', 'read', 'update', 'delete'] },
     { resource: 'reports', actions: ['create', 'read', 'update', 'delete'] },
     { resource: 'settings', actions: ['create', 'read', 'update', 'delete'] },
-    { resource: 'dashboard', actions: ['read'] }
+    { resource: 'dashboard', actions: ['read'] },
+    { resource: 'user-management', actions: ['create', 'read', 'update', 'delete'] }
+  ],
+  distributor: [
+    { resource: 'clients', actions: ['create', 'read', 'update', 'delete'] },
+    { resource: 'operators', actions: ['create', 'read', 'update', 'delete'] },
+    { resource: 'spaces', actions: ['create', 'read', 'update', 'delete'] },
+    { resource: 'collections', actions: ['create', 'read', 'update', 'delete'] },
+    { resource: 'reports', actions: ['create', 'read', 'update', 'delete'] },
+    { resource: 'dashboard', actions: ['read'] },
+    { resource: 'user-management', actions: ['create', 'read', 'update', 'delete'] }
   ],
   supervisor: [
     { resource: 'clients', actions: ['read', 'update'] },
-    { resource: 'operators', actions: ['read'] },
+    { resource: 'operators', actions: ['create', 'read', 'update', 'delete'] },
     { resource: 'spaces', actions: ['create', 'read', 'update'] },
     { resource: 'collections', actions: ['create', 'read', 'update'] },
-    { resource: 'reports', actions: ['read'] },
+    { resource: 'reports', actions: ['create', 'read'] },
     { resource: 'dashboard', actions: ['read'] }
   ],
-  operador: [
+  operator: [
     { resource: 'collections', actions: ['create', 'read'] },
     { resource: 'spaces', actions: ['read'] },
     { resource: 'dashboard', actions: ['read'] }
   ]
 }
 
-const hasPermission = (role: 'admin' | 'supervisor' | 'operador', resource: string, action: string): boolean => {
-  const permissions = rolePermissions[role]
+const hasPermission = (role: 'admin' | 'distributor' | 'supervisor' | 'operator', resource: string, action: string): boolean => {
+  const permissions = rolePermissions[role as keyof typeof rolePermissions]
+  if (!permissions) return false
   const resourcePermission = permissions.find(p => p.resource === resource)
   return resourcePermission?.actions.includes(action) ?? false
 }
@@ -77,7 +88,7 @@ const navigationItems: NavItem[] = [
     description: 'Gestão de clientes',
     resource: 'clients',
     action: 'read',
-    allowedRoles: ['admin']
+    allowedRoles: ['admin', 'distributor']
   },
   {
     title: 'Espaços',
@@ -102,14 +113,16 @@ const navigationItems: NavItem[] = [
     description: 'Equipe de campo',
     resource: 'operators',
     action: 'read',
-    allowedRoles: ['admin', 'supervisor']
+    allowedRoles: ['admin', 'distributor', 'supervisor']
   },
   {
     title: 'Gestão de Usuários',
     href: '/user-management',
     icon: Shield,
     description: 'Gerenciar usuários e senhas',
-    allowedRoles: ['admin']
+    resource: 'user-management',
+    action: 'read',
+    allowedRoles: ['admin', 'distributor']
   },
   {
     title: 'Relatórios',
@@ -118,7 +131,7 @@ const navigationItems: NavItem[] = [
     description: 'Análises e exports',
     resource: 'reports',
     action: 'read',
-    allowedRoles: ['admin', 'supervisor']
+    allowedRoles: ['admin', 'distributor', 'supervisor']
   },
 ]
 

@@ -87,34 +87,92 @@
 }
 
 @layer utilities {
-  /* Utilitários para responsividade mobile */
-  .mobile-container {
-    @apply px-3 xs:px-4 sm:px-5 lg:px-6 py-3 xs:py-4 sm:py-5 lg:py-6;
+  /* Utilitários para responsividade mobile - removido, movido para baixo */
+  
+  /* Sistema de grid responsivo otimizado */
+  .grid-auto-fit {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
   }
   
+  .grid-auto-fit-sm {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.75rem;
+  }
+  
+  .grid-auto-fit-lg {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.25rem;
+  }
+  
+  /* Grid para cards de estatísticas */
+  .stats-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4;
+  }
+  
+  /* Grid compacto para mobile */
   .mobile-grid {
-    @apply grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 xs:gap-4 sm:gap-5 lg:gap-6;
+    @apply grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4;
+  }
+  
+  /* Grid responsivo com largura mínima */
+  .responsive-grid {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   }
   
   .mobile-text {
     @apply text-sm sm:text-base leading-relaxed;
   }
   
+  /* Sistema de botões otimizado e compacto */
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs font-medium rounded-md transition-all active:scale-95 touch-manipulation;
+  }
+  
+  .btn-md {
+    @apply px-4 py-2 text-sm font-medium rounded-md transition-all active:scale-95 touch-manipulation;
+  }
+  
+  .btn-lg {
+    @apply px-5 py-2.5 text-sm font-medium rounded-lg transition-all active:scale-95 touch-manipulation;
+  }
+  
+  .btn-xl {
+    @apply px-6 py-3 text-base font-medium rounded-lg transition-all active:scale-95 touch-manipulation;
+  }
+  
+  /* Variantes de cor */
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700;
+  }
+  
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700;
+  }
+  
+  /* Botão com ícone otimizado */
+  .btn-icon {
+    @apply flex items-center gap-2 justify-center;
+  }
+  
+  /* Botão móvel otimizado - substitui mobile-button */
   .mobile-button {
-    @apply px-4 xs:px-5 sm:px-6 py-2.5 xs:py-3 sm:py-3.5 text-sm xs:text-base font-medium rounded-lg transition-all active:scale-95 touch-manipulation;
+    @apply btn-md btn-primary btn-icon;
   }
   
   .mobile-card {
     @apply p-4 xs:p-5 sm:p-6 rounded-lg border transition-all hover:shadow-lg active:scale-[0.99] touch-manipulation;
   }
   
-  .mobile-table {
-    @apply overflow-x-auto;
-  }
-  
-  .mobile-table table {
-    @apply min-w-full;
-  }
+  /* Removido - substituído por table-responsive otimizado */
   
   .mobile-header {
     @apply text-xl sm:text-2xl lg:text-3xl font-bold leading-tight;
@@ -124,9 +182,22 @@
     @apply text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed;
   }
   
-  /* Melhorias para touch targets - Apple HIG recommends 44x44px minimum */
-  .touch-target {
+  /* Touch targets adaptivos */
+  .touch-sm {
+    @apply min-h-[36px] min-w-[36px] flex items-center justify-center touch-manipulation;
+  }
+  
+  .touch-md {
     @apply min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation;
+  }
+  
+  .touch-lg {
+    @apply min-h-[52px] min-w-[52px] flex items-center justify-center touch-manipulation;
+  }
+  
+  /* Compatibilidade com mobile-button existente */
+  .touch-target {
+    @apply touch-md;
   }
   
   /* Prevenir zoom no iOS */
@@ -144,11 +215,38 @@
     @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4;
   }
   
-  /* Container responsivo com safe areas para dispositivos com notch */
+  /* Sistema de containers otimizado */
+  .page-container {
+    @apply w-full px-4 py-4 sm:px-6 sm:py-6;
+    overflow-x: hidden; /* Evita scroll horizontal */
+    max-width: 100vw; /* Garante que nunca ultrapasse viewport */
+  }
+  
+  .page-container-full {
+    @apply w-full px-3 py-3 sm:px-4 sm:py-4;
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+  
+  .page-container-narrow {
+    @apply w-full max-w-4xl mx-auto px-4 py-4 sm:px-6 sm:py-6;
+    overflow-x: hidden;
+  }
+  
+  /* Container responsivo com safe areas - otimizado */
   .responsive-container {
-    @apply max-w-7xl mx-auto px-4 xs:px-5 sm:px-6 lg:px-8;
+    @apply max-w-6xl mx-auto px-4 sm:px-6;
     padding-left: max(1rem, env(safe-area-inset-left));
     padding-right: max(1rem, env(safe-area-inset-right));
+    overflow-x: hidden;
+  }
+  
+  /* Container compacto para mobile */
+  .mobile-container {
+    @apply px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
   }
   
   /* Safe area padding para dispositivos móveis */
@@ -302,16 +400,7 @@
     @apply transition-all duration-300 ease-in-out;
   }
 
-  /* Melhorias para grid responsivo */
-  .grid-responsive {
-    @apply grid grid-cols-1 gap-4;
-  }
-
-  @media (min-width: 640px) {
-    .grid-responsive {
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    }
-  }
+  /* Removido - substituído por grid-auto-fit */
 
   /* Melhorias para formulários mobile */
   .form-mobile {
@@ -333,18 +422,70 @@
     font-size: 16px; /* Previne zoom no iOS */
   }
 
-  /* Melhorias para tabelas responsivas */
+  /* Sistema de tabelas mobile-first otimizado */
+  .table-container {
+    @apply w-full overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700;
+  }
+  
   .table-responsive {
-    @apply w-full overflow-x-auto;
+    @apply w-full overflow-x-auto hide-scrollbar;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
   }
 
   .table-responsive table {
-    @apply min-w-full divide-y divide-gray-200 dark:divide-gray-700;
+    @apply w-full divide-y divide-gray-200 dark:divide-gray-700;
+    min-width: 600px; /* Largura mínima controlada */
   }
 
   .table-responsive th,
   .table-responsive td {
-    @apply px-2 sm:px-4 py-2 sm:py-3 text-sm sm:text-base;
+    @apply px-3 py-3 text-sm whitespace-nowrap;
+  }
+  
+  .table-responsive th {
+    @apply bg-gray-50 dark:bg-gray-800 font-medium text-gray-900 dark:text-gray-100;
+  }
+  
+  .table-responsive td {
+    @apply bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300;
+  }
+  
+  /* Cards para substituir tabelas em mobile */
+  .mobile-card-list {
+    @apply space-y-3;
+  }
+  
+  .mobile-card-item {
+    @apply bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3;
+  }
+  
+  .mobile-card-header {
+    @apply flex items-start justify-between gap-3;
+  }
+  
+  .mobile-card-title {
+    @apply font-semibold text-gray-900 dark:text-white text-base flex-1 min-w-0;
+  }
+  
+  .mobile-card-actions {
+    @apply flex items-center gap-1 flex-shrink-0;
+  }
+  
+  .mobile-card-content {
+    @apply space-y-2 text-sm text-gray-600 dark:text-gray-400;
+  }
+  
+  .mobile-card-row {
+    @apply flex items-center justify-between;
+  }
+  
+  .mobile-card-label {
+    @apply text-gray-500 dark:text-gray-500 font-medium;
+  }
+  
+  .mobile-card-value {
+    @apply text-gray-900 dark:text-gray-100;
   }
 
   /* Estados de loading mobile */
@@ -466,14 +607,7 @@
     padding-top: env(safe-area-inset-top);
   }
   
-  /* Mobile-first typography scale */
-  .text-xs-mobile { @apply text-[0.75rem] leading-4; }
-  .text-sm-mobile { @apply text-[0.875rem] leading-5; }
-  .text-base-mobile { @apply text-[1rem] leading-6; }
-  .text-lg-mobile { @apply text-[1.125rem] leading-7; }
-  .text-xl-mobile { @apply text-[1.25rem] leading-7; }
-  .text-2xl-mobile { @apply text-[1.5rem] leading-8; }
-  .text-3xl-mobile { @apply text-[1.875rem] leading-9; }
+  /* Simplificado - usar classes Tailwind padrão */
   
   /* Floating action button */
   .fab {

@@ -61,7 +61,7 @@ const userSchema = z.object({
     .optional()
     .or(z.literal('')),
   
-  role: z.enum(['admin', 'supervisor', 'operator'], {
+  role: z.enum(['admin', 'distributor', 'supervisor', 'operator'], {
     required_error: 'Função é obrigatória'
   }),
   
@@ -92,7 +92,7 @@ interface CreateUserData {
   name: string
   email: string
   password?: string
-  role: 'admin' | 'supervisor' | 'operator'
+  role: 'admin' | 'distributor' | 'supervisor' | 'operator'
   account_id?: string
   phone?: string
   cpf?: string
@@ -135,7 +135,7 @@ export default function UserForm({
       name: user?.name || '',
       email: user?.email || '',
       password: '',
-      role: (user?.role || 'operator') as 'admin' | 'supervisor' | 'operator',
+      role: (user?.role || 'operator') as 'admin' | 'distributor' | 'supervisor' | 'operator',
       account_id: user?.account_id || accountContext || currentUser?.account_id || '',
       supervisor_id: user?.supervisor_id || '',
       phone: user?.phone || '',
@@ -179,7 +179,7 @@ export default function UserForm({
     
     try {
       // Validações específicas por role
-      if (data.role === 'admin') {
+      if (data.role === 'admin' || data.role === 'distributor') {
         data.account_id = undefined
         data.supervisor_id = undefined
       } else if (data.role === 'supervisor') {
@@ -235,6 +235,7 @@ export default function UserForm({
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'admin': return 'Administrador'
+      case 'distributor': return 'Distribuidor'
       case 'supervisor': return 'Supervisor'
       case 'operator': return 'Operador'
       default: return role
@@ -245,7 +246,9 @@ export default function UserForm({
     const roles = []
     
     if (userType === 'admin') {
-      roles.push('admin', 'supervisor', 'operator')
+      roles.push('admin', 'distributor', 'supervisor', 'operator')
+    } else if (userType === 'distributor') {
+      roles.push('supervisor', 'operator')
     } else if (userType === 'supervisor') {
       roles.push('supervisor', 'operator')
     }
@@ -373,6 +376,7 @@ export default function UserForm({
               <p className="font-medium mb-1">Sobre as funções:</p>
               <ul className="list-disc list-inside space-y-1 text-xs">
                 <li><strong>Admin:</strong> Acesso completo a todo o sistema</li>
+                <li><strong>Distribuidor:</strong> Gerencia sua carteira de clientes</li>
                 <li><strong>Supervisor:</strong> Gerencia uma empresa específica</li>
                 <li><strong>Operador:</strong> Faz coletas e visualiza relatórios</li>
               </ul>

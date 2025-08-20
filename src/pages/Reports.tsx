@@ -1,20 +1,15 @@
 import { useState, useMemo } from 'react'
 import { 
   Download, 
-  FileText, 
   TrendingUp, 
   TrendingDown, 
   BarChart3,
   Target,
-  AlertTriangle,
   CheckCircle,
   RefreshCw,
   Activity,
   Calendar,
-  Bell,
-  Lightbulb,
-  Clock,
-  Zap
+  Clock
 } from 'lucide-react'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useCollections } from '@/hooks/useCollections'
@@ -128,7 +123,8 @@ export default function Reports() {
     }
   }, [currentPeriodCollections, previousPeriodCollections])
 
-  // Gerar alertas automáticos
+  // Gerar alertas automáticos - TEMPORARIAMENTE DESATIVADO
+  /*
   const alerts = useMemo(() => {
     const alerts: Array<{ 
       type: 'critical' | 'warning' | 'info' | 'success', 
@@ -201,6 +197,7 @@ export default function Reports() {
 
     return alerts.sort((a, b) => a.priority - b.priority)
   }, [metrics, spaces, currentPeriodCollections])
+  */
 
   // Gerar cronograma de reaplicação
   const reapplicationSchedule = useMemo(() => {
@@ -256,7 +253,8 @@ export default function Reports() {
     return schedule.sort((a, b) => a.daysUntilReapplication - b.daysUntilReapplication)
   }, [spaces, currentPeriodCollections])
 
-  // Gerar insights avançados
+  // Gerar insights avançados - TEMPORARIAMENTE DESATIVADO
+  /*
   const advancedInsights = useMemo(() => {
     const insights: Array<{
       type: 'trend' | 'comparison' | 'prediction' | 'recommendation',
@@ -320,6 +318,7 @@ export default function Reports() {
 
     return insights
   }, [metrics, selectedPeriod, reapplicationSchedule])
+  */
 
   const handleGeneratePDF = async () => {
     setIsGeneratingPDF(true)
@@ -465,7 +464,8 @@ export default function Reports() {
         </Card>
               </div>
 
-       {/* Alertas Automáticos */}
+       {/* Alertas Automáticos - TEMPORARIAMENTE DESATIVADO */}
+       {/*
        {alerts.length > 0 && (
          <Card className="p-6">
            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
@@ -526,6 +526,7 @@ export default function Reports() {
            </div>
          </Card>
        )}
+       */}
 
        {/* Cronograma de Reaplicação */}
        <Card className="p-6 overflow-hidden">
@@ -642,7 +643,8 @@ export default function Reports() {
          )}
        </Card>
 
-       {/* Insights Avançados */}
+       {/* Insights Avançados - TEMPORARIAMENTE DESATIVADO */}
+       {/*
        {advancedInsights.length > 0 && (
          <Card className="p-6">
            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
@@ -691,6 +693,7 @@ export default function Reports() {
            </div>
          </Card>
        )}
+       */}
 
        {/* Performance por Espaço */}
        <Card className="p-6 overflow-hidden">
@@ -836,7 +839,8 @@ export default function Reports() {
          )}
        </Card>
 
-       {/* Resumo Executivo */}
+       {/* Resumo Executivo - TEMPORARIAMENTE DESATIVADO */}
+       {/*
        <Card className="p-6">
          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
            <FileText className="h-5 w-5 mr-2 text-blue-600" />
@@ -870,8 +874,10 @@ export default function Reports() {
            </div>
          </div>
        </Card>
+       */}
 
-       {/* Metas de Redução de Pragas */}
+       {/* Metas de Redução de Pragas - TEMPORARIAMENTE DESATIVADO */}
+       {/* 
        <Card className="p-6">
          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
            <Target className="h-5 w-5 mr-2 text-green-600" />
@@ -880,7 +886,7 @@ export default function Reports() {
          
          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
            {/* Meta Mensal */}
-           <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-lg">
+           {/*<div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-lg">
              <div className="flex items-center justify-between mb-2">
                <h4 className="font-medium text-blue-900 dark:text-blue-300">Meta Mensal</h4>
                <Badge variant="default">30 dias</Badge>
@@ -908,7 +914,7 @@ export default function Reports() {
            </div>
 
            {/* Meta Trimestral */}
-           <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 rounded-lg">
+           {/*<div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 rounded-lg">
              <div className="flex items-center justify-between mb-2">
                <h4 className="font-medium text-purple-900 dark:text-purple-300">Meta Trimestral</h4>
                <Badge variant="default">90 dias</Badge>
@@ -935,7 +941,7 @@ export default function Reports() {
            </div>
 
            {/* Meta Anual */}
-           <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-lg">
+           {/*<div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-lg">
              <div className="flex items-center justify-between mb-2">
                <h4 className="font-medium text-green-900 dark:text-green-300">Meta Anual</h4>
                <Badge variant="success">365 dias</Badge>
@@ -963,7 +969,7 @@ export default function Reports() {
          </div>
 
          {/* ROI e Benefícios */}
-         <div className="mt-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+         {/*<div className="mt-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
            <h4 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center">
              <Zap className="h-4 w-4 mr-2 text-yellow-500" />
              ROI e Benefícios do Mata-Moscas TLC
@@ -993,6 +999,7 @@ export default function Reports() {
            </p>
          </div>
        </Card>
+       */}
      </div>
    )
  } 

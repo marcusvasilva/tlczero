@@ -14,7 +14,7 @@ export interface RegisterData {
   name: string
   email: string
   password: string
-  role: 'admin' | 'supervisor' | 'operator'
+  role: 'admin' | 'distributor' | 'supervisor' | 'operator'
   phone?: string
   account_id?: string
   supervisor_id?: string
@@ -33,7 +33,7 @@ export interface AuthContextType extends AuthState {
   logout: () => void
   clearError: () => void
   updateUser: (userData: Partial<AuthUser>) => void
-  userType: 'admin' | 'supervisor' | 'operator'
+  userType: 'admin' | 'distributor' | 'supervisor' | 'operator'
   accountContext: string | null
   setAccountContext: (accountId: string | null) => void
 }

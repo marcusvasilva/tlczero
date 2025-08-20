@@ -290,20 +290,20 @@ export default function Dashboard() {
   const isLoading = collectionsLoading || spacesLoading || operatorsLoading || (userType === 'admin' && clientsLoading)
 
   return (
-    <div className="responsive-spacing mobile-container">
+    <div className="page-container space-y-6">
       {/* Header */}
-      <div className="responsive-flex">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="mobile-header">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             Dashboard TLC Zero
           </h1>
-          <p className="mobile-subheader mt-1">
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
             Bem-vindo, {user?.name}! Monitore a eficácia do mata-moscas TLC Agro.
           </p>
         </div>
         <button 
           onClick={refreshAllData} 
-          className="mobile-button bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 whitespace-nowrap"
+          className="btn-md btn-primary"
         >
           <RefreshCw className="h-4 w-4" />
           <span className="hidden xs:inline">Atualizar</span>
@@ -346,7 +346,7 @@ export default function Dashboard() {
       </SimpleCard>
 
       {/* Cards de métricas */}
-      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 xs:gap-4 sm:gap-5 lg:gap-6">
+      <div className="stats-grid">
         <MetricCard
           title="Moscas Eliminadas"
           value={metrics.totalFlies}

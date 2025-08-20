@@ -7,6 +7,7 @@ export type UpdateUserData = TablesUpdate<'users'>
 
 // Tipos específicos para diferentes roles
 export type AdminUser = User & { role: 'admin'; account_id: null; supervisor_id: null }
+export type DistributorUser = User & { role: 'distributor'; account_id: null; supervisor_id: null }
 export type SupervisorUser = User & { role: 'supervisor'; account_id: string; supervisor_id: null }
 export type OperatorUser = User & { role: 'operator'; account_id: string; supervisor_id: string }
 
@@ -31,7 +32,7 @@ export interface UserFormData {
   email: string
   phone?: string
   cpf?: string
-  role: 'admin' | 'supervisor' | 'operator'
+  role: 'admin' | 'distributor' | 'supervisor' | 'operator'
   account_id?: string
   supervisor_id?: string
   status?: 'active' | 'inactive'

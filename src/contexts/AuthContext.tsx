@@ -19,16 +19,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [tempUser, setTempUser] = useState<AuthUser | null>(null)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   
-  // Referencias para controle de timeout e debug
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  // Referências para controle de estado
   const isInitializing = useRef(true)
-  const lastSessionCheck = useRef<number>(0)
-  const isProcessing = useRef(false)
 
   // Determinar o tipo de usuário baseado no role
-  const userType: 'admin' | 'supervisor' | 'operator' = useMemo(() => {
+  const userType: 'admin' | 'distributor' | 'supervisor' | 'operator' = useMemo(() => {
     if (!user) return 'operator'
     if (user.role === 'admin') return 'admin'
+    if (user.role === 'distributor') return 'distributor'
     if (user.role === 'supervisor') return 'supervisor'
     return 'operator'
   }, [user])
@@ -36,8 +34,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Definir accountContext automaticamente baseado no usuário logado
   useEffect(() => {
     if (user) {
-      if (user.role === 'admin') {
-        // Admin vê todos os dados
+      if (user.role === 'admin' || user.role === 'distributor') {
+        // Admin e distribuidor vêem dados filtrados por suas permissões
         setAccountContext(null)
       } else {
         // Supervisor e operador veem apenas dados da sua conta
@@ -48,49 +46,65 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [user])
 
-  // Timeout de segurança reduzido para evitar loading infinito
-  const setAuthTimeout = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
-    }
-    
-    timeoutRef.current = setTimeout(() => {
-      console.warn('⚠️ Timeout na verificação de autenticação (10s) - forçando reset')
-      setIsLoading(false)
-      isProcessing.current = false
-      setError('Timeout na verificação de autenticação. Tente recarregar a página.')
-    }, 10000) // Reduzido para 10 segundos
-  }
 
-  const clearAuthTimeout = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
-      timeoutRef.current = null
-    }
-  }
-
-  // Função para buscar dados do usuário no Supabase
+  // Função otimizada para buscar dados do usuário no Supabase
   const fetchUserData = async (supabaseUser: SupabaseUser): Promise<AuthUser | null> => {
     try {
-      console.log('🔍 Buscando dados do usuário:', supabaseUser.id)
+      console.log('🔍 Buscando dados do usuário (RPC otimizada):', supabaseUser.id)
       
       if (!supabaseUser.id) {
         console.log('❌ ID do usuário não encontrado')
         return null
       }
 
-      // Usar função personalizada para evitar problemas de RLS
-      const { data: dbUserData, error } = await (supabase as any)
-        .rpc('get_user_data', { user_id: supabaseUser.id })
-        .single()
-
-      if (error) {
-        console.error('❌ Erro ao buscar usuário na tabela:', error.message)
-        return null
+      // Tentar usar função RPC otimizada primeiro, mas com fallback robusto
+      let dbUserData = null
+      let useRPC = true
+      
+      try {
+        const rpcResult = await supabase
+          .rpc('get_user_data', { user_id: supabaseUser.id })
+          .single()
+          
+        if (rpcResult.error) {
+          console.warn('⚠️ RPC get_user_data falhou:', rpcResult.error.message)
+          useRPC = false
+        } else {
+          dbUserData = rpcResult.data
+          console.log('✅ RPC get_user_data bem-sucedida')
+        }
+      } catch (rpcError) {
+        console.warn('⚠️ Erro na chamada RPC:', rpcError)
+        useRPC = false
+      }
+      
+      // Fallback para query tradicional se RPC falhou
+      if (!useRPC || !dbUserData) {
+        console.log('🔄 Usando query tradicional...')
+        
+        const fallbackResult = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', supabaseUser.id)
+          .single()
+          
+        if (fallbackResult.error) {
+          console.error('❌ Erro na query tradicional:', fallbackResult.error.message)
+          return null
+        }
+        
+        dbUserData = fallbackResult.data
+        console.log('✅ Query tradicional bem-sucedida')
       }
 
       if (!dbUserData) {
-        console.log('❌ Dados do usuário não encontrados na tabela public.users')
+        console.log('❌ Dados do usuário não encontrados')
+        return null
+      }
+      
+      // Verificar se o usuário está ativo
+      if (dbUserData.status !== 'active') {
+        console.log('❌ Usuário inativo:', dbUserData.status)
         return null
       }
 
@@ -98,7 +112,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         id: dbUserData.id,
         email: dbUserData.email,
         name: dbUserData.name,
-        role: dbUserData.role as 'admin' | 'supervisor' | 'operator',
+        role: dbUserData.role as 'admin' | 'distributor' | 'supervisor' | 'operator',
         account_id: dbUserData.account_id,
         supervisor_id: dbUserData.supervisor_id,
         phone: dbUserData.phone,
@@ -109,7 +123,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         updated_at: dbUserData.updated_at,
       }
 
-      console.log('✅ Dados do usuário carregados:', { id: userData.id, role: userData.role, status: userData.status })
+      console.log('✅ Dados do usuário carregados:', { 
+        id: userData.id, 
+        role: userData.role, 
+        status: userData.status,
+        method: useRPC ? 'RPC' : 'Traditional Query'
+      })
       return userData
     } catch (err) {
       console.error('❌ Erro inesperado ao buscar dados do usuário:', err)
@@ -117,129 +136,79 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  // Verificar sessão inicial com proteções otimizadas
+  // Verificar sessão inicial simplificada
   useEffect(() => {
     let isMounted = true
     
-    const checkSession = async () => {
-      // Evitar múltiplas verificações simultâneas
-      if (isProcessing.current) {
-        console.log('⏭️ Verificação de sessão já em andamento')
-        return
-      }
-      
-      const now = Date.now()
-      
-      // Evitar múltiplas verificações muito próximas
-      if (now - lastSessionCheck.current < 2000 && !isInitializing.current) {
-        console.log('⏭️ Pulando verificação de sessão (muito recente)')
-        return
-      }
-      
-      isProcessing.current = true
-      lastSessionCheck.current = now
-      
+    const initializeAuth = async () => {
       try {
-        console.log('🔄 Verificando sessão inicial...')
-        setAuthTimeout() // Iniciar timeout de segurança
+        console.log('🔄 Inicializando autenticação...')
         
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        const { data: { session }, error } = await supabase.auth.getSession()
         
-        if (sessionError) {
-          console.error('❌ Erro ao obter sessão:', sessionError)
-          throw sessionError
+        if (error) {
+          console.error('Erro ao obter sessão:', error)
+          throw error
         }
-    
-        if (!isMounted) return // Componente foi desmontado
+        
+        if (!isMounted) return
         
         if (session?.user) {
-          console.log('👤 Sessão encontrada, buscando dados do usuário')
           const userData = await fetchUserData(session.user)
           
           if (!isMounted) return
           
-          if (userData && userData.status === 'active') {
-            console.log('✅ Usuário autenticado com sucesso')
+          if (userData?.status === 'active') {
             setUser(userData)
             setError(null)
           } else {
-            console.log('❌ Usuário inativo ou dados inválidos, fazendo logout')
             await supabase.auth.signOut()
-            setUser(null)
             setError('Conta inativa. Contate o administrador.')
           }
-        } else {
-          console.log('❌ Nenhuma sessão encontrada')
-          setUser(null)
-          setError(null)
         }
       } catch (err) {
-        console.error('❌ Erro ao verificar sessão:', err)
+        console.error('Erro na inicialização:', err)
         if (isMounted) {
-          setUser(null)
-          setError('Erro ao verificar autenticação. Tente fazer login novamente.')
+          setError('Erro ao verificar autenticação.')
         }
       } finally {
         if (isMounted) {
-          clearAuthTimeout()
           setIsLoading(false)
           isInitializing.current = false
-          isProcessing.current = false
-          console.log('✅ Verificação de sessão concluída')
         }
       }
     }
 
-    checkSession()
+    initializeAuth()
 
-    // Escutar mudanças na autenticação com proteções otimizadas
+    // Listener simplificado de mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!isMounted || isProcessing.current) return
+        if (!isMounted) return
         
-        console.log('🔔 Auth state change:', event)
+        console.log('Auth state change:', event)
         
-        // Evitar processar eventos duplicados muito próximos
-        const now = Date.now()
-        if (now - lastSessionCheck.current < 1000 && event !== 'SIGNED_OUT') {
-          console.log('⏭️ Ignorando evento auth duplicado')
+        if (event === 'SIGNED_OUT' || !session) {
+          setUser(null)
+          setError(null)
           return
         }
         
-        isProcessing.current = true
-        lastSessionCheck.current = now
-        
-        try {
-          if (session?.user && event !== 'SIGNED_OUT') {
-            console.log('👤 Processando nova sessão')
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          try {
             const userData = await fetchUserData(session.user)
             
             if (!isMounted) return
             
-            if (userData && userData.status === 'active') {
+            if (userData?.status === 'active') {
               setUser(userData)
               setError(null)
             } else {
-              console.log('❌ Dados inválidos na mudança de auth, fazendo logout')
-              setUser(null)
+              await supabase.auth.signOut()
+              setError('Conta inativa.')
             }
-          } else {
-            console.log('🚪 Usuário deslogado')
-            setUser(null)
-            setError(null)
-          }
-        } catch (err) {
-          console.error('❌ Erro no auth state change:', err)
-          if (isMounted) {
-            setUser(null)
-          }
-        } finally {
-          if (isMounted) {
-            isProcessing.current = false
-            if (isInitializing.current) {
-              setIsLoading(false)
-              isInitializing.current = false
-            }
+          } catch (err) {
+            console.error('Erro no processamento de sessão:', err)
           }
         }
       }
@@ -247,21 +216,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     return () => {
       isMounted = false
-      clearAuthTimeout()
-      isProcessing.current = false
       subscription.unsubscribe()
     }
   }, [])
 
   const login = async (credentials: LoginCredentials): Promise<void> => {
-    if (isProcessing.current) {
-      console.log('⏭️ Login já em andamento')
-      return
-    }
-    
     setIsLoading(true)
     setError(null)
-    isProcessing.current = true
     
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -317,19 +278,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(null)
     } finally {
       setIsLoading(false)
-      isProcessing.current = false
     }
   }
 
   const register = async (data: RegisterData): Promise<void> => {
-    if (isProcessing.current) {
-      console.log('⏭️ Registro já em andamento')
-      return
-    }
-
     setIsLoading(true)
     setError(null)
-    isProcessing.current = true
 
     try {
       console.log('🔄 Iniciando registro de usuário:', data.email)
@@ -421,27 +375,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       throw new Error(errorMessage)
     } finally {
       setIsLoading(false)
-      isProcessing.current = false
     }
   }
 
   const logout = async (): Promise<void> => {
-    if (isProcessing.current) {
-      console.log('⏭️ Logout já em andamento')
-      return
-    }
-
     setIsLoading(true)
-    isProcessing.current = true
     try {
       await supabase.auth.signOut()
-    setUser(null)
-    setAccountContext(null)
+      setUser(null)
+      setAccountContext(null)
     } catch (err) {
       console.error('Erro ao fazer logout:', err)
     } finally {
       setIsLoading(false)
-      isProcessing.current = false
     }
   }
 

@@ -2,77 +2,43 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../types/database'
 import { getPerformanceConfig } from '../config/performance'
 
-const supabaseUrl = 'https://nfditawexkrwwhzbqfjt.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mZGl0YXdleGtyd3doemJxZmp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4MjM4MzAsImV4cCI6MjA2NzM5OTgzMH0.X7jsQwk7c09RXr_wMnFtg_j-bWA4vuaKA5BiB9ZuDOs'
+// Configuração do Supabase usando variáveis de ambiente
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseServiceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
 
-// Chave de service role para operações administrativas
-const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mZGl0YXdleGtyd3doemJxZmp0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTgyMzgzMCwiZXhwIjoyMDY3Mzk5ODMwfQ.M7i7gOlSrdWvHILcW9CfnSZiLYrsYj_deuV0-ciYOyU'
+// Validar se as variáveis de ambiente estão configuradas
+if (!supabaseUrl) {
+  throw new Error('VITE_SUPABASE_URL não encontrada nas variáveis de ambiente')
+}
+if (!supabaseAnonKey) {
+  throw new Error('VITE_SUPABASE_ANON_KEY não encontrada nas variáveis de ambiente')
+}
+if (!supabaseServiceRoleKey) {
+  throw new Error('VITE_SUPABASE_SERVICE_ROLE_KEY não encontrada nas variáveis de ambiente')
+}
 
-// Singleton para o cliente Supabase principal
-let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null
-let supabaseAdminInstance: ReturnType<typeof createClient<Database>> | null = null
-
-// Função para criar ou retornar a instância única do cliente Supabase
-export const supabase = (() => {
-  if (!supabaseInstance) {
-    supabaseInstance = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
-        // Adicionar timeout de sessão mais longo
-        storageKey: 'tlc-zero-auth',
-        storage: window.localStorage
-      },
-      // Adicionar configurações de realtime e fetch
-      realtime: {
-        params: {
-          eventsPerSecond: 2
-        }
-      },
-      global: {
-        // Headers customizados para melhor rastreamento
-        headers: { 
-          'x-client-info': 'tlc-zero-app',
-          'x-request-source': 'web-app'
-        },
-        // Configuração de fetch com timeout reduzido
-        fetch: (url, init) => {
-          const controller = new AbortController()
-          const config = getPerformanceConfig()
-          const timeoutId = setTimeout(() => controller.abort(), config.timeouts.query)
-          
-          return fetch(url, {
-            ...init,
-            signal: controller.signal,
-            // Adicionar retry automático no nível do fetch
-            cache: 'no-cache'
-          }).finally(() => clearTimeout(timeoutId))
-        }
-      },
-      // Pool de conexões
-      db: {
-        schema: 'public'
-      }
-    })
-    console.log('✅ Cliente Supabase criado (singleton)')
+// Cliente Supabase principal seguindo padrão da documentação oficial
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    storageKey: 'tlc-zero-auth'
   }
-  return supabaseInstance
-})()
+})
 
-// Cliente admin para operações que requerem privilégios administrativos
-export const supabaseAdmin = (() => {
-  if (!supabaseAdminInstance) {
-    supabaseAdminInstance = createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
-    console.log('✅ Cliente Supabase Admin criado (singleton)')
+console.log('✅ Cliente Supabase inicializado')
+
+// Cliente admin para operações administrativas
+export const supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
   }
-  return supabaseAdminInstance
-})()
+})
+
+console.log('✅ Cliente Supabase Admin inicializado')
 
 // Tipos para a função utilitária
 interface QueryOptions {

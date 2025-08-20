@@ -48,9 +48,9 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/collect/:token" element={<AnonymousCollect />} />
             
-            {/* Rota de registro protegida - apenas admins */}
+            {/* Rota de registro protegida - admins e distribuidores */}
             <Route path="/register" element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'distributor']}>
                 <Register />
               </ProtectedRoute>
             } />
@@ -80,23 +80,23 @@ function App() {
               
               {/* Coleta Anônima - página para apontamentos anônimos */}
               
-              {/* Operadores - admin e supervisor podem gerenciar */}
+              {/* Operadores - admin, distribuidor e supervisor podem gerenciar */}
               <Route path="operators" element={
-                <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                <ProtectedRoute allowedRoles={['admin', 'distributor', 'supervisor']}>
                   <Operators />
                 </ProtectedRoute>
               } />
               
-              {/* Gestão de Usuários - apenas admin */}
+              {/* Gestão de Usuários - admin e distribuidor */}
               <Route path="user-management" element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'distributor']}>
                   <UserManagement />
                 </ProtectedRoute>
               } />
               
-              {/* Relatórios - admin e supervisor podem criar, operador só visualiza */}
+              {/* Relatórios - admin, distribuidor e supervisor podem criar, operador só visualiza */}
               <Route path="reports" element={
-                <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                <ProtectedRoute allowedRoles={['admin', 'distributor', 'supervisor']}>
                   <Reports />
                 </ProtectedRoute>
               } />

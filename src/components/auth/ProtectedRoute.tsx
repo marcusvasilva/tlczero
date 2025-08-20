@@ -14,6 +14,14 @@ const rolePermissions = {
     { resource: 'reports', actions: ['create', 'read', 'update', 'delete'] },
     { resource: 'settings', actions: ['create', 'read', 'update', 'delete'] }
   ],
+  distributor: [
+    { resource: 'clients', actions: ['create', 'read', 'update', 'delete'] },
+    { resource: 'operators', actions: ['create', 'read', 'update', 'delete'] },
+    { resource: 'spaces', actions: ['create', 'read', 'update', 'delete'] },
+    { resource: 'collections', actions: ['read'] },
+    { resource: 'reports', actions: ['read'] },
+    { resource: 'settings', actions: ['read'] }
+  ],
   supervisor: [
     { resource: 'clients', actions: ['read', 'update'] },
     { resource: 'operators', actions: ['read'] },
@@ -27,7 +35,7 @@ const rolePermissions = {
   ]
 }
 
-const hasPermission = (role: 'admin' | 'supervisor' | 'operator', resource: string, action: string): boolean => {
+const hasPermission = (role: 'admin' | 'distributor' | 'supervisor' | 'operator', resource: string, action: string): boolean => {
   const permissions = rolePermissions[role]
   const resourcePermission = permissions.find(p => p.resource === resource)
   return resourcePermission?.actions.includes(action) ?? false
@@ -138,7 +146,7 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
     return <>{fallback}</>
   }
 
-  const hasAccess = hasPermission(user.role as 'admin' | 'supervisor' | 'operator', resource, action)
+  const hasAccess = hasPermission(user.role as 'admin' | 'distributor' | 'supervisor' | 'operator', resource, action)
 
   return hasAccess ? <>{children}</> : <>{fallback}</>
 }
@@ -149,7 +157,7 @@ export const usePermissions = () => {
 
   const checkPermission = (resource: string, action: string): boolean => {
     if (!user) return false
-    return hasPermission(user.role as 'admin' | 'supervisor' | 'operator', resource, action)
+    return hasPermission(user.role as 'admin' | 'distributor' | 'supervisor' | 'operator', resource, action)
   }
 
   const canCreate = (resource: string) => checkPermission(resource, 'create')

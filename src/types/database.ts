@@ -29,6 +29,7 @@ export type Database = {
           state: string | null
           status: string
           updated_at: string | null
+          distributor_id: string | null
         }
         Insert: {
           address?: string | null
@@ -44,6 +45,7 @@ export type Database = {
           state?: string | null
           status?: string
           updated_at?: string | null
+          distributor_id?: string | null
         }
         Update: {
           address?: string | null
@@ -59,8 +61,17 @@ export type Database = {
           state?: string | null
           status?: string
           updated_at?: string | null
+          distributor_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "accounts_distributor_id_fkey"
+            columns: ["distributor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       collections: {
         Row: {

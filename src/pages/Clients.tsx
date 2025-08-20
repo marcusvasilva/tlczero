@@ -69,83 +69,80 @@ export function Clients() {
   }
 
   return (
-    <div className="min-h-screen">
-      <div className="mobile-container max-w-full">
-        <div className="mb-4 xs:mb-5 sm:mb-6 responsive-flex">
-          <div className="min-w-0 flex-1">
-            <h1 className="mobile-header mb-1">Clientes</h1>
-            <p className="mobile-subheader">Gerencie os clientes do sistema</p>
-          </div>
-          <div className="flex-shrink-0">
-            <button
-              onClick={openCreateForm}
-              className="mobile-button bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 w-full sm:w-auto justify-center"
-            >
-              <Plus className="w-4 h-4" />
-              Adicionar Cliente
-            </button>
-          </div>
+    <div className="page-container space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Clientes</h1>
+          <p className="text-gray-600 dark:text-gray-400">Gerencie os clientes do sistema</p>
         </div>
+        <button
+          onClick={openCreateForm}
+          className="btn-md btn-primary w-full sm:w-auto"
+        >
+          <Plus className="w-4 h-4" />
+          Adicionar Cliente
+        </button>
+      </div>
 
-                {/* Estatísticas */}
-        <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 xs:gap-4 sm:gap-5 mb-4 xs:mb-5 sm:mb-6">
-          <div className="mobile-card">
-            <div className="flex items-center">
-              <div className="p-2 xs:p-2.5 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex-shrink-0">
-                <Building2 className="w-4 h-4 xs:w-5 xs:h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="ml-3 min-w-0">
-                <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Total</p>
-                <p className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{clients.length}</p>
-              </div>
+      {/* Estatísticas */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="mobile-card">
+          <div className="flex items-center">
+            <div className="p-2 xs:p-2.5 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex-shrink-0">
+              <Building2 className="w-4 h-4 xs:w-5 xs:h-5 text-blue-600 dark:text-blue-400" />
             </div>
-          </div>
-
-          <div className="mobile-card">
-            <div className="flex items-center">
-              <div className="p-2 xs:p-2.5 bg-green-100 dark:bg-green-900/20 rounded-lg flex-shrink-0">
-                <Users className="w-4 h-4 xs:w-5 xs:h-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div className="ml-3 min-w-0">
-                <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Ativos</p>
-                <p className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                  {clients.filter(c => c.status === 'active').length}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mobile-card">
-            <div className="flex items-center">
-              <div className="p-2 xs:p-2.5 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex-shrink-0">
-                <MapPin className="w-4 h-4 xs:w-5 xs:h-5 text-yellow-600 dark:text-yellow-400" />
-              </div>
-              <div className="ml-3 min-w-0">
-                <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Cidades</p>
-                <p className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                  {new Set(clients.map(c => c.city).filter(Boolean)).size}
-                </p>
-              </div>
+            <div className="ml-3 min-w-0">
+              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Total</p>
+              <p className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{clients.length}</p>
             </div>
           </div>
         </div>
 
-        {/* Busca */}
-        <div className="mb-4 xs:mb-5 sm:mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Buscar clientes..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 input-responsive"
-            />
+        <div className="mobile-card">
+          <div className="flex items-center">
+            <div className="p-2 xs:p-2.5 bg-green-100 dark:bg-green-900/20 rounded-lg flex-shrink-0">
+              <Users className="w-4 h-4 xs:w-5 xs:h-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="ml-3 min-w-0">
+              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Ativos</p>
+              <p className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                {clients.filter(c => c.status === 'active').length}
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Lista de clientes */}
-        {isMobile ? (
+        <div className="mobile-card">
+          <div className="flex items-center">
+            <div className="p-2 xs:p-2.5 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex-shrink-0">
+              <MapPin className="w-4 h-4 xs:w-5 xs:h-5 text-yellow-600 dark:text-yellow-400" />
+            </div>
+            <div className="ml-3 min-w-0">
+              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Cidades</p>
+              <p className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                {new Set(clients.map(c => c.city).filter(Boolean)).size}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Busca */}
+      <div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <input
+            type="text"
+            placeholder="Buscar clientes..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 input-responsive"
+          />
+        </div>
+      </div>
+
+      {/* Lista de clientes */}
+      {isMobile ? (
           // Visualização em Cards para Mobile
           <div className="grid grid-cols-1 gap-3">
             {filteredClients.map((client) => (
@@ -275,15 +272,14 @@ export function Clients() {
           </div>
         )}
 
-        {/* Modal do formulário */}
-        {showForm && (
-          <ClientForm
-            client={editingClient || undefined}
-            onSubmit={handleSubmit}
-            onCancel={closeForm}
-          />
-        )}
-      </div>
+      {/* Modal do formulário */}
+      {showForm && (
+        <ClientForm
+          client={editingClient || undefined}
+          onSubmit={handleSubmit}
+          onCancel={closeForm}
+        />
+      )}
     </div>
   )
 } 

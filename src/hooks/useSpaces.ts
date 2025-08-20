@@ -80,15 +80,16 @@ export const useSpaces = (options: UseSpacesOptions = {}): UseSpacesReturn => {
     setError(null)
     
     try {
+      // Agora podemos usar joins novamente - recursão resolvida
       let query = supabase
         .from('spaces')
         .select(`
           *,
-          accounts!inner (
+          accounts!inner(
             id,
             company_name,
-            email,
-            status
+            contact_person,
+            distributor_id
           )
         `)
         .order(sortBy, { ascending: sortOrder === 'asc' })
@@ -183,15 +184,7 @@ export const useSpaces = (options: UseSpacesOptions = {}): UseSpacesReturn => {
       const { data: newSpace, error } = await supabase
         .from('spaces')
         .insert([supabaseData])
-        .select(`
-          *,
-          accounts!inner (
-            id,
-            company_name,
-            email,
-            status
-          )
-        `)
+        .select('*')
         .single()
 
       if (error) {
@@ -245,15 +238,7 @@ export const useSpaces = (options: UseSpacesOptions = {}): UseSpacesReturn => {
         .from('spaces')
         .update(supabaseData)
         .eq('id', id)
-        .select(`
-          *,
-          accounts!inner (
-            id,
-            company_name,
-            email,
-            status
-          )
-        `)
+        .select('*')
         .single()
 
       if (error) {

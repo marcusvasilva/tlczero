@@ -8,7 +8,7 @@ interface CreateUserData {
   name: string
   email: string
   password?: string
-  role: 'admin' | 'supervisor' | 'operator'
+  role: 'admin' | 'distributor' | 'supervisor' | 'operator'
   account_id?: string
   phone?: string
   cpf?: string
@@ -78,29 +78,62 @@ export const useUsers = (): UseUsersReturn => {
         .select('*')
         .order('created_at', { ascending: false })
 
-      // Aplicar filtro baseado no tipo de usuário
-      if (userType === 'admin') {
-        // Admin vê todos os usuários
-        console.log('👑 Admin - buscando todos os usuários')
-      } else if (userType === 'supervisor') {
-        // Supervisor vê apenas usuários da sua empresa
-        const currentAccountId = accountContext || user?.account_id
-        if (currentAccountId) {
-          query = query.eq('account_id', currentAccountId)
-          console.log('👨‍💼 Supervisor - buscando usuários da empresa:', currentAccountId)
-        }
-      } else {
-        // Operator não deveria ter acesso a esta funcionalidade
-        console.log('👷 Operator - acesso negado')
+      // OTIMIZAÇÃO: Usar função RPC para melhor performance
+      // Baseado na documentação do Supabase sobre security definer functions
+      
+      if (!user?.id) {
+        console.log('❌ Usuário não autenticado')
         setUsers([])
         return
       }
-
-      const { data, error } = await query
+      
+      console.log(`🔍 Usando função RPC otimizada para ${userType}`)
+      
+      const { data, error } = await supabase.rpc('get_users_by_context', {
+        requesting_user_id: user.id,
+        requesting_role: user.role,
+        account_filter: (userType === 'supervisor') ? (accountContext || user.account_id) : null
+      })
 
       if (error) {
-        console.error('❌ Erro ao carregar usuários:', error)
-        throw error
+        console.error('❌ Erro ao carregar usuários via RPC:', error)
+        // Fallback para query tradicional em caso de erro na RPC
+        console.log('🔄 Tentando fallback para query tradicional...')
+        
+        let fallbackQuery = supabase
+          .from('users')
+          .select('*')
+          .order('created_at', { ascending: false })
+          
+        // Aplicar filtros baseados no tipo de usuário
+        if (userType === 'admin') {
+          // Admin vê todos
+          console.log('👑 Admin fallback - todos os usuários')
+        } else if (userType === 'distributor' && user?.id) {
+          fallbackQuery = fallbackQuery.eq('account_id', 
+            supabase.from('accounts')
+              .select('id')
+              .eq('distributor_id', user.id)
+          )
+        } else if (userType === 'supervisor') {
+          const currentAccountId = accountContext || user?.account_id
+          if (currentAccountId) {
+            fallbackQuery = fallbackQuery.eq('account_id', currentAccountId)
+          }
+        } else {
+          setUsers([])
+          return
+        }
+        
+        const fallbackResult = await fallbackQuery
+        if (fallbackResult.error) {
+          console.error('❌ Erro no fallback também:', fallbackResult.error)
+          throw fallbackResult.error
+        }
+        
+        console.log('✅ Fallback bem-sucedido:', fallbackResult.data?.length, 'usuários')
+        setUsers(fallbackResult.data || [])
+        return
       }
 
       console.log('✅ Usuários carregados:', data?.length || 0)
@@ -151,6 +184,9 @@ export const useUsers = (): UseUsersReturn => {
       if (data.role === 'admin') {
         // Admin não precisa de account_id
         data.account_id = undefined
+      } else if (data.role === 'distributor') {
+        // Distribuidor não precisa de account_id (gerencia múltiplas contas)
+        data.account_id = undefined
       } else if (data.role === 'supervisor') {
         // Supervisor precisa de account_id
         if (!data.account_id) {
@@ -163,6 +199,10 @@ export const useUsers = (): UseUsersReturn => {
           if (data.account_id !== currentAccountId) {
             throw new Error('Você só pode criar supervisores da sua empresa')
           }
+        } else if (userType === 'distributor') {
+          // Distribuidor deve verificar se a conta é sua
+          // Será validado no backend via RLS
+          console.log('🔍 Distribuidor criando supervisor para conta:', data.account_id)
         }
       } else if (data.role === 'operator') {
         // Operator precisa de account_id e supervisor_id
@@ -171,6 +211,12 @@ export const useUsers = (): UseUsersReturn => {
         }
         if (!data.supervisor_id) {
           throw new Error('Operador deve ter um supervisor')
+        }
+        
+        // Validar se distribuidor pode criar operador para esta conta
+        if (userType === 'distributor') {
+          console.log('🔍 Distribuidor criando operador para conta:', data.account_id)
+          // Validação será feita no backend via RLS
         }
       }
 
@@ -286,6 +332,8 @@ export const useUsers = (): UseUsersReturn => {
       // Validações específicas por role se role está sendo alterada
       if (data.role) {
         if (data.role === 'admin') {
+          data.account_id = undefined
+        } else if (data.role === 'distributor') {
           data.account_id = undefined
         } else if (data.role === 'supervisor' && !data.account_id) {
           throw new Error('Supervisor deve ser associado a uma empresa')

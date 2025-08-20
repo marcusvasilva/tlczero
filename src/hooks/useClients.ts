@@ -3,6 +3,7 @@ import { supabase, executeQuery } from '../lib/supabase'
 import { handleError } from '../lib/utils'
 import { cache, getCacheKey } from '../lib/cache'
 import { useApiConnectionMonitor } from './useConnectionMonitor'
+import { useAuthContext } from '../contexts/AuthContext'
 import type { Account } from '../types/client'
 import type { UseClientsOptions, UseClientsReturn } from '../types/client'
 
@@ -20,6 +21,9 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
   
   // Hook para monitorar conexão
   const { reportApiError } = useApiConnectionMonitor()
+  
+  // Contexto de autenticação para verificar role do usuário
+  const { user } = useAuthContext()
   
   // Extrair opções para evitar re-renders desnecessários
   const { sortBy = 'company_name', sortOrder = 'asc' } = options
@@ -82,23 +86,76 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
     setError(null)
     
     try {
-      // Usar executeQuery com timeout e retry
+      // Usar função RPC otimizada quando possível
       const result = await executeQuery(
         async () => {
+          if (user?.id) {
+            console.log('🚀 Usando RPC otimizada para buscar contas')
+            
+            // Tentar usar função RPC otimizada primeiro
+            const rpcResult = await supabase.rpc('get_accounts_by_context', {
+              requesting_user_id: user.id,
+              requesting_role: user.role,
+              account_filter: (user.role === 'supervisor' || user.role === 'operator') ? user.account_id : null
+            })
+            
+            if (!rpcResult.error) {
+              let data = rpcResult.data || []
+              
+              // Aplicar filtros de status se especificado
+              if (options.filterActive !== undefined) {
+                const targetStatus = options.filterActive ? 'active' : 'inactive'
+                data = data.filter(account => account.status === targetStatus)
+                console.log('📋 Filtro de status aplicado na RPC:', targetStatus)
+              }
+              
+              // Aplicar ordenação
+              data.sort((a, b) => {
+                const aValue = a[sortBy] || ''
+                const bValue = b[sortBy] || ''
+                if (sortOrder === 'asc') {
+                  return aValue.localeCompare(bValue)
+                } else {
+                  return bValue.localeCompare(aValue)
+                }
+              })
+              
+              console.log('✅ RPC bem-sucedida:', data.length, 'contas')
+              return { data, error: null }
+            } else {
+              console.warn('⚠️ RPC falhou, usando fallback:', rpcResult.error)
+            }
+          }
+          
+          // Fallback para query tradicional
+          console.log('🔄 Usando query tradicional como fallback')
           let query = supabase
             .from('accounts')
             .select('*')
             .order(sortBy, { ascending: sortOrder === 'asc' })
 
-          // Apply filters
+          // IMPORTANTE: Sempre adicionar filtros diretos para otimizar RLS
+          if (user) {
+            if (user.role === 'admin') {
+              console.log('📋 Admin - sem filtros adicionais')
+            } else if (user.role === 'distributor') {
+              console.log('📋 Aplicando filtro de distribuidor:', user.id)
+              query = query.eq('distributor_id', user.id)
+            } else if (user.role === 'supervisor' || user.role === 'operator') {
+              if (user.account_id) {
+                console.log('📋 Aplicando filtro de conta:', user.account_id)
+                query = query.eq('id', user.account_id)
+              }
+            }
+          }
+
+          // Apply status filters
           if (options.filterActive !== undefined) {
             console.log('📋 Aplicando filtro de status:', options.filterActive ? 'active' : 'inactive')
             query = query.eq('status', options.filterActive ? 'active' : 'inactive')
-          } else {
-            console.log('📋 Sem filtro de status aplicado')
           }
 
-          console.log('📋 Query construída, executando...')
+          console.log('📋 Query tradicional construída, executando...')
           return await query
         },
         {
@@ -218,7 +275,9 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
               state: data.state,
               cep: data.cep,
               cnpj: data.cnpj,
-              status: data.status || 'active'
+              status: data.status || 'active',
+              // Se for distribuidor, vincular a conta a ele
+              distributor_id: user?.role === 'distributor' ? user.id : null
             }])
             .select()
             .single()
