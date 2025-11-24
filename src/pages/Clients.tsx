@@ -1,20 +1,25 @@
 import { useState } from 'react'
-import { Search, Building2, Users, MapPin, Plus, Edit, Phone, Mail } from 'lucide-react'
+import { Search, Building2, Users, MapPin, Plus, Edit, Phone, Mail, Rocket } from 'lucide-react'
 import { useClients } from '@/hooks/useClients'
 import { formatPhone } from '@/lib/formatters'
 import { ClientForm } from '@/components/forms/ClientForm'
+import { CompanyOnboardingWizard } from '@/components/forms/CompanyOnboardingWizard'
 import { useToast } from '@/contexts/ToastContext'
 import { useMobile } from '@/hooks/use-mobile'
+import { useAuthContext } from '@/contexts/AuthContext'
+import { Button } from '@/components/ui/button'
 import type { Account } from '@/types'
 
 export function Clients() {
   const { clients, isLoading, createClient, updateClient } = useClients()
   const { toast } = useToast()
   const isMobile = useMobile()
+  const { userType } = useAuthContext()
   
   // Estados locais
   const [searchTerm, setSearchTerm] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [showWizard, setShowWizard] = useState(false)
   const [editingClient, setEditingClient] = useState<Account | null>(null)
   
   // Filtrar clientes
@@ -29,6 +34,10 @@ export function Clients() {
     setShowForm(true)
   }
 
+  const openWizard = () => {
+    setShowWizard(true)
+  }
+
   const openEditForm = (client: Account) => {
     setEditingClient(client)
     setShowForm(true)
@@ -37,6 +46,10 @@ export function Clients() {
   const closeForm = () => {
     setShowForm(false)
     setEditingClient(null)
+  }
+
+  const closeWizard = () => {
+    setShowWizard(false)
   }
 
   // Função para criar/atualizar cliente
@@ -75,13 +88,25 @@ export function Clients() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Clientes</h1>
           <p className="text-gray-600 dark:text-gray-400">Gerencie os clientes do sistema</p>
         </div>
-        <button
-          onClick={openCreateForm}
-          className="btn-md btn-primary w-full sm:w-auto"
-        >
-          <Plus className="w-4 h-4" />
-          Adicionar Cliente
-        </button>
+        <div className="flex gap-2">
+          {userType === 'distributor' && (
+            <Button
+              onClick={openWizard}
+              variant="gradient"
+              className="w-full sm:w-auto"
+            >
+              <Rocket className="w-4 h-4" />
+              Nova Empresa Completa
+            </Button>
+          )}
+          <Button
+            onClick={openCreateForm}
+            className="w-full sm:w-auto"
+          >
+            <Plus className="w-4 h-4" />
+            {userType === 'distributor' ? 'Apenas Cliente' : 'Adicionar Cliente'}
+          </Button>
+        </div>
       </div>
 
       {/* Estatísticas */}
@@ -186,13 +211,14 @@ export function Clients() {
                 </div>
                 
                 <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                  <button
+                  <Button
                     onClick={() => openEditForm(client)}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                    variant="secondary"
+                    className="w-full"
                   >
                     <Edit className="w-4 h-4" />
                     Editar
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}
@@ -257,12 +283,13 @@ export function Clients() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <button
+                        <Button
                           onClick={() => openEditForm(client)}
-                          className="text-primary hover:text-primary/80 text-sm font-medium"
+                          variant="ghost"
+                          size="sm"
                         >
                           Editar
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -278,6 +305,14 @@ export function Clients() {
           client={editingClient || undefined}
           onSubmit={handleSubmit}
           onCancel={closeForm}
+        />
+      )}
+
+      {/* Modal do wizard */}
+      {showWizard && (
+        <CompanyOnboardingWizard
+          onComplete={closeWizard}
+          onCancel={closeWizard}
         />
       )}
     </div>

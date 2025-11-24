@@ -83,6 +83,14 @@ class LocalCache {
       console.warn('Erro ao limpar cache do localStorage:', error)
     }
   }
+  
+  // Forçar limpeza completa do cache de dados (NÃO mexe em autenticação)
+  forceCompleteCleanup(): void {
+    console.log('🧹 Executando limpeza completa do cache de dados...')
+    this.clear()
+    // IMPORTANTE: NÃO mexer em tokens de autenticação
+    // O Supabase gerencia isso automaticamente
+  }
 
   // Invalidar cache por padrão
   invalidatePattern(pattern: string): void {
@@ -215,22 +223,24 @@ export async function preloadCache<T>(
   }
 }
 
-// Limpar cache expirado periodicamente
-setInterval(() => {
-  try {
-    const keys = Object.keys(localStorage)
-    keys.forEach(key => {
-      if (key.startsWith('cache_')) {
-        const item = localStorage.getItem(key)
-        if (item) {
-          const parsed = JSON.parse(item) as CacheItem<any>
-          if (Date.now() - parsed.timestamp > parsed.ttl) {
-            localStorage.removeItem(key)
+// Limpar cache expirado periodicamente (apenas em runtime, não no build)
+if (typeof window !== 'undefined') {
+  setInterval(() => {
+    try {
+      const keys = Object.keys(localStorage)
+      keys.forEach(key => {
+        if (key.startsWith('cache_')) {
+          const item = localStorage.getItem(key)
+          if (item) {
+            const parsed = JSON.parse(item) as CacheItem<any>
+            if (Date.now() - parsed.timestamp > parsed.ttl) {
+              localStorage.removeItem(key)
+            }
           }
         }
-      }
-    })
-  } catch (error) {
-    console.warn('Erro ao limpar cache expirado:', error)
-  }
-}, 60000) // A cada minuto
+      })
+    } catch (error) {
+      console.warn('Erro ao limpar cache expirado:', error)
+    }
+  }, 60000) // A cada minuto
+}

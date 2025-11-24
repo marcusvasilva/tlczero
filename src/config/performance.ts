@@ -3,18 +3,18 @@
 export const performanceConfig = {
   // Timeouts em milissegundos
   timeouts: {
-    query: 10000,        // Timeout padrão para queries (10s)
-    quickCheck: 3000,    // Timeout para verificações rápidas (3s)
-    auth: 5000,          // Timeout para operações de auth (5s)
-    upload: 30000,       // Timeout para uploads (30s)
+    query: 30000,        // Timeout padrão para queries (30s) - aumentado
+    quickCheck: 8000,    // Timeout para verificações rápidas (8s)
+    auth: 10000,         // Timeout para operações de auth (10s)
+    upload: 60000,       // Timeout para uploads (60s)
   },
   
   // Configurações de retry
   retry: {
-    maxAttempts: 2,      // Número máximo de tentativas
-    initialDelay: 500,   // Delay inicial em ms
-    maxDelay: 5000,      // Delay máximo em ms
-    backoffMultiplier: 2, // Multiplicador para backoff exponencial
+    maxAttempts: 1,      // Número máximo de tentativas - reduzido para evitar espera longa
+    initialDelay: 1000,  // Delay inicial em ms
+    maxDelay: 3000,      // Delay máximo em ms
+    backoffMultiplier: 1.5, // Multiplicador para backoff exponencial
   },
   
   // Configurações de cache
@@ -69,8 +69,8 @@ export function getPerformanceConfig() {
       ...performanceConfig,
       timeouts: {
         ...performanceConfig.timeouts,
-        query: 20000,
-        quickCheck: 5000,
+        query: 45000,       // 45s em desenvolvimento
+        quickCheck: 10000,  // 10s para checks rápidos
       }
     }
   }

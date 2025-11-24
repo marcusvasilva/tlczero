@@ -6,6 +6,8 @@ import { AppLayout } from './components/layout/AppLayout'
 import { GlobalLoading } from './components/common/GlobalLoading'
 import { PWAInstallPrompt } from './components/common/PWAInstallPrompt'
 import { ToastContainer } from './components/common/Toast'
+import { SessionMonitor } from './components/common/SessionMonitor'
+// import { ConnectionAlert } from './components/common/ConnectionAlert' // Temporariamente desabilitado
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
 
@@ -20,6 +22,7 @@ import AnonymousCollect from './pages/AnonymousCollect'
 // Importações normais para todos os componentes
 import Dashboard from './pages/Dashboard'
 import Reports from './pages/Reports'
+import TestConnection from './pages/TestConnection'
 
 
 
@@ -42,6 +45,8 @@ function App() {
   return (
     <AuthProvider>
       <ToastProvider>
+        <SessionMonitor />
+        {/* <ConnectionAlert /> Temporariamente desabilitado */}
         <Router>
           <Routes>
             {/* Rotas públicas */}
@@ -98,6 +103,13 @@ function App() {
               <Route path="reports" element={
                 <ProtectedRoute allowedRoles={['admin', 'distributor', 'supervisor']}>
                   <Reports />
+                </ProtectedRoute>
+              } />
+              
+              {/* Teste de conexão - temporário para debug */}
+              <Route path="test-connection" element={
+                <ProtectedRoute>
+                  <TestConnection />
                 </ProtectedRoute>
               } />
               

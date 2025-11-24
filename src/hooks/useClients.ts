@@ -7,6 +7,26 @@ import { useAuthContext } from '../contexts/AuthContext'
 import type { Account } from '../types/client'
 import type { UseClientsOptions, UseClientsReturn } from '../types/client'
 
+// Função auxiliar para mapear dados do Supabase para o formato do frontend
+function mapAccountFromSupabase(account: any): Account {
+  return {
+    id: account.id,
+    company_name: account.company_name,
+    contact_person: account.contact_person,
+    phone: account.phone,
+    email: account.email,
+    address: account.address,
+    city: account.city,
+    state: account.state,
+    cep: account.cep,
+    cnpj: account.cnpj,
+    distributor_id: account.distributor_id,
+    status: account.status,
+    created_at: account.created_at,
+    updated_at: account.updated_at
+  }
+}
+
 export const useClients = (options: UseClientsOptions = {}): UseClientsReturn => {
   const [clients, setClients] = useState<Account[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -41,7 +61,10 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
   }, [clients, options.filterActive])
 
   // Fetch clients from Supabase
-  const fetchClients = useCallback(async (forceRefresh = false) => {
+  const fetchClients = useCallback(async (arg?: boolean | { forceRefresh?: boolean; background?: boolean }) => {
+    const forceRefresh = typeof arg === 'boolean' ? arg : arg?.forceRefresh ?? false
+    const isBackground = typeof arg === 'object' ? Boolean(arg.background) : false
+
     // Evitar múltiplas chamadas simultâneas
     if (fetchingRef.current) {
       console.log('⚠️ Fetch já em andamento, pulando...')
@@ -75,141 +98,89 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
         if (cacheAge && cacheAge > 30000) { // 30 segundos
           console.log('🔄 Cache antigo, revalidando em background...')
           // Não esperar, apenas iniciar a revalidação
-          fetchClients(true).catch(console.error)
+          fetchClients({ forceRefresh: true, background: true }).catch(console.error)
         }
         
         return
       }
     }
     
-    setIsLoading(true)
+    if (!isBackground) {
+      setIsLoading(true)
+    }
     setError(null)
     
     try {
-      // Usar função RPC otimizada quando possível
+      // Usar query tradicional mais simples e robusta
+      console.log('🔄 Buscando contas usando query tradicional')
+      
       const result = await executeQuery(
         async () => {
-          if (user?.id) {
-            console.log('🚀 Usando RPC otimizada para buscar contas')
-            
-            // Tentar usar função RPC otimizada primeiro
-            const rpcResult = await supabase.rpc('get_accounts_by_context', {
-              requesting_user_id: user.id,
-              requesting_role: user.role,
-              account_filter: (user.role === 'supervisor' || user.role === 'operator') ? user.account_id : null
-            })
-            
-            if (!rpcResult.error) {
-              let data = rpcResult.data || []
-              
-              // Aplicar filtros de status se especificado
-              if (options.filterActive !== undefined) {
-                const targetStatus = options.filterActive ? 'active' : 'inactive'
-                data = data.filter(account => account.status === targetStatus)
-                console.log('📋 Filtro de status aplicado na RPC:', targetStatus)
-              }
-              
-              // Aplicar ordenação
-              data.sort((a, b) => {
-                const aValue = a[sortBy] || ''
-                const bValue = b[sortBy] || ''
-                if (sortOrder === 'asc') {
-                  return aValue.localeCompare(bValue)
-                } else {
-                  return bValue.localeCompare(aValue)
-                }
-              })
-              
-              console.log('✅ RPC bem-sucedida:', data.length, 'contas')
-              return { data, error: null }
-            } else {
-              console.warn('⚠️ RPC falhou, usando fallback:', rpcResult.error)
-            }
-          }
+          let query = supabase.from('accounts').select('*')
           
-          // Fallback para query tradicional
-          console.log('🔄 Usando query tradicional como fallback')
-          let query = supabase
-            .from('accounts')
-            .select('*')
-            .order(sortBy, { ascending: sortOrder === 'asc' })
-
-          // IMPORTANTE: Sempre adicionar filtros diretos para otimizar RLS
-          if (user) {
-            if (user.role === 'admin') {
-              console.log('📋 Admin - sem filtros adicionais')
-            } else if (user.role === 'distributor') {
-              console.log('📋 Aplicando filtro de distribuidor:', user.id)
-              query = query.eq('distributor_id', user.id)
-            } else if (user.role === 'supervisor' || user.role === 'operator') {
-              if (user.account_id) {
-                console.log('📋 Aplicando filtro de conta:', user.account_id)
-                query = query.eq('id', user.account_id)
-              }
-            }
+          // Aplicar filtros baseados no role do usuário
+          if (user?.role === 'distributor') {
+            query = query.eq('distributor_id', user.id)
+          } else if ((user?.role === 'supervisor' || user?.role === 'operator') && user.account_id) {
+            query = query.eq('id', user.account_id)
           }
-
-          // Apply status filters
-          if (options.filterActive !== undefined) {
-            console.log('📋 Aplicando filtro de status:', options.filterActive ? 'active' : 'inactive')
-            query = query.eq('status', options.filterActive ? 'active' : 'inactive')
-          }
-
-          console.log('📋 Query tradicional construída, executando...')
-          return await query
+          // Admin vê todos (sem filtro)
+          
+          return await query.order(sortBy, { ascending: sortOrder === 'asc' })
         },
         {
-          timeout: 15000,
-          maxRetries: 3,
-          context: 'Fetch Clients'
+          timeout: 30000, // Aumentar para 30 segundos
+          maxRetries: 2, // Tentar 2 vezes
+          retryDelay: 2000, // Esperar 2 segundos entre tentativas
+          context: 'Fetch Accounts'
         }
       )
 
-      if (!result.success) {
-        // Reportar erro de API para o monitor de conexão
+      if (result.success && result.data) {
+        let data = result.data
+        
+        // Aplicar filtros de status se especificado
+        if (options.filterActive !== undefined) {
+          const targetStatus = options.filterActive ? 'active' : 'inactive'
+          data = data.filter(account => account.status === targetStatus)
+          console.log('📋 Filtro de status aplicado:', targetStatus, '- Total:', data.length)
+        }
+        
+        console.log('📊 Dados brutos do Supabase:', data.length, 'registros')
+        
+        // Mapear dados do Supabase para o formato do frontend
+        const mappedData = data.map(mapAccountFromSupabase)
+        
+        // Atualizar cache
+        cache.set(cacheKey, mappedData)
+        setClients(mappedData)
+        setError(null)
+        console.log('✅ Contas carregadas com sucesso:', mappedData.length, 'itens')
+      } else {
+        console.error('❌ Erro ao carregar contas:', result.error)
+        
+        // Reportar erro para o monitor de conexão
         reportApiError()
-        const errorInfo = handleError(result.error, 'Fetch Clients')
-        throw new Error(errorInfo.message)
+        
+        // Se for erro de timeout, sugerir limpar cache
+        if (result.error?.message?.includes('timeout')) {
+          setError('Tempo limite excedido. Se o problema persistir, tente recarregar a página (Ctrl+F5).')
+        } else if (result.error?.message?.includes('JWT') || result.error?.message?.includes('token')) {
+          setError('Erro de autenticação. Faça login novamente.')
+        } else {
+          setError('Erro ao carregar contas. Tente novamente.')
+        }
       }
-
-      console.log('📊 Dados brutos do Supabase:', result.data)
-      console.log('📊 Número de registros retornados:', result.data?.length || 0)
-      
-      // Verificar se o componente ainda está montado antes de atualizar o estado
-      if (!isMountedRef.current) {
-        console.log('⚠️ Componente desmontado, cancelando atualização de estado')
-        return
-      }
-
-      const clientsData = result.data || []
-      
-      // Salvar no cache
-      cache.set(cacheKey, clientsData, 5 * 60 * 1000) // Cache por 5 minutos
-      
-      setClients(clientsData)
-      setError(null)
       
     } catch (err) {
-      console.error('❌ Erro ao buscar clientes:', err)
-      
-      // Reportar erro se for problema de conexão
-      if (err instanceof Error && 
-          (err.message.includes('timeout') || 
-           err.message.includes('network') || 
-           err.message.includes('fetch'))) {
-        reportApiError()
-      }
-      
-      // Verificar se ainda está montado antes de definir erro
-      if (isMountedRef.current) {
-        const errorInfo = handleError(err, 'Fetch Clients')
-        setError(errorInfo.message)
-      }
+      console.error('❌ Erro ao buscar contas:', err)
+      reportApiError()
+      setError('Erro ao carregar contas. Tente novamente.')
     } finally {
       fetchingRef.current = false
       
       // Verificar se ainda está montado antes de definir loading
-      if (isMountedRef.current) {
+      if (isMountedRef.current && !isBackground) {
         setIsLoading(false)
       }
     }
@@ -233,7 +204,7 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
 
   // Refresh clients function
   const refreshClients = useCallback(() => {
-    fetchClients()
+    fetchClients({ forceRefresh: true })
   }, [fetchClients])
 
   // Clear error
@@ -303,7 +274,7 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
       
       // Refresh clients list apenas se ainda estiver montado
       if (isMountedRef.current) {
-        await fetchClients()
+        await fetchClients({ forceRefresh: true })
         console.log('✅ Lista atualizada, retornando cliente...')
       }
       

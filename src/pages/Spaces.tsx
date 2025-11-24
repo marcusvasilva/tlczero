@@ -6,14 +6,15 @@ import { SpaceForm } from '@/components/forms/SpaceForm'
 import { QRCodeDisplay } from '@/components/common/QRCodeDisplay'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { ToggleSwitch } from '@/components/ui/toggle-switch'
+import { Button } from '@/components/ui/button'
 import type { Account } from '@/types/client'
-import { 
-  Building2, 
-  Plus, 
-  Search, 
-  MapPin, 
-  Edit2, 
-  Trash2, 
+import {
+  Building2,
+  Plus,
+  Search,
+  MapPin,
+  Edit2,
+  Trash2,
   QrCode,
   Activity,
   Home,
@@ -168,16 +169,15 @@ export default function Spaces() {
           <p className="text-gray-600 dark:text-gray-400 mt-1">Gerencie os locais de coleta</p>
         </div>
         {canCreate && (
-          <button
+          <Button
             onClick={() => {
               setEditingSpace(null)
               setShowSpaceForm(true)
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
           >
             <Plus className="w-5 h-5" />
             Novo Espaço
-          </button>
+          </Button>
         )}
       </div>
 
@@ -286,16 +286,15 @@ export default function Spaces() {
               : 'Comece criando um novo espaço'}
           </p>
           {canCreate && !searchTerm && filterEnvironment === 'all' && filterClient === 'all' && (
-            <button
+            <Button
               onClick={() => {
                 setEditingSpace(null)
                 setShowSpaceForm(true)
               }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               <Plus className="w-5 h-5" />
               Criar Primeiro Espaço
-            </button>
+            </Button>
           )}
         </div>
       ) : (
@@ -385,26 +384,30 @@ export default function Spaces() {
                     )}
                     
                     {canEdit && (
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => {
                           setEditingSpace(space)
                           setShowSpaceForm(true)
                         }}
-                        className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                        className="flex-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                       >
                         <Edit2 className="w-4 h-4" />
                         Editar
-                      </button>
+                      </Button>
                     )}
-                    
+
                     {canDelete && (
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setDeletingSpace(space)}
-                        className="flex items-center justify-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                       >
                         <Trash2 className="w-4 h-4" />
                         Excluir
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>

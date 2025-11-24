@@ -4,6 +4,7 @@ import { useAuthContext } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { useUsers } from '@/hooks/useUsers'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { Button } from '@/components/ui/button'
 import UserForm from '@/components/forms/UserForm'
 import { useMobile } from '@/hooks/use-mobile'
 import type { User } from '@/types'
@@ -238,13 +239,10 @@ export function UserManagement() {
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Gerenciamento de Usuários</h1>
-          <button
-            onClick={handleCreateUser}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-          >
+          <Button onClick={handleCreateUser}>
             <Plus className="w-4 h-4" />
             Novo Usuário
-          </button>
+          </Button>
         </div>
         <p className="text-gray-600 dark:text-gray-400">
           {userType === 'admin' 
@@ -378,19 +376,21 @@ export function UserManagement() {
                 </div>
                 
                 <div className="flex gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
-                  <button
+                  <Button
+                    variant="secondary"
                     onClick={() => handleEditUser(user)}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                    className="flex-1"
                   >
                     <Edit2 className="w-4 h-4" />
                     Editar
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="icon"
                     onClick={() => handleDeleteUser(user)}
-                    className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))
@@ -542,12 +542,12 @@ export function UserManagement() {
             </p>
           </div>
           <div className="flex justify-end">
-            <button
+            <Button
+              variant="secondary"
               onClick={() => setShowCredentialsDialog(false)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
             >
               Entendi
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>

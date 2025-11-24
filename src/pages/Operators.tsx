@@ -5,33 +5,10 @@ import { useAuthContext } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { formatDate } from '@/lib/formatters'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { Button } from '@/components/ui/button'
 import SimpleOperatorForm from '@/components/forms/SimpleOperatorForm'
 import { useMobile } from '@/hooks/use-mobile'
 import type { SimpleOperator, CreateSimpleOperatorData } from '@/types/operator'
-
-// Componentes UI simples
-function Button({ children, variant = 'default', size = 'default', onClick, className = '' }: {
-  children: React.ReactNode
-  variant?: 'default' | 'outline'
-  size?: 'default' | 'sm'
-  onClick?: () => void
-  className?: string
-}) {
-  const baseClasses = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2'
-  const variantClasses = variant === 'outline' 
-    ? 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700' 
-    : 'bg-green-600 text-white hover:bg-green-700'
-  const sizeClasses = size === 'sm' ? 'px-3 py-1.5 text-sm' : 'px-4 py-2'
-  
-  return (
-    <button 
-      className={`${baseClasses} ${variantClasses} ${sizeClasses} ${className}`}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  )
-}
 
 function Input({ placeholder, value, onChange, className = '' }: {
   placeholder?: string
@@ -423,20 +400,17 @@ export function Operators() {
                 </div>
                 
                 <div className="flex gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
-                  <button
+                  <Button
                     onClick={() => handleEditOperator(operator)}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                    className="flex-1"
                   >
                     <Edit2 className="w-4 h-4" />
                     Editar
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant={operator.status === 'active' ? 'outline' : 'default'}
                     onClick={() => handleToggleStatus(operator)}
-                    className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                      operator.status === 'active' 
-                        ? 'bg-orange-600 text-white hover:bg-orange-700' 
-                        : 'bg-green-600 text-white hover:bg-green-700'
-                    }`}
+                    className={`flex-1 ${operator.status === 'active' ? 'text-orange-600 hover:bg-orange-50' : ''}`}
                   >
                     {operator.status === 'active' ? (
                       <>
@@ -449,16 +423,17 @@ export function Operators() {
                         Ativar
                       </>
                     )}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="icon"
                     onClick={() => {
                       setOperatorToDelete(operator)
                       setShowDeleteDialog(true)
                     }}
-                    className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               </Card>
             ))
@@ -547,17 +522,18 @@ export function Operators() {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end gap-2">
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => handleEditOperator(operator)}
+                            className="text-blue-600 hover:bg-blue-50"
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => handleToggleStatus(operator)}
-                            className={operator.status === 'active' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}
+                            className={operator.status === 'active' ? 'text-orange-600 hover:bg-orange-50' : 'text-green-600 hover:bg-green-50'}
                           >
                             {operator.status === 'active' ? (
                               <UserX className="h-4 w-4" />
@@ -566,13 +542,13 @@ export function Operators() {
                             )}
                           </Button>
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => {
                               setOperatorToDelete(operator)
                               setShowDeleteDialog(true)
                             }}
-                            className="text-red-600 dark:text-red-400"
+                            className="text-red-600 hover:bg-red-50"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

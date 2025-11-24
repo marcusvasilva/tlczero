@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { RefreshCw, WifiOff, CheckCircle } from 'lucide-react'
-import { checkBasicConnectivity } from '@/lib/supabase'
+import { checkSupabaseConnection } from '@/lib/supabase'
 import { cache } from '@/lib/cache'
 
 interface ConnectionRetryProps {
@@ -25,8 +25,8 @@ export function ConnectionRetry({ onRetry, show }: ConnectionRetryProps) {
     setRetryCount(prev => prev + 1)
     
     try {
-      // Verificar conectividade básica
-      const connected = await checkBasicConnectivity()
+      // Verificar conectividade com Supabase
+      const connected = await checkSupabaseConnection()
       
       if (connected) {
         setIsConnected(true)

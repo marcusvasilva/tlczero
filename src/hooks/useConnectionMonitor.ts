@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { checkSupabaseConnection, refreshSessionIfNeeded } from '../lib/supabase'
+import { checkSupabaseConnection } from '../lib/supabase'
 
 export interface ConnectionStatus {
   isOnline: boolean
@@ -121,11 +121,19 @@ class ConnectionManager {
     }
   }
 
-  reportApiError() {
+  async reportApiError() {
     this.updateStatus({
       lastApiError: new Date(),
       consecutiveFailures: this.currentStatus.consecutiveFailures + 1
     })
+    
+    console.log('⚠️ Erro de API reportado, tentando recuperar...')
+    
+    // Se tiver muitos erros consecutivos, apenas logar
+    if (this.currentStatus.consecutiveFailures >= 3) {
+      console.log('⚠️ Muitos erros consecutivos detectados')
+      // O Supabase gerencia o refresh automaticamente
+    }
     
     // Verificar conexão após erro de API
     setTimeout(() => {
@@ -193,15 +201,10 @@ export function useConnectionMonitor(options: UseConnectionMonitorOptions = {}):
     await connectionManager.checkConnection(true)
   }, [])
 
-  // Forçar refresh da sessão
+  // Forçar verificação de conexão
   const forceRefresh = useCallback(async () => {
-    console.log('🔄 Forçando refresh da sessão...')
-    try {
-      await refreshSessionIfNeeded()
-      await connectionManager.checkConnection(true)
-    } catch (error) {
-      console.error('Erro ao forçar refresh:', error)
-    }
+    console.log('🔄 Forçando verificação de conexão...')
+    await connectionManager.checkConnection(true)
   }, [])
 
   // Reportar erro de API
@@ -238,20 +241,12 @@ export function useConnectionMonitor(options: UseConnectionMonitorOptions = {}):
       // O manager será atualizado na próxima verificação
     }
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && navigator.onLine) {
-        setTimeout(() => connectionManager.checkConnection(), 1000)
-      }
-    }
-
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
-    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
 

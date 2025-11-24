@@ -1,16 +1,16 @@
 import { useState, useMemo } from 'react'
 import { format, subDays, startOfDay, endOfDay, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { 
-  Users, 
-  Bug, 
+import {
+  Users,
+  Bug,
   RefreshCw,
   MapPin,
   Scale,
   Info,
   ChevronDown
 } from 'lucide-react'
-import { 
+import {
   LineChart,
   Line,
   XAxis,
@@ -29,6 +29,7 @@ import { useCollections } from '@/hooks/useCollections'
 import { useSpaces } from '@/hooks/useSpaces'
 import { useOperators } from '@/hooks/useOperators'
 import { useClients } from '@/hooks/useClients'
+import { Button } from '@/components/ui/button'
 
 // Constantes
 const FLY_WEIGHT_GRAMS = 0.002 // Uma mosca pesa aproximadamente 2mg
@@ -301,13 +302,12 @@ export default function Dashboard() {
             Bem-vindo, {user?.name}! Monitore a eficácia do mata-moscas TLC Agro.
           </p>
         </div>
-        <button 
-          onClick={refreshAllData} 
-          className="btn-md btn-primary"
+        <Button
+          onClick={refreshAllData}
         >
           <RefreshCw className="h-4 w-4" />
           <span className="hidden xs:inline">Atualizar</span>
-        </button>
+        </Button>
       </div>
 
       {/* Filtros */}

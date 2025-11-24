@@ -7,13 +7,14 @@ import { useAuthContext } from '@/contexts/AuthContext'
 import { CollectionForm } from '@/components/forms/CollectionForm'
 import { DataTable } from '@/components/common/DataTable'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { Button } from '@/components/ui/button'
 import { formatDate, formatWeight } from '@/lib/formatters'
-import { 
-  ClipboardList, 
-  Plus, 
-  Search, 
-  Edit2, 
-  Trash2, 
+import {
+  ClipboardList,
+  Plus,
+  Search,
+  Edit2,
+  Trash2,
   Eye,
   Scale,
   Calendar,
@@ -173,12 +174,14 @@ export default function Collections() {
       label: 'Foto',
       render: (value: string) => (
         value ? (
-          <button 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => window.open(value, '_blank')}
             className="text-blue-600 hover:text-blue-800"
           >
             <Eye className="h-4 w-4" />
-          </button>
+          </Button>
         ) : (
           <span className="text-gray-400">Sem foto</span>
         )
@@ -220,12 +223,14 @@ export default function Collections() {
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">Erro</h3>
               <p className="mt-1 text-sm text-red-700">{error}</p>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={clearError}
-                className="mt-2 text-sm text-red-600 hover:text-red-500"
+                className="mt-2 text-sm text-red-600 hover:text-red-500 h-auto p-0"
               >
                 Tentar novamente
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -244,13 +249,10 @@ export default function Collections() {
           </h1>
         </div>
         {canCreate && (
-          <button
-            onClick={handleCreateCollection}
-            className="mobile-button bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4 mr-2" />
+          <Button onClick={handleCreateCollection}>
+            <Plus className="h-4 w-4" />
             Nova Coleta
-          </button>
+          </Button>
         )}
       </div>
 
@@ -352,16 +354,17 @@ export default function Collections() {
 
           {/* Botão de exportação */}
           <div>
-            <button
+            <Button
+              variant="outline"
               onClick={() => {
                 // TODO: Implementar exportação
                 console.log('Exportar coletas')
               }}
-              className="mobile-button bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 w-full flex items-center justify-center gap-2"
+              className="w-full"
             >
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="h-4 w-4" />
               Exportar
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -397,13 +400,15 @@ export default function Collections() {
               )}
             </div>
             {collection.photoUrl && (
-              <button 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => window.open(collection.photoUrl, '_blank')}
-                className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                className="text-xs text-blue-600 hover:text-blue-800 h-auto p-0"
               >
                 <Eye className="h-3 w-3" />
                 Ver foto
-              </button>
+              </Button>
             )}
           </div>
         )}

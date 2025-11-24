@@ -1,335 +1,277 @@
-import { useState, useMemo } from 'react'
-import { 
-  Download, 
-  TrendingUp, 
-  TrendingDown, 
-  BarChart3,
-  Target,
-  CheckCircle,
-  RefreshCw,
-  Activity,
-  Calendar,
-  Clock
-} from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Download, RefreshCw, Filter, FileText, Calendar, MapPin, TrendingUp } from 'lucide-react'
 import { useAuthContext } from '@/contexts/AuthContext'
-import { useCollections } from '@/hooks/useCollections'
-import { useClientSpaces } from '@/hooks/useSpaces'
-import { useClients } from '@/hooks/useClients'
-import { formatDate, formatWeight } from '@/lib/formatters'
+import { supabase } from '@/lib/supabase'
+import { generateCollectionsReportPdf, type ReportData } from '@/lib/reportPdf'
+import { Button } from '@/components/ui/button'
 import { useMobile } from '@/hooks/use-mobile'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell
+} from 'recharts'
 
-// Componentes UI simples
-const Button = ({ children, variant = 'default', size = 'default', onClick, disabled, className = '' }: any) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    className={`inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-      variant === 'outline' 
-        ? 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300' 
-        : 'bg-blue-600 text-white hover:bg-blue-700'
-    } ${size === 'sm' ? 'px-3 py-1.5 text-sm' : 'px-4 py-2'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
-  >
-    {children}
-  </button>
-)
+interface CollectionReport {
+  collection_number: number
+  id: string
+  collection_date: string
+  weight_collected: number
+  notes: string | null
+  executor_name: string | null
+  space_name: string | null
+  space_id: string
+  account_id: string
+  client_name: string | null
+}
 
-const Card = ({ children, className = '' }: any) => (
-  <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 ${className}`}>
-    {children}
-  </div>
-)
+interface Account {
+  id: string
+  company_name: string
+}
 
-const Badge = ({ children, variant = 'default' }: any) => (
-  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-    variant === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
-    variant === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' :
-    variant === 'danger' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' :
-    'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
-  }`}>
-    {children}
-  </span>
-)
+interface Space {
+  id: string
+  name: string
+  account_id: string
+}
+
+// Cores para os gráficos
+const CHART_COLORS = [
+  '#22c55e', '#16a34a', '#15803d', '#166534', '#14532d',
+  '#84cc16', '#65a30d', '#4d7c0f', '#3f6212', '#365314'
+]
 
 export default function Reports() {
   const { userType, user } = useAuthContext()
-  const { collections } = useCollections()
-  const { spaces } = useClientSpaces()
-  const { clients } = useClients()
   const isMobile = useMobile()
-  
-  const [selectedPeriod, setSelectedPeriod] = useState<'7d' | '30d' | '90d' | '1y'>('30d')
+
+  // Estados
+  const [collections, setCollections] = useState<CollectionReport[]>([])
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [spaces, setSpaces] = useState<Space[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+  const [activeView, setActiveView] = useState<'charts' | 'table'>('charts')
 
-  // Obter cliente atual
-  const currentClient = useMemo(() => {
-    if (userType === 'admin') return null
-    const accountId = user?.account_id
-    return clients.find(c => c.id === accountId)
-  }, [userType, user?.account_id, clients])
+  // Filtros
+  const [selectedAccount, setSelectedAccount] = useState<string>('')
+  const [selectedSpace, setSelectedSpace] = useState<string>('')
+  const [startDate, setStartDate] = useState<string>(() => {
+    const date = new Date()
+    date.setMonth(date.getMonth() - 1)
+    return date.toISOString().split('T')[0]
+  })
+  const [endDate, setEndDate] = useState<string>(() => {
+    return new Date().toISOString().split('T')[0]
+  })
 
-  // Calcular datas do período
-  const periodDates = useMemo(() => {
-    const now = new Date()
-    const periodDays = selectedPeriod === '7d' ? 7 : selectedPeriod === '30d' ? 30 : selectedPeriod === '90d' ? 90 : 365
-    const startDate = new Date(now.getTime() - periodDays * 24 * 60 * 60 * 1000)
-    const previousStartDate = new Date(startDate.getTime() - periodDays * 24 * 60 * 60 * 1000)
-    
-    return {
-      current: { start: startDate, end: now },
-      previous: { start: previousStartDate, end: startDate }
+  // Carregar dados iniciais
+  useEffect(() => {
+    loadAccounts()
+    loadSpaces()
+  }, [])
+
+  // Carregar coletas quando filtros mudarem
+  useEffect(() => {
+    if (startDate && endDate) {
+      loadCollections()
     }
-  }, [selectedPeriod])
+  }, [selectedAccount, selectedSpace, startDate, endDate])
 
-  // Filtrar coletas do período atual
-  const currentPeriodCollections = useMemo(() => {
-    return collections.filter(collection => {
-      const collectionDate = new Date(collection.collectedAt)
-      return collectionDate >= periodDates.current.start && collectionDate <= periodDates.current.end
-    })
-  }, [collections, periodDates])
+  const loadAccounts = async () => {
+    const { data } = await supabase
+      .from('accounts')
+      .select('id, company_name')
+      .eq('status', 'active')
+      .order('company_name')
 
-  // Filtrar coletas do período anterior (para comparação)
-  const previousPeriodCollections = useMemo(() => {
-    return collections.filter(collection => {
-      const collectionDate = new Date(collection.collectedAt)
-      return collectionDate >= periodDates.previous.start && collectionDate <= periodDates.previous.end
-    })
-  }, [collections, periodDates])
+    setAccounts(data || [])
+  }
 
-  // Calcular métricas principais
-  const metrics = useMemo(() => {
-    const currentTotal = currentPeriodCollections.reduce((sum, c) => sum + c.weight, 0)
-    const currentCount = currentPeriodCollections.length
-    const currentAverage = currentCount > 0 ? currentTotal / currentCount : 0
-    
-    const previousTotal = previousPeriodCollections.reduce((sum, c) => sum + c.weight, 0)
-    const spacesWithCollections = new Set(currentPeriodCollections.map(c => c.spaceId)).size
-    
-    // Score de eficácia baseado no peso total e número de coletas
-    const effectivenessScore = Math.min(100, Math.round((currentTotal / Math.max(currentCount, 1)) * 10))
-    
-    // Tendência baseada na comparação com período anterior
-    const percentageChange = previousTotal > 0 ? ((currentTotal - previousTotal) / previousTotal) * 100 : 0
-    const trend = percentageChange > 5 ? 'up' : percentageChange < -5 ? 'down' : 'stable'
-    
-    return {
-      totalWeight: currentTotal,
-      averageWeight: currentAverage,
-      collectionsCount: currentCount,
-      spacesActive: spacesWithCollections,
-      effectivenessScore,
-      trend,
-      percentageChange
-    }
-  }, [currentPeriodCollections, previousPeriodCollections])
+  const loadSpaces = async () => {
+    const { data } = await supabase
+      .from('spaces')
+      .select('id, name, account_id')
+      .eq('status', 'active')
+      .order('name')
 
-  // Gerar alertas automáticos - TEMPORARIAMENTE DESATIVADO
-  /*
-  const alerts = useMemo(() => {
-    const alerts: Array<{ 
-      type: 'critical' | 'warning' | 'info' | 'success', 
-      title: string,
-      message: string,
-      action?: string,
-      priority: number
-    }> = []
+    setSpaces(data || [])
+  }
 
-    // Alerta crítico: eficácia muito baixa
-    if (metrics.effectivenessScore < 40) {
-      alerts.push({
-        type: 'critical',
-        title: 'Eficácia Crítica Detectada',
-        message: `Score de eficácia de apenas ${metrics.effectivenessScore}%. Recomenda-se reaplicação imediata do mata-moscas TLC.`,
-        action: 'Agendar Reaplicação',
-        priority: 1
-      })
+  const loadCollections = async () => {
+    // Validação rigorosa das datas
+    if (!startDate || !endDate || startDate.trim() === '' || endDate.trim() === '') {
+      console.log('loadCollections: datas inválidas', { startDate, endDate })
+      return
     }
 
-    // Alerta: tendência de queda
-    if (metrics.trend === 'down' && Math.abs(metrics.percentageChange) > 20) {
-      alerts.push({
-        type: 'warning',
-        title: 'Queda Significativa na Eficácia',
-        message: `Redução de ${Math.abs(metrics.percentageChange).toFixed(1)}% na eficácia. Verifique se há necessidade de reaplicação.`,
-        action: 'Verificar Espaços',
-        priority: 2
-      })
+    // Validar formato de data (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+    if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
+      console.log('loadCollections: formato de data inválido', { startDate, endDate })
+      return
     }
 
-    // Alerta: espaços sem coletas recentes
-    const spacesWithoutRecentCollections = spaces.filter(space => {
-      const spaceCollections = currentPeriodCollections.filter(c => c.spaceId === space.id)
-      const lastCollection = spaceCollections.length > 0 
-        ? new Date(Math.max(...spaceCollections.map(c => new Date(c.collectedAt).getTime())))
-        : null
-      return !lastCollection || new Date().getTime() - lastCollection.getTime() > 7 * 24 * 60 * 60 * 1000
-    })
+    setIsLoading(true)
 
-    if (spacesWithoutRecentCollections.length > 0) {
-      alerts.push({
-        type: 'warning',
-        title: 'Espaços Sem Monitoramento',
-        message: `${spacesWithoutRecentCollections.length} espaço(s) sem coletas nos últimos 7 dias. Verificar se necessita reaplicação.`,
-        action: 'Ver Espaços',
-        priority: 3
-      })
-    }
+    try {
+      let query = supabase
+        .from('collections_report')
+        .select('*')
+        .gte('collection_date', startDate)
+        .lte('collection_date', endDate)
+        .order('collection_date', { ascending: false })
 
-    // Alerta positivo: alta eficácia
-    if (metrics.effectivenessScore >= 80 && metrics.trend === 'up') {
-      alerts.push({
-        type: 'success',
-        title: 'Excelente Performance!',
-        message: `Eficácia de ${metrics.effectivenessScore}% com tendência crescente. O mata-moscas TLC está funcionando perfeitamente.`,
-        priority: 5
-      })
-    }
-
-    // Alerta informativo: primeira aplicação
-    if (metrics.collectionsCount === 0) {
-      alerts.push({
-        type: 'info',
-        title: 'Início do Monitoramento',
-        message: 'Aguardando primeiras coletas para análise de eficácia. Recomenda-se acompanhar diariamente nos primeiros 7 dias.',
-        priority: 4
-      })
-    }
-
-    return alerts.sort((a, b) => a.priority - b.priority)
-  }, [metrics, spaces, currentPeriodCollections])
-  */
-
-  // Gerar cronograma de reaplicação
-  const reapplicationSchedule = useMemo(() => {
-    const schedule: Array<{
-      spaceId: string,
-      spaceName: string,
-      urgency: 'immediate' | 'soon' | 'scheduled' | 'good',
-      daysUntilReapplication: number,
-      reason: string
-    }> = []
-
-    spaces.forEach(space => {
-      const spaceCollections = currentPeriodCollections.filter(c => c.spaceId === space.id)
-      const totalWeight = spaceCollections.reduce((sum, c) => sum + c.weight, 0)
-      const collectionsCount = spaceCollections.length
-      const averageWeight = collectionsCount > 0 ? totalWeight / collectionsCount : 0
-      const lastCollection = spaceCollections.length > 0 
-        ? new Date(Math.max(...spaceCollections.map(c => new Date(c.collectedAt).getTime())))
-        : null
-
-      let urgency: 'immediate' | 'soon' | 'scheduled' | 'good' = 'good'
-      let daysUntilReapplication = 30 // Padrão: 30 dias
-      let reason = 'Manutenção preventiva'
-
-      // Lógica de urgência baseada na performance
-      if (averageWeight < 0.5 || !lastCollection) {
-        urgency = 'immediate'
-        daysUntilReapplication = 0
-        reason = 'Eficácia muito baixa ou sem dados'
-      } else if (averageWeight < 1.0) {
-        urgency = 'soon'
-        daysUntilReapplication = 7
-        reason = 'Eficácia abaixo do esperado'
-      } else if (lastCollection && new Date().getTime() - lastCollection.getTime() > 21 * 24 * 60 * 60 * 1000) {
-        urgency = 'scheduled'
-        daysUntilReapplication = 14
-        reason = 'Tempo desde última aplicação'
-      } else if (averageWeight >= 2.0) {
-        urgency = 'good'
-        daysUntilReapplication = 45
-        reason = 'Performance excelente - extensão do prazo'
+      if (selectedAccount) {
+        query = query.eq('account_id', selectedAccount)
       }
 
-      schedule.push({
-        spaceId: space.id,
-        spaceName: space.name,
-        urgency,
-        daysUntilReapplication,
-        reason
-      })
+      if (selectedSpace) {
+        query = query.eq('space_id', selectedSpace)
+      }
+
+      // Filtrar por account do usuário se não for admin
+      if (userType !== 'admin' && user?.account_id) {
+        query = query.eq('account_id', user.account_id)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      setCollections(data || [])
+    } catch (error) {
+      console.error('Erro ao carregar coletas:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Espaços filtrados por conta selecionada
+  const filteredSpaces = useMemo(() => {
+    if (!selectedAccount) return spaces
+    return spaces.filter(s => s.account_id === selectedAccount)
+  }, [spaces, selectedAccount])
+
+  // Resumo geral
+  const summary = useMemo(() => {
+    const totalCollections = collections.length
+    const totalWeight = collections.reduce((sum, c) => sum + Number(c.weight_collected), 0)
+    return { totalCollections, totalWeight }
+  }, [collections])
+
+  // Resumo por espaço (ranking)
+  const summaryBySpace = useMemo(() => {
+    const spaceMap = new Map<string, { name: string; weight: number; count: number }>()
+
+    collections.forEach(c => {
+      const spaceName = c.space_name || 'Sem espaço'
+      const existing = spaceMap.get(spaceName)
+      if (existing) {
+        existing.weight += Number(c.weight_collected)
+        existing.count += 1
+      } else {
+        spaceMap.set(spaceName, {
+          name: spaceName,
+          weight: Number(c.weight_collected),
+          count: 1
+        })
+      }
     })
 
-    return schedule.sort((a, b) => a.daysUntilReapplication - b.daysUntilReapplication)
-  }, [spaces, currentPeriodCollections])
+    return Array.from(spaceMap.values())
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, 10) // Top 10
+  }, [collections])
 
-  // Gerar insights avançados - TEMPORARIAMENTE DESATIVADO
-  /*
-  const advancedInsights = useMemo(() => {
-    const insights: Array<{
-      type: 'trend' | 'comparison' | 'prediction' | 'recommendation',
-      title: string,
-      description: string,
-      value?: string,
-      impact: 'high' | 'medium' | 'low'
-    }> = []
+  // Resumo por mês
+  const summaryByMonth = useMemo(() => {
+    const monthMap = new Map<string, { month: string; monthLabel: string; weight: number; count: number }>()
 
-    // Insight de tendência
-    if (metrics.trend !== 'stable') {
-      const trendText = metrics.trend === 'up' ? 'crescimento' : 'redução'
-      const impactText = Math.abs(metrics.percentageChange) > 30 ? 'significativo' : 'moderado'
-      insights.push({
-        type: 'trend',
-        title: `Tendência de ${trendText} ${impactText}`,
-        description: `A eficácia do mata-moscas apresenta ${trendText} de ${Math.abs(metrics.percentageChange).toFixed(1)}% comparado ao período anterior.`,
-        value: `${metrics.percentageChange > 0 ? '+' : ''}${metrics.percentageChange.toFixed(1)}%`,
-        impact: Math.abs(metrics.percentageChange) > 30 ? 'high' : Math.abs(metrics.percentageChange) > 15 ? 'medium' : 'low'
-      })
-    }
+    collections.forEach(c => {
+      const date = new Date(c.collection_date)
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      const monthLabel = date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
 
-    // Insight de comparação com meta
-    const targetEffectiveness = 75 // Meta de 75% de eficácia
-    if (metrics.effectivenessScore !== 0) {
-      const diffFromTarget = metrics.effectivenessScore - targetEffectiveness
-      insights.push({
-        type: 'comparison',
-        title: diffFromTarget >= 0 ? 'Meta de Eficácia Atingida' : 'Abaixo da Meta de Eficácia',
-        description: diffFromTarget >= 0 
-          ? `Performance ${diffFromTarget.toFixed(1)} pontos acima da meta estabelecida de ${targetEffectiveness}%.`
-          : `Performance ${Math.abs(diffFromTarget).toFixed(1)} pontos abaixo da meta de ${targetEffectiveness}%. Ações corretivas recomendadas.`,
-        value: `${metrics.effectivenessScore}%`,
-        impact: Math.abs(diffFromTarget) > 20 ? 'high' : Math.abs(diffFromTarget) > 10 ? 'medium' : 'low'
-      })
-    }
+      const existing = monthMap.get(monthKey)
+      if (existing) {
+        existing.weight += Number(c.weight_collected)
+        existing.count += 1
+      } else {
+        monthMap.set(monthKey, {
+          month: monthKey,
+          monthLabel: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
+          weight: Number(c.weight_collected),
+          count: 1
+        })
+      }
+    })
 
-    // Insight de predição
-    if (metrics.collectionsCount > 5) {
-      const projectedMoscasEliminated = Math.round(metrics.totalWeight * 1000 * (365 / (selectedPeriod === '7d' ? 7 : selectedPeriod === '30d' ? 30 : selectedPeriod === '90d' ? 90 : 365)))
-      insights.push({
-        type: 'prediction',
-        title: 'Projeção Anual de Eliminação',
-        description: `Com base na performance atual, estima-se eliminar aproximadamente ${projectedMoscasEliminated.toLocaleString()} moscas por ano.`,
-        value: `${projectedMoscasEliminated.toLocaleString()} moscas/ano`,
-        impact: 'medium'
-      })
-    }
+    return Array.from(monthMap.values())
+      .sort((a, b) => a.month.localeCompare(b.month))
+  }, [collections])
 
-    // Insight de recomendação
-    const urgentSpaces = reapplicationSchedule.filter(s => s.urgency === 'immediate' || s.urgency === 'soon').length
-    if (urgentSpaces > 0) {
-      insights.push({
-        type: 'recommendation',
-        title: 'Ação Imediata Recomendada',
-        description: `${urgentSpaces} espaço(s) necessitam reaplicação urgente para manter a eficácia do tratamento.`,
-        value: `${urgentSpaces} espaços`,
-        impact: 'high'
-      })
-    }
-
-    return insights
-  }, [metrics, selectedPeriod, reapplicationSchedule])
-  */
-
+  // Gerar PDF
   const handleGeneratePDF = async () => {
+    if (collections.length === 0) {
+      alert('Não há dados para gerar o relatório')
+      return
+    }
+
     setIsGeneratingPDF(true)
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      alert('Relatório PDF gerado com sucesso!')
+      const reportData: ReportData[] = collections.map((c, index) => ({
+        collection_number: collections.length - index,
+        collection_date: c.collection_date,
+        executor_name: c.executor_name,
+        client_name: c.client_name,
+        space_name: c.space_name,
+        weight_collected: Number(c.weight_collected),
+        notes: c.notes
+      }))
+
+      const filters = {
+        clientName: selectedAccount
+          ? accounts.find(a => a.id === selectedAccount)?.company_name || ''
+          : '',
+        spaceName: selectedSpace
+          ? spaces.find(s => s.id === selectedSpace)?.name || ''
+          : '',
+        startDate,
+        endDate
+      }
+
+      generateCollectionsReportPdf(reportData, filters, summary)
     } catch (error) {
+      console.error('Erro ao gerar PDF:', error)
       alert('Erro ao gerar relatório PDF')
     } finally {
       setIsGeneratingPDF(false)
     }
+  }
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('pt-BR')
+  }
+
+  const formatWeight = (weight: number) => {
+    if (weight >= 1000) {
+      return `${(weight / 1000).toFixed(2)} kg`
+    }
+    return `${weight.toFixed(0)} g`
+  }
+
+  const formatWeightShort = (weight: number) => {
+    if (weight >= 1000) {
+      return `${(weight / 1000).toFixed(1)}kg`
+    }
+    return `${weight.toFixed(0)}g`
   }
 
   return (
@@ -337,669 +279,459 @@ export default function Reports() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Relatório de Eficácia
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+            Relatório de Coletas
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {currentClient 
-              ? `Demonstrativo de performance do mata-moscas TLC - ${currentClient.company_name}`
-              : 'Relatórios consolidados de todos os clientes'
-            }
+            Análise consolidada das coletas realizadas
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            <RefreshCw className="h-4 w-4 mr-2" />
+          <Button
+            variant="outline"
+            onClick={loadCollections}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             Atualizar
           </Button>
-          <Button onClick={handleGeneratePDF} disabled={isGeneratingPDF}>
-            <Download className="h-4 w-4 mr-2" />
+          <Button
+            onClick={handleGeneratePDF}
+            disabled={isGeneratingPDF || collections.length === 0}
+          >
+            <Download className="h-4 w-4" />
             {isGeneratingPDF ? 'Gerando...' : 'Exportar PDF'}
           </Button>
         </div>
       </div>
 
       {/* Filtros */}
-      <Card className="p-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Período
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter className="h-5 w-5 text-gray-500" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Filtros</h2>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Cliente */}
+          {userType === 'admin' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Cliente
+              </label>
+              <select
+                value={selectedAccount}
+                onChange={(e) => {
+                  setSelectedAccount(e.target.value)
+                  setSelectedSpace('')
+                }}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">Todos os clientes</option>
+                {accounts.map(account => (
+                  <option key={account.id} value={account.id}>
+                    {account.company_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Espaço */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Espaço
             </label>
             <select
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+              value={selectedSpace}
+              onChange={(e) => setSelectedSpace(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
             >
-              <option value="7d">Últimos 7 dias</option>
-              <option value="30d">Últimos 30 dias</option>
-              <option value="90d">Últimos 90 dias</option>
-              <option value="1y">Último ano</option>
+              <option value="">Todos os espaços</option>
+              {filteredSpaces.map(space => (
+                <option key={space.id} value={space.id}>
+                  {space.name}
+                </option>
+              ))}
             </select>
           </div>
+
+          {/* Data Início */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Data Início
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+            />
+          </div>
+
+          {/* Data Fim */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Data Fim
+            </label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+            />
+          </div>
         </div>
-      </Card>
+      </div>
 
-      {/* Métricas Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="p-6">
+      {/* Cards de Resumo */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Eliminado</p>
+              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Coletas</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {formatWeight(metrics.totalWeight)}
+                {summary.totalCollections}
               </p>
-              <div className="flex items-center mt-1">
-                {metrics.trend === 'up' ? (
-                  <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                ) : metrics.trend === 'down' ? (
-                  <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
+            </div>
+            <FileText className="h-8 w-8 text-green-600" />
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Peso Total</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                {formatWeight(summary.totalWeight)}
+              </p>
+            </div>
+            <Calendar className="h-8 w-8 text-blue-600" />
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Espaços</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                {summaryBySpace.length}
+              </p>
+            </div>
+            <MapPin className="h-8 w-8 text-purple-600" />
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Média/Coleta</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                {summary.totalCollections > 0
+                  ? formatWeight(summary.totalWeight / summary.totalCollections)
+                  : '0 g'}
+              </p>
+            </div>
+            <TrendingUp className="h-8 w-8 text-orange-600" />
+          </div>
+        </div>
+      </div>
+
+      {/* Toggle de Visualização */}
+      <div className="flex gap-2">
+        <Button
+          variant={activeView === 'charts' ? 'default' : 'outline'}
+          onClick={() => setActiveView('charts')}
+          size="sm"
+        >
+          Gráficos
+        </Button>
+        <Button
+          variant={activeView === 'table' ? 'default' : 'outline'}
+          onClick={() => setActiveView('table')}
+          size="sm"
+        >
+          Tabela Detalhada
+        </Button>
+      </div>
+
+      {activeView === 'charts' && (
+        <>
+          {/* Gráficos */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Gráfico por Espaço */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Peso por Espaço (Top 10)
+              </h3>
+              {summaryBySpace.length === 0 ? (
+                <div className="h-64 flex items-center justify-center text-gray-500">
+                  Nenhum dado disponível
+                </div>
+              ) : (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={summaryBySpace}
+                      layout="vertical"
+                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" tickFormatter={(v) => formatWeightShort(v)} />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        width={100}
+                        tick={{ fontSize: 11 }}
+                      />
+                      <Tooltip
+                        formatter={(value: number) => [formatWeight(value), 'Peso']}
+                        labelFormatter={(label) => `Espaço: ${label}`}
+                      />
+                      <Bar dataKey="weight" radius={[0, 4, 4, 0]}>
+                        {summaryBySpace.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+
+            {/* Gráfico por Mês */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Evolução Mensal
+              </h3>
+              {summaryByMonth.length === 0 ? (
+                <div className="h-64 flex items-center justify-center text-gray-500">
+                  Nenhum dado disponível
+                </div>
+              ) : (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={summaryByMonth}
+                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="monthLabel" tick={{ fontSize: 11 }} />
+                      <YAxis tickFormatter={(v) => formatWeightShort(v)} />
+                      <Tooltip
+                        formatter={(value: number) => [formatWeight(value), 'Peso']}
+                        labelFormatter={(label) => `Mês: ${label}`}
+                      />
+                      <Bar dataKey="weight" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Tabelas de Resumo */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Ranking por Espaço */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-green-50 dark:bg-green-900/20">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-green-600" />
+                  Ranking por Espaço
+                </h3>
+              </div>
+              <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-80 overflow-y-auto">
+                {summaryBySpace.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500">Nenhum dado</div>
                 ) : (
-                  <Activity className="h-4 w-4 text-gray-500 mr-1" />
+                  summaryBySpace.map((item, index) => (
+                    <div key={item.name} className="p-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <div className="flex items-center gap-3">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                          index === 0 ? 'bg-yellow-500' :
+                          index === 1 ? 'bg-gray-400' :
+                          index === 2 ? 'bg-amber-600' :
+                          'bg-gray-300 text-gray-600'
+                        }`}>
+                          {index + 1}
+                        </span>
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                          {item.name}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-bold text-green-600">
+                          {formatWeight(item.weight)}
+                        </span>
+                        <span className="text-xs text-gray-500 ml-2">
+                          ({item.count} coletas)
+                        </span>
+                      </div>
+                    </div>
+                  ))
                 )}
-                <span className={`text-sm ${
-                  metrics.trend === 'up' ? 'text-green-600' :
-                  metrics.trend === 'down' ? 'text-red-600' : 'text-gray-600'
-                }`}>
-                  {Math.abs(metrics.percentageChange).toFixed(1)}%
-                </span>
               </div>
+              {summaryBySpace.length > 0 && (
+                <div className="p-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">TOTAL</span>
+                    <span className="text-sm font-bold text-green-600">{formatWeight(summary.totalWeight)}</span>
+                  </div>
+                </div>
+              )}
             </div>
-            <Target className="h-8 w-8 text-blue-600" />
-          </div>
-        </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Coletas Realizadas</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {metrics.collectionsCount}
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {selectedPeriod === '7d' ? 'esta semana' : 
-                 selectedPeriod === '30d' ? 'este mês' :
-                 selectedPeriod === '90d' ? 'neste trimestre' : 'este ano'}
-              </p>
-            </div>
-            <BarChart3 className="h-8 w-8 text-green-600" />
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Peso Médio</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {formatWeight(metrics.averageWeight)}
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">por coleta</p>
-            </div>
-            <CheckCircle className="h-8 w-8 text-purple-600" />
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Score de Eficácia</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {metrics.effectivenessScore}%
-              </p>
-              <Badge 
-                variant={
-                  metrics.effectivenessScore >= 80 ? 'success' :
-                  metrics.effectivenessScore >= 60 ? 'warning' : 'danger'
-                }
-              >
-                {metrics.effectivenessScore >= 80 ? 'Excelente' :
-                 metrics.effectivenessScore >= 60 ? 'Bom' : 'Atenção'}
-              </Badge>
-            </div>
-            <CheckCircle className={`h-8 w-8 ${
-              metrics.effectivenessScore >= 80 ? 'text-green-600' :
-              metrics.effectivenessScore >= 60 ? 'text-yellow-600' : 'text-red-600'
-            }`} />
-          </div>
-        </Card>
+            {/* Resumo por Mês */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-blue-600" />
+                  Resumo por Mês
+                </h3>
               </div>
+              <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-80 overflow-y-auto">
+                {summaryByMonth.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500">Nenhum dado</div>
+                ) : (
+                  summaryByMonth.map((item) => (
+                    <div key={item.month} className="p-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {item.monthLabel}
+                      </span>
+                      <div className="text-right">
+                        <span className="text-sm font-bold text-blue-600">
+                          {formatWeight(item.weight)}
+                        </span>
+                        <span className="text-xs text-gray-500 ml-2">
+                          ({item.count} coletas)
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              {summaryByMonth.length > 0 && (
+                <div className="p-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">TOTAL</span>
+                    <span className="text-sm font-bold text-blue-600">{formatWeight(summary.totalWeight)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
-       {/* Alertas Automáticos - TEMPORARIAMENTE DESATIVADO */}
-       {/*
-       {alerts.length > 0 && (
-         <Card className="p-6">
-           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-             <Bell className="h-5 w-5 mr-2 text-orange-600" />
-             Alertas e Notificações
-           </h3>
-           <div className="space-y-3">
-             {alerts.map((alert, index) => (
-               <div
-                 key={index}
-                 className={`p-4 rounded-lg border-l-4 flex items-start justify-between ${
-                   alert.type === 'critical' ? 'bg-red-50 border-red-400 dark:bg-red-900/20' :
-                   alert.type === 'warning' ? 'bg-yellow-50 border-yellow-400 dark:bg-yellow-900/20' :
-                   alert.type === 'success' ? 'bg-green-50 border-green-400 dark:bg-green-900/20' :
-                   'bg-blue-50 border-blue-400 dark:bg-blue-900/20'
-                 }`}
-               >
-                 <div className="flex-1">
-                   <div className="flex items-center mb-1">
-                     {alert.type === 'critical' ? (
-                       <AlertTriangle className="h-4 w-4 text-red-600 mr-2" />
-                     ) : alert.type === 'warning' ? (
-                       <AlertTriangle className="h-4 w-4 text-yellow-600 mr-2" />
-                     ) : alert.type === 'success' ? (
-                       <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                     ) : (
-                       <Bell className="h-4 w-4 text-blue-600 mr-2" />
-                     )}
-                     <h4 className={`font-medium ${
-                       alert.type === 'critical' ? 'text-red-800 dark:text-red-300' :
-                       alert.type === 'warning' ? 'text-yellow-800 dark:text-yellow-300' :
-                       alert.type === 'success' ? 'text-green-800 dark:text-green-300' :
-                       'text-blue-800 dark:text-blue-300'
-                     }`}>
-                       {alert.title}
-                     </h4>
-                   </div>
-                   <p className={`text-sm ${
-                     alert.type === 'critical' ? 'text-red-700 dark:text-red-400' :
-                     alert.type === 'warning' ? 'text-yellow-700 dark:text-yellow-400' :
-                     alert.type === 'success' ? 'text-green-700 dark:text-green-400' :
-                     'text-blue-700 dark:text-blue-400'
-                   }`}>
-                     {alert.message}
-                   </p>
-                 </div>
-                 {alert.action && (
-                   <Button 
-                     size="sm" 
-                     variant="outline"
-                     className="ml-4"
-                   >
-                     {alert.action}
-                   </Button>
-                 )}
-               </div>
-             ))}
-           </div>
-         </Card>
-       )}
-       */}
+      {activeView === 'table' && (
+        /* Tabela de Coletas */
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Coletas no Período ({collections.length})
+            </h2>
+          </div>
 
-       {/* Cronograma de Reaplicação */}
-       <Card className="p-6 overflow-hidden">
-         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-           <Calendar className="h-5 w-5 mr-2 text-purple-600" />
-           Cronograma de Reaplicação Inteligente
-         </h3>
-         {isMobile ? (
-           // Visualização em Cards para Mobile
-           <div className="grid grid-cols-1 gap-3">
-             {reapplicationSchedule.map((item) => (
-               <div key={item.spaceId} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                 <div className="flex items-center justify-between mb-3">
-                   <h4 className="font-medium text-gray-900 dark:text-white">{item.spaceName}</h4>
-                   <Badge variant={
-                     item.urgency === 'immediate' ? 'danger' :
-                     item.urgency === 'soon' ? 'warning' :
-                     item.urgency === 'scheduled' ? 'default' : 'success'
-                   }>
-                     {item.urgency === 'immediate' ? 'Imediato' :
-                      item.urgency === 'soon' ? 'Em breve' :
-                      item.urgency === 'scheduled' ? 'Agendado' : 'Bom'}
-                   </Badge>
-                 </div>
-                 <div className="space-y-2 text-sm">
-                   <div className="flex items-center text-gray-600 dark:text-gray-300">
-                     <Clock className="h-4 w-4 mr-2" />
-                     <span>Prazo: {item.daysUntilReapplication === 0 ? 'Agora' : `${item.daysUntilReapplication} dias`}</span>
-                   </div>
-                   <div className="text-gray-500 dark:text-gray-400">
-                     {item.reason}
-                   </div>
-                 </div>
-                 <div className="mt-3">
-                   <Button 
-                     size="sm" 
-                     variant={item.urgency === 'immediate' ? 'default' : 'outline'}
-                     className="w-full"
-                   >
-                     {item.urgency === 'immediate' ? 'Agendar' : 'Planejar'}
-                   </Button>
-                 </div>
-               </div>
-             ))}
-           </div>
-         ) : (
-           // Visualização em Tabela para Desktop
-           <div className="overflow-x-auto">
-             <table className="min-w-full">
-               <thead className="bg-gray-50 dark:bg-gray-700">
-                 <tr>
-                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                     Espaço
-                   </th>
-                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                     Urgência
-                   </th>
-                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                     Prazo
-                   </th>
-                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                     Motivo
-                   </th>
-                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                     Ação
-                   </th>
-                 </tr>
-               </thead>
-               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                 {reapplicationSchedule.map((item) => (
-                   <tr key={item.spaceId} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                     <td className="px-6 py-4 whitespace-nowrap">
-                       <div className="text-sm font-medium text-gray-900 dark:text-white">
-                         {item.spaceName}
-                       </div>
-                     </td>
-                     <td className="px-6 py-4 whitespace-nowrap">
-                       <Badge variant={
-                         item.urgency === 'immediate' ? 'danger' :
-                         item.urgency === 'soon' ? 'warning' :
-                         item.urgency === 'scheduled' ? 'default' : 'success'
-                       }>
-                         {item.urgency === 'immediate' ? 'Imediato' :
-                          item.urgency === 'soon' ? 'Em breve' :
-                          item.urgency === 'scheduled' ? 'Agendado' : 'Bom'}
-                       </Badge>
-                     </td>
-                     <td className="px-6 py-4 whitespace-nowrap">
-                       <div className="flex items-center">
-                         <Clock className="h-4 w-4 text-gray-400 mr-1" />
-                         <span className="text-sm text-gray-900 dark:text-white">
-                           {item.daysUntilReapplication === 0 ? 'Agora' : `${item.daysUntilReapplication} dias`}
-                         </span>
-                       </div>
-                     </td>
-                     <td className="px-6 py-4">
-                       <div className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
-                         {item.reason}
-                       </div>
-                     </td>
-                     <td className="px-6 py-4 whitespace-nowrap">
-                       <Button 
-                         size="sm" 
-                         variant={item.urgency === 'immediate' ? 'default' : 'outline'}
-                       >
-                         {item.urgency === 'immediate' ? 'Agendar' : 'Planejar'}
-                       </Button>
-                     </td>
-                   </tr>
-                 ))}
-               </tbody>
-             </table>
-           </div>
-         )}
-       </Card>
-
-       {/* Insights Avançados - TEMPORARIAMENTE DESATIVADO */}
-       {/*
-       {advancedInsights.length > 0 && (
-         <Card className="p-6">
-           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-             <Lightbulb className="h-5 w-5 mr-2 text-yellow-500" />
-             Insights Inteligentes
-           </h3>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             {advancedInsights.map((insight, index) => (
-               <div
-                 key={index}
-                 className={`p-4 rounded-lg border ${
-                   insight.impact === 'high' ? 'border-red-200 bg-red-50 dark:bg-red-900/10' :
-                   insight.impact === 'medium' ? 'border-yellow-200 bg-yellow-50 dark:bg-yellow-900/10' :
-                   'border-green-200 bg-green-50 dark:bg-green-900/10'
-                 }`}
-               >
-                 <div className="flex items-start justify-between mb-2">
-                   <div className="flex items-center">
-                     {insight.type === 'trend' ? (
-                       <TrendingUp className="h-4 w-4 text-blue-600 mr-2" />
-                     ) : insight.type === 'comparison' ? (
-                       <Target className="h-4 w-4 text-purple-600 mr-2" />
-                     ) : insight.type === 'prediction' ? (
-                       <Zap className="h-4 w-4 text-orange-600 mr-2" />
-                     ) : (
-                       <Lightbulb className="h-4 w-4 text-yellow-600 mr-2" />
-                     )}
-                     <h4 className="font-medium text-gray-900 dark:text-white text-sm">
-                       {insight.title}
-                     </h4>
-                   </div>
-                   {insight.value && (
-                     <Badge variant={
-                       insight.impact === 'high' ? 'danger' :
-                       insight.impact === 'medium' ? 'warning' : 'success'
-                     }>
-                       {insight.value}
-                     </Badge>
-                   )}
-                 </div>
-                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                   {insight.description}
-                 </p>
-               </div>
-             ))}
-           </div>
-         </Card>
-       )}
-       */}
-
-       {/* Performance por Espaço */}
-       <Card className="p-6 overflow-hidden">
-         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-           Performance por Espaço
-         </h3>
-         {isMobile ? (
-           // Visualização em Cards para Mobile
-           <div className="grid grid-cols-1 gap-3">
-             {spaces.map((space) => {
-               const spaceCollections = currentPeriodCollections.filter(c => c.spaceId === space.id)
-               const totalWeight = spaceCollections.reduce((sum, c) => sum + c.weight, 0)
-               const collectionsCount = spaceCollections.length
-               const averageWeight = collectionsCount > 0 ? totalWeight / collectionsCount : 0
-               const lastCollection = spaceCollections.length > 0 
-                 ? new Date(Math.max(...spaceCollections.map(c => new Date(c.collectedAt).getTime())))
-                 : null
-
-               return (
-                 <div key={space.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                   <div className="flex items-center justify-between mb-3">
-                     <div>
-                       <h4 className="font-medium text-gray-900 dark:text-white">{space.name}</h4>
-                       <p className="text-xs text-gray-500 dark:text-gray-400">ID: {space.id}</p>
-                     </div>
-                     <Badge variant={
-                       averageWeight >= 2 ? 'success' :
-                       averageWeight >= 1 ? 'warning' : 
-                       collectionsCount === 0 ? 'danger' : 'default'
-                     }>
-                       {averageWeight >= 2 ? 'Excelente' :
-                        averageWeight >= 1 ? 'Boa' :
-                        collectionsCount === 0 ? 'Sem dados' : 'Baixa'}
-                     </Badge>
-                   </div>
-                   <div className="grid grid-cols-2 gap-3 text-sm">
-                     <div>
-                       <p className="text-gray-600 dark:text-gray-400">Total Eliminado</p>
-                       <p className="font-semibold text-gray-900 dark:text-white">{formatWeight(totalWeight)}</p>
-                     </div>
-                     <div>
-                       <p className="text-gray-600 dark:text-gray-400">Coletas</p>
-                       <p className="font-semibold text-gray-900 dark:text-white">{collectionsCount}</p>
-                     </div>
-                     <div>
-                       <p className="text-gray-600 dark:text-gray-400">Média/Coleta</p>
-                       <p className="font-semibold text-gray-900 dark:text-white">{formatWeight(averageWeight)}</p>
-                     </div>
-                     <div>
-                       <p className="text-gray-600 dark:text-gray-400">Última Coleta</p>
-                       <p className="font-semibold text-gray-900 dark:text-white">
-                         {lastCollection ? formatDate(lastCollection) : 'Nunca'}
-                       </p>
-                     </div>
-                   </div>
-                 </div>
-               )
-             })}
-           </div>
-         ) : (
-           // Visualização em Tabela para Desktop
-           <div className="overflow-x-auto">
-             <table className="min-w-full">
-               <thead className="bg-gray-50 dark:bg-gray-700">
-                 <tr>
-                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                     Espaço
-                   </th>
-                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                     Total Eliminado
-                   </th>
-                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                     Coletas
-                   </th>
-                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                     Média por Coleta
-                   </th>
-                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                     Última Coleta
-                   </th>
-                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                     Status
-                   </th>
-                 </tr>
-               </thead>
-               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                 {spaces.map((space) => {
-                   const spaceCollections = currentPeriodCollections.filter(c => c.spaceId === space.id)
-                   const totalWeight = spaceCollections.reduce((sum, c) => sum + c.weight, 0)
-                   const collectionsCount = spaceCollections.length
-                   const averageWeight = collectionsCount > 0 ? totalWeight / collectionsCount : 0
-                   const lastCollection = spaceCollections.length > 0 
-                     ? new Date(Math.max(...spaceCollections.map(c => new Date(c.collectedAt).getTime())))
-                     : null
-
-                   return (
-                     <tr key={space.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                       <td className="px-6 py-4 whitespace-nowrap">
-                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                           {space.name}
-                         </div>
-                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                           ID: {space.id}
-                         </div>
-                       </td>
-                       <td className="px-6 py-4 whitespace-nowrap">
-                         <div className="text-sm text-gray-900 dark:text-white font-semibold">
-                           {formatWeight(totalWeight)}
-                         </div>
-                       </td>
-                       <td className="px-6 py-4 whitespace-nowrap">
-                         <div className="text-sm text-gray-900 dark:text-white">
-                           {collectionsCount}
-                         </div>
-                       </td>
-                       <td className="px-6 py-4 whitespace-nowrap">
-                         <div className="text-sm text-gray-900 dark:text-white">
-                           {formatWeight(averageWeight)}
-                         </div>
-                       </td>
-                       <td className="px-6 py-4 whitespace-nowrap">
-                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                           {lastCollection ? formatDate(lastCollection) : 'Nunca'}
-                         </div>
-                       </td>
-                       <td className="px-6 py-4 whitespace-nowrap">
-                         <Badge variant={
-                           averageWeight >= 2 ? 'success' :
-                           averageWeight >= 1 ? 'warning' : 
-                           collectionsCount === 0 ? 'danger' : 'default'
-                         }>
-                           {averageWeight >= 2 ? 'Excelente' :
-                            averageWeight >= 1 ? 'Boa' :
-                            collectionsCount === 0 ? 'Sem dados' : 'Baixa'}
-                         </Badge>
-                       </td>
-                     </tr>
-                   )
-                 })}
-               </tbody>
-             </table>
-           </div>
-         )}
-       </Card>
-
-       {/* Resumo Executivo - TEMPORARIAMENTE DESATIVADO */}
-       {/*
-       <Card className="p-6">
-         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-           <FileText className="h-5 w-5 mr-2 text-blue-600" />
-           Resumo Executivo - Eficácia do Mata-Moscas TLC
-         </h3>
-        <div className="prose dark:prose-invert max-w-none">
-          <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-            Durante o período de <strong>{selectedPeriod === '7d' ? '7 dias' : selectedPeriod === '30d' ? '30 dias' : selectedPeriod === '90d' ? '90 dias' : '1 ano'}</strong>, 
-            o mata-moscas TLC demonstrou {metrics.trend === 'up' ? 'excelente' : metrics.trend === 'down' ? 'reduzida' : 'estável'} eficácia 
-            na eliminação de moscas, com um total de <strong>{formatWeight(metrics.totalWeight)}</strong> coletados 
-            em <strong>{metrics.collectionsCount} coletas</strong> realizadas 
-            em <strong>{metrics.spacesActive} espaços ativos</strong>.
-          </p>
-          
-          <p className="text-gray-700 dark:text-gray-300 leading-relaxed mt-4">
-            A média de <strong>{formatWeight(metrics.averageWeight)} por coleta</strong> representa 
-            aproximadamente <strong>{Math.round(metrics.averageWeight * 1000).toLocaleString()} moscas eliminadas</strong> por aplicação, 
-            demonstrando a {metrics.effectivenessScore >= 80 ? 'alta' : metrics.effectivenessScore >= 60 ? 'boa' : 'baixa'} eficácia 
-            do produto TLC Agro.
-          </p>
-
-                     <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-             <p className="text-blue-800 dark:text-blue-300 font-medium">
-               💡 Recomendação: {metrics.trend === 'up' 
-                 ? 'Manter a frequência atual de aplicação e monitoramento.'
-                 : metrics.trend === 'down'
-                 ? 'Considerar reaplicação nos espaços com baixa performance e verificar pontos de aplicação.'
-                 : 'Continuar monitoramento regular para manter a eficácia estável.'
-               }
-             </p>
-           </div>
-         </div>
-       </Card>
-       */}
-
-       {/* Metas de Redução de Pragas - TEMPORARIAMENTE DESATIVADO */}
-       {/* 
-       <Card className="p-6">
-         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-           <Target className="h-5 w-5 mr-2 text-green-600" />
-           Metas de Redução de Pragas
-         </h3>
-         
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-           {/* Meta Mensal */}
-           {/*<div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-lg">
-             <div className="flex items-center justify-between mb-2">
-               <h4 className="font-medium text-blue-900 dark:text-blue-300">Meta Mensal</h4>
-               <Badge variant="default">30 dias</Badge>
-             </div>
-             <div className="space-y-2">
-               <div className="flex justify-between text-sm">
-                 <span className="text-blue-700 dark:text-blue-400">Progresso:</span>
-                 <span className="font-medium text-blue-900 dark:text-blue-300">
-                   {formatWeight(metrics.totalWeight)} / {formatWeight(5)}
-                 </span>
-               </div>
-               <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
-                 <div 
-                   className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                   style={{ width: `${Math.min(100, (metrics.totalWeight / 5) * 100)}%` }}
-                 ></div>
-               </div>
-               <p className="text-xs text-blue-600 dark:text-blue-400">
-                 {metrics.totalWeight >= 5 
-                   ? '✅ Meta atingida!' 
-                   : `Faltam ${formatWeight(5 - metrics.totalWeight)} para atingir a meta`
-                 }
-               </p>
-             </div>
-           </div>
-
-           {/* Meta Trimestral */}
-           {/*<div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 rounded-lg">
-             <div className="flex items-center justify-between mb-2">
-               <h4 className="font-medium text-purple-900 dark:text-purple-300">Meta Trimestral</h4>
-               <Badge variant="default">90 dias</Badge>
-             </div>
-             <div className="space-y-2">
-               <div className="flex justify-between text-sm">
-                 <span className="text-purple-700 dark:text-purple-400">Progresso:</span>
-                 <span className="font-medium text-purple-900 dark:text-purple-300">
-                   {formatWeight(metrics.totalWeight * (selectedPeriod === '90d' ? 1 : selectedPeriod === '30d' ? 3 : 12))} / {formatWeight(15)}
-                 </span>
-               </div>
-               <div className="w-full bg-purple-200 dark:bg-purple-800 rounded-full h-2">
-                 <div 
-                   className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                   style={{ 
-                     width: `${Math.min(100, ((metrics.totalWeight * (selectedPeriod === '90d' ? 1 : selectedPeriod === '30d' ? 3 : 12)) / 15) * 100)}%` 
-                   }}
-                 ></div>
-               </div>
-               <p className="text-xs text-purple-600 dark:text-purple-400">
-                 Meta de redução significativa
-               </p>
-             </div>
-           </div>
-
-           {/* Meta Anual */}
-           {/*<div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-lg">
-             <div className="flex items-center justify-between mb-2">
-               <h4 className="font-medium text-green-900 dark:text-green-300">Meta Anual</h4>
-               <Badge variant="success">365 dias</Badge>
-             </div>
-             <div className="space-y-2">
-               <div className="flex justify-between text-sm">
-                 <span className="text-green-700 dark:text-green-400">Progresso:</span>
-                 <span className="font-medium text-green-900 dark:text-green-300">
-                   {formatWeight(metrics.totalWeight * (selectedPeriod === '1y' ? 1 : selectedPeriod === '90d' ? 4 : selectedPeriod === '30d' ? 12 : 52))} / {formatWeight(50)}
-                 </span>
-               </div>
-               <div className="w-full bg-green-200 dark:bg-green-800 rounded-full h-2">
-                 <div 
-                   className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                   style={{ 
-                     width: `${Math.min(100, ((metrics.totalWeight * (selectedPeriod === '1y' ? 1 : selectedPeriod === '90d' ? 4 : selectedPeriod === '30d' ? 12 : 52)) / 50) * 100)}%` 
-                   }}
-                 ></div>
-               </div>
-               <p className="text-xs text-green-600 dark:text-green-400">
-                 Controle total de pragas
-               </p>
-             </div>
-           </div>
-         </div>
-
-         {/* ROI e Benefícios */}
-         {/*<div className="mt-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-           <h4 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center">
-             <Zap className="h-4 w-4 mr-2 text-yellow-500" />
-             ROI e Benefícios do Mata-Moscas TLC
-           </h4>
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-             <div className="text-center">
-               <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                 {Math.round(metrics.totalWeight * 1000).toLocaleString()}
-               </div>
-               <div className="text-gray-600 dark:text-gray-400">Moscas Eliminadas</div>
-             </div>
-             <div className="text-center">
-               <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                 {metrics.effectivenessScore}%
-               </div>
-               <div className="text-gray-600 dark:text-gray-400">Eficácia Comprovada</div>
-             </div>
-             <div className="text-center">
-               <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                 R$ {((metrics.totalWeight * 1000) * 0.01).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-               </div>
-               <div className="text-gray-600 dark:text-gray-400">Economia Estimada*</div>
-             </div>
-           </div>
-           <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
-             * Baseado no custo médio de outros métodos de controle de pragas
-           </p>
-         </div>
-       </Card>
-       */}
-     </div>
-   )
- } 
+          {isLoading ? (
+            <div className="p-8 text-center text-gray-500">
+              <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2" />
+              Carregando...
+            </div>
+          ) : collections.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              Nenhuma coleta encontrada no período selecionado
+            </div>
+          ) : isMobile ? (
+            // Visualização Mobile
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+              {collections.map((collection, index) => (
+                <div key={collection.id} className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-green-600">
+                      #{String(collections.length - index).padStart(4, '0')}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {formatDate(collection.collection_date)}
+                    </span>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <p><span className="text-gray-500">Executor:</span> {collection.executor_name || '-'}</p>
+                    <p><span className="text-gray-500">Cliente:</span> {collection.client_name || '-'}</p>
+                    <p><span className="text-gray-500">Espaço:</span> {collection.space_name || '-'}</p>
+                    <p><span className="text-gray-500">Peso:</span> <span className="font-semibold text-green-600">{formatWeight(Number(collection.weight_collected))}</span></p>
+                    {collection.notes && (
+                      <p><span className="text-gray-500">Obs:</span> {collection.notes}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            // Visualização Desktop
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead className="bg-green-600 text-white">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                      Nº Coleta
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                      Data
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                      Executor
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                      Cliente
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                      Espaço
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                      Peso
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                      Observações
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {collections.map((collection, index) => (
+                    <tr
+                      key={collection.id}
+                      className={index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-700/50' : 'bg-white dark:bg-gray-800'}
+                    >
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="text-sm font-medium text-green-600">
+                          {String(collections.length - index).padStart(4, '0')}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {formatDate(collection.collection_date)}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {collection.executor_name || '-'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {collection.client_name || '-'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {collection.space_name || '-'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-green-600">
+                        {formatWeight(Number(collection.weight_collected))}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
+                        {collection.notes || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}

@@ -1,204 +1,91 @@
 import { useState } from 'react'
-import { useLocation } from 'react-router-dom'
-import {
-  Bell,
-  User,
-  Settings,
-  LogOut,
-  ChevronDown,
-  Menu,
-  X
-} from 'lucide-react'
+import { Menu, Bell, User, LogOut, Settings, ChevronDown } from 'lucide-react'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
-import { useSidebar } from './AppLayout'
+import { Logo } from '@/components/common/Logo'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
-// Mapeamento de títulos das páginas
-const pageTitles: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/clients': 'Clientes',
-  '/spaces': 'Espaços',
-  '/collections': 'Coletas',
-  '/operators': 'Operadores',
-  '/user-management': 'Gestão de Usuários',
-  '/reports': 'Relatórios',
-  '/settings': 'Configurações'
+interface AppHeaderProps {
+  onMenuClick: () => void
 }
 
-// Breadcrumbs simulados
-const getBreadcrumbs = (pathname: string) => {
-  const segments = pathname.split('/').filter(Boolean)
-  const breadcrumbs = []
-  
-  let currentPath = ''
-  for (const segment of segments) {
-    currentPath += `/${segment}`
-    const title = pageTitles[currentPath] || segment.charAt(0).toUpperCase() + segment.slice(1)
-    breadcrumbs.push({
-      title,
-      href: currentPath,
-      isLast: currentPath === pathname
-    })
-  }
-  
-  return breadcrumbs
-}
-
-export function AppHeader() {
-  const location = useLocation()
+export function AppHeader({ onMenuClick }: AppHeaderProps) {
   const { user, logout } = useAuthContext()
-  const { isMobileMenuOpen, setIsMobileMenuOpen } = useSidebar()
-  const [showUserMenu, setShowUserMenu] = useState(false)
-  const currentPageTitle = pageTitles[location.pathname] || 'TLC Zero'
-  const breadcrumbs = getBreadcrumbs(location.pathname)
 
-  const handleLogout = () => {
-    logout()
-    setShowUserMenu(false)
+  const handleLogout = async () => {
+    await logout()
   }
 
-  const getRoleName = (role: string) => {
-    const roleNames = {
-      admin: 'Administrador',
-      supervisor: 'Supervisor',
-      operador: 'Operador'
+  const getRoleBadge = (role: string) => {
+    const badges: Record<string, { label: string; className: string }> = {
+      admin: { label: 'Admin', className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' },
+      distributor: { label: 'Distribuidor', className: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' },
+      supervisor: { label: 'Supervisor', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+      operator: { label: 'Operador', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' },
     }
-    return roleNames[role as keyof typeof roleNames] || role
+    return badges[role] || badges.operator
   }
 
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen)
-  }
+  const badge = user ? getRoleBadge(user.role) : null
 
   return (
-    <header className="border-b border-gray-200 bg-white dark:bg-gray-900 dark:border-gray-700 sticky-header z-40">
-      <div className="flex h-16 items-center justify-between mobile-container">
-        {/* Mobile Menu Button + Title */}
-        <div className="flex items-center gap-3 min-w-0 flex-1 lg:flex-initial">
-          {/* Menu Mobile */}
-          <button
-            onClick={toggleMobileMenu}
-            className="lg:hidden touch-target -ml-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-effect"
-            aria-label="Toggle menu"
-          >
-            {isMobileMenuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
-          </button>
+    <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-white px-4 dark:bg-gray-900 dark:border-gray-800 md:px-6">
+      {/* Menu button - mobile only */}
+      <button
+        onClick={onMenuClick}
+        className="inline-flex items-center justify-center rounded-md p-2 text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800 md:hidden"
+      >
+        <Menu className="h-6 w-6" />
+        <span className="sr-only">Abrir menu</span>
+      </button>
 
-          {/* Título da Página */}
-          <div className="min-w-0 flex-1 lg:flex-initial">
-            <h1 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate">
-              {currentPageTitle}
-            </h1>
-            {/* Breadcrumbs - oculto em mobile */}
-            {breadcrumbs.length > 0 && (
-              <nav className="hidden sm:flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400">
-                <span>Início</span>
-                {breadcrumbs.map((crumb) => (
-                  <div key={crumb.href} className="flex items-center">
-                    <span className="mx-1">/</span>
-                    <span className={crumb.isLast ? 'text-gray-900 dark:text-white font-medium' : ''}>
-                      {crumb.title}
-                    </span>
-                  </div>
-                ))}
-              </nav>
-            )}
-          </div>
-        </div>
-
-
-
-        {/* Actions */}
-        <div className="flex items-center space-x-2 sm:space-x-3">
-          {/* Theme Toggle */}
-          <ThemeToggle />
-
-          {/* Notifications */}
-          <button className="relative touch-target text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-effect"
-            aria-label="Notifications">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-              3
-            </span>
-          </button>
-
-          {/* User Menu */}
-          <div className="relative">
-            <button
-              onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 touch-target text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-effect"
-              aria-label="User menu"
-              aria-expanded={showUserMenu}
-            >
-              <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-                <User className="h-4 w-4 text-white" />
-              </div>
-              <div className="hidden xs:block text-left">
-                <div className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</div>
-              </div>
-              <ChevronDown className="h-4 w-4 text-gray-400" />
-            </button>
-
-            {/* User Dropdown */}
-            {showUserMenu && (
-              <div className="absolute right-0 mt-2 w-56 xs:w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50 slide-in-right">
-                {/* User Info */}
-                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
-                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">{getRoleName(user?.role || '')}</p>
-                </div>
-
-                {/* Menu Items */}
-                <div className="py-1">
-                  <button
-                    onClick={() => setShowUserMenu(false)}
-                    className="w-full flex items-center px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <User className="h-4 w-4 mr-3" />
-                    Meu Perfil
-                  </button>
-                  <button
-                    onClick={() => setShowUserMenu(false)}
-                    className="w-full flex items-center px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <Settings className="h-4 w-4 mr-3" />
-                    Configurações
-                  </button>
-                </div>
-
-                {/* Logout */}
-                <div className="border-t border-gray-100 dark:border-gray-700 py-1">
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                  >
-                    <LogOut className="h-4 w-4 mr-3" />
-                    Sair
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+      {/* Logo - mobile only */}
+      <div className="md:hidden">
+        <Logo size="sm" />
       </div>
 
+      {/* Spacer */}
+      <div className="flex-1" />
 
+      {/* Actions */}
+      <div className="flex items-center gap-2">
+        <ThemeToggle />
 
-      {/* Overlay para fechar menus */}
-      {showUserMenu && (
-          <div
-          className="fixed inset-0 z-30 bg-black/20 backdrop-blur-sm lg:bg-transparent lg:backdrop-blur-none"
-          onClick={() => {
-            setShowUserMenu(false)
-          }}
-          />
-        )}
+        {/* User menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <User className="h-4 w-4 text-green-600 dark:text-green-400" />
+              </div>
+              <div className="hidden md:block text-left">
+                <div className="font-medium">{user?.name || 'Usuário'}</div>
+                {badge && (
+                  <span className={`text-xs px-1.5 py-0.5 rounded ${badge.className}`}>
+                    {badge.label}
+                  </span>
+                )}
+              </div>
+            </div>
+            <ChevronDown className="h-4 w-4 hidden md:block" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="px-2 py-1.5 md:hidden">
+              <div className="font-medium text-sm">{user?.name}</div>
+              <div className="text-xs text-gray-500">{user?.email}</div>
+            </div>
+            <DropdownMenuItem onClick={handleLogout} className="text-red-600 dark:text-red-400 cursor-pointer">
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </header>
   )
-} 
+}

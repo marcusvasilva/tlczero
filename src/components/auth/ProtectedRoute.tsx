@@ -53,7 +53,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Detectar loading muito longo e mostrar opções de emergência
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading || user) {
       setShowEmergency(false)
       return
     }
