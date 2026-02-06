@@ -396,16 +396,6 @@ export function CompanyOnboardingWizard({ onComplete, onCancel }: CompanyOnboard
           {/* Etapa 2: Criar Supervisor */}
           {currentStep === 2 && (
             <form onSubmit={supervisorForm.handleSubmit(handleSupervisorSubmit)} className="space-y-4">
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
-                <h3 className="font-medium text-blue-900 dark:text-blue-300 mb-2">
-                  Supervisor Principal
-                </h3>
-                <p className="text-sm text-blue-700 dark:text-blue-400">
-                  Este será o usuário principal da empresa, com acesso total aos dados e configurações.
-                  Uma senha temporária será gerada automaticamente.
-                </p>
-              </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Nome Completo *
@@ -468,15 +458,6 @@ export function CompanyOnboardingWizard({ onComplete, onCancel }: CompanyOnboard
           {/* Etapa 3: Primeiro Espaço */}
           {currentStep === 3 && (
             <form onSubmit={spaceForm.handleSubmit(handleSpaceSubmit)} className="space-y-4">
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
-                <h3 className="font-medium text-green-900 dark:text-green-300 mb-2">
-                  Configure o Primeiro Espaço
-                </h3>
-                <p className="text-sm text-green-700 dark:text-green-400">
-                  Espaços são locais onde o produto TLC Agro é aplicado. Você pode adicionar mais espaços depois.
-                </p>
-              </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Nome do Espaço *
@@ -585,12 +566,6 @@ export function CompanyOnboardingWizard({ onComplete, onCancel }: CompanyOnboard
                   )}
                 </button>
                 
-                <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <p className="text-sm text-amber-800 dark:text-amber-300">
-                    <strong>Importante:</strong> O supervisor deverá alterar a senha no primeiro acesso.
-                    As credenciais também foram enviadas por email.
-                  </p>
-                </div>
               </div>
 
               <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4">

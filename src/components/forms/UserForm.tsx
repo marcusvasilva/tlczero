@@ -2,49 +2,12 @@ import React, { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { X, Shield } from 'lucide-react'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useClients } from '@/hooks/useClients'
 import { formatPhone } from '@/lib/formatters'
 import { supabase } from '@/lib/supabase'
 import type { User } from '@/types'
-
-// Componentes UI simples
-const Button = ({ children, type = 'button', variant = 'default', onClick, disabled, className = '' }: any) => (
-  <button
-    type={type}
-    onClick={onClick}
-    disabled={disabled}
-    className={`px-4 py-2 rounded-md font-medium transition-colors ${
-      variant === 'outline' 
-        ? 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300' 
-        : 'bg-blue-600 text-white hover:bg-blue-700'
-    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
-  >
-    {children}
-  </button>
-)
-
-const Label = ({ htmlFor, children, className = '' }: any) => (
-  <label htmlFor={htmlFor} className={`block text-sm font-medium text-gray-700 dark:text-gray-300 ${className}`}>
-    {children}
-  </label>
-)
-
-const Input = ({ className = '', ...props }: any) => (
-  <input
-    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white ${className}`}
-    {...props}
-  />
-)
-
-const Select = ({ className = '', children, ...props }: any) => (
-  <select
-    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white ${className}`}
-    {...props}
-  >
-    {children}
-  </select>
-)
 
 // Schema de validação
 const userSchema = z.object({
@@ -57,9 +20,8 @@ const userSchema = z.object({
     .min(1, 'Email é obrigatório'),
   
   password: z.string()
-    .min(6, 'Senha deve ter pelo menos 6 caracteres')
     .optional()
-    .or(z.literal('')),
+    .refine((val) => val === undefined || val === '' || val.length >= 6, 'Senha deve ter pelo menos 6 caracteres'),
   
   role: z.enum(['admin', 'distributor', 'supervisor', 'operator'], {
     required_error: 'Função é obrigatória'
@@ -101,16 +63,20 @@ interface CreateUserData {
 
 interface UserFormProps {
   user?: User
+  defaultAccountId?: string
+  defaultRole?: string
   onSubmit: (data: CreateUserData) => Promise<void>
   onCancel: () => void
   isLoading?: boolean
 }
 
-export default function UserForm({ 
-  user, 
-  onSubmit, 
-  onCancel, 
-  isLoading = false 
+export default function UserForm({
+  user,
+  defaultAccountId,
+  defaultRole,
+  onSubmit,
+  onCancel,
+  isLoading = false
 }: UserFormProps) {
   const { userType, accountContext, user: currentUser } = useAuthContext()
   const { clients } = useClients()
@@ -135,8 +101,8 @@ export default function UserForm({
       name: user?.name || '',
       email: user?.email || '',
       password: '',
-      role: (user?.role || 'operator') as 'admin' | 'distributor' | 'supervisor' | 'operator',
-      account_id: user?.account_id || accountContext || currentUser?.account_id || '',
+      role: (user?.role || defaultRole || 'operator') as 'admin' | 'distributor' | 'supervisor' | 'operator',
+      account_id: user?.account_id || defaultAccountId || accountContext || currentUser?.account_id || '',
       supervisor_id: user?.supervisor_id || '',
       phone: user?.phone || '',
       cpf: user?.cpf || ''
@@ -176,8 +142,13 @@ export default function UserForm({
 
   const onFormSubmit = async (data: UserFormData) => {
     console.log('🚀 Dados do formulário recebidos:', data)
-    
+
     try {
+      // Senha obrigatória na criação
+      if (!user && (!data.password || data.password.length < 6)) {
+        throw new Error('Senha é obrigatória e deve ter pelo menos 6 caracteres')
+      }
+
       // Validações específicas por role
       if (data.role === 'admin' || data.role === 'distributor') {
         data.account_id = undefined
@@ -256,52 +227,58 @@ export default function UserForm({
     return roles
   }
 
+  const roleTitle = defaultRole === 'supervisor' ? 'Supervisor' : 'Usuário'
+
+  const inputClass = (hasError: boolean) =>
+    `w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white ${
+      hasError ? 'border-red-300 bg-red-50' : 'border-gray-300'
+    }`
+
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {user ? 'Editar Usuário' : 'Novo Usuário'}
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          {user ? 'Atualize as informações do usuário' : 'Preencha os dados para criar um novo usuário'}
-        </p>
-        
-        {!user && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0">
-                <span className="text-blue-600 text-lg">👤</span>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-blue-900 mb-1">
-                  Criação de Usuário do Sistema
-                </h3>
-                <p className="text-sm text-blue-800">
-                  Este usuário poderá fazer login no sistema e terá acesso às funcionalidades 
-                  baseadas na sua função.
-                </p>
-                {userType === 'supervisor' && (
-                  <p className="text-xs text-blue-700 mt-2">
-                    💡 Você só pode criar usuários para sua empresa.
-                  </p>
-                )}
-              </div>
-            </div>
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between p-6 border-b">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+            <Shield className="w-5 h-5 text-green-600" />
           </div>
-        )}
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              {user ? `Editar ${roleTitle}` : `Novo ${roleTitle}`}
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {user
+                ? `Atualize as informações do ${roleTitle.toLowerCase()}`
+                : `Cadastre um novo ${roleTitle.toLowerCase()} com acesso ao sistema`}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={handleCancel}
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+        >
+          <X className="w-6 h-6" />
+        </button>
       </div>
 
-             <form onSubmit={handleSubmit(onFormSubmit as any)} className="space-y-6">
-        {/* Nome */}
+      {/* Form */}
+      <form onSubmit={handleSubmit(onFormSubmit as any)} className="p-6 space-y-6">
+        {/* Hidden fields */}
+        {defaultRole && <input type="hidden" {...register('role')} value={defaultRole} />}
+        {(watchedRole === 'supervisor' || watchedRole === 'operator') && defaultAccountId && (
+          <input type="hidden" {...register('account_id')} value={defaultAccountId} />
+        )}
+
+        {/* Nome Completo */}
         <div>
-          <Label htmlFor="name">
-            Nome Completo <span className="text-red-500">*</span>
-          </Label>
-          <Input
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Nome Completo *
+          </label>
+          <input
             id="name"
             {...register('name')}
-            placeholder="Digite o nome completo"
-            className={errors.name ? 'border-red-500' : ''}
+            placeholder="Nome completo do supervisor"
+            className={inputClass(!!errors.name)}
           />
           {errors.name && (
             <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
@@ -310,15 +287,15 @@ export default function UserForm({
 
         {/* Email */}
         <div>
-          <Label htmlFor="email">
-            Email <span className="text-red-500">*</span>
-          </Label>
-          <Input
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Email *
+          </label>
+          <input
             id="email"
             type="email"
             {...register('email')}
             placeholder="email@exemplo.com"
-            className={errors.email ? 'border-red-500' : ''}
+            className={inputClass(!!errors.email)}
           />
           {errors.email && (
             <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
@@ -328,72 +305,60 @@ export default function UserForm({
         {/* Senha */}
         {showPasswordField && (
           <div>
-            <Label htmlFor="password">
-              Senha {!user && <span className="text-red-500">*</span>}
-            </Label>
-            <Input
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Senha {!user && '*'}
+            </label>
+            <input
               id="password"
               type="password"
               {...register('password')}
               placeholder="Digite a senha de acesso"
-              className={errors.password ? 'border-red-500' : ''}
+              className={inputClass(!!errors.password)}
             />
             {errors.password && (
               <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
             )}
-            <p className="text-xs text-gray-500 mt-1">
-              {user 
-                ? '💡 Deixe em branco para manter a senha atual' 
-                : '💡 Se não informar, uma senha será gerada automaticamente'
-              }
-            </p>
+            {user && (
+              <p className="text-xs text-gray-500 mt-1">
+                Deixe em branco para manter a senha atual
+              </p>
+            )}
           </div>
         )}
 
-        {/* Função */}
-        <div>
-          <Label htmlFor="role">
-            Função <span className="text-red-500">*</span>
-          </Label>
-          <Select
-            id="role"
-            {...register('role')}
-            className={errors.role ? 'border-red-500' : ''}
-          >
-            {getAvailableRoles().map((role) => (
-              <option key={role} value={role}>
-                {getRoleLabel(role)}
-              </option>
-            ))}
-          </Select>
-          {errors.role && (
-            <p className="mt-1 text-sm text-red-600">{errors.role.message}</p>
-          )}
-          
-          {/* Info sobre roles */}
-          <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-md">
-            <div className="text-sm text-gray-700">
-              <p className="font-medium mb-1">Sobre as funções:</p>
-              <ul className="list-disc list-inside space-y-1 text-xs">
-                <li><strong>Admin:</strong> Acesso completo a todo o sistema</li>
-                <li><strong>Distribuidor:</strong> Gerencia sua carteira de clientes</li>
-                <li><strong>Supervisor:</strong> Gerencia uma empresa específica</li>
-                <li><strong>Operador:</strong> Faz coletas e visualiza relatórios</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* Empresa (para supervisor/operator) */}
-        {(watchedRole === 'supervisor' || watchedRole === 'operator') && (
+        {/* Função (quando não tem defaultRole) */}
+        {!defaultRole && (
           <div>
-            <Label htmlFor="account_id">
-              Empresa <span className="text-red-500">*</span>
-            </Label>
-            <Select
+            <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Função *
+            </label>
+            <select
+              id="role"
+              {...register('role')}
+              className={inputClass(!!errors.role)}
+            >
+              {getAvailableRoles().map((role) => (
+                <option key={role} value={role}>
+                  {getRoleLabel(role)}
+                </option>
+              ))}
+            </select>
+            {errors.role && (
+              <p className="mt-1 text-sm text-red-600">{errors.role.message}</p>
+            )}
+          </div>
+        )}
+
+        {/* Empresa (quando não tem defaultAccountId) */}
+        {(watchedRole === 'supervisor' || watchedRole === 'operator') && !defaultAccountId && (
+          <div>
+            <label htmlFor="account_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Empresa *
+            </label>
+            <select
               id="account_id"
               {...register('account_id')}
-              className={errors.account_id ? 'border-red-500' : ''}
+              className={inputClass(!!errors.account_id)}
             >
               <option value="">Selecione uma empresa</option>
               {availableClients.map((client) => (
@@ -401,7 +366,7 @@ export default function UserForm({
                   {client.company_name}
                 </option>
               ))}
-            </Select>
+            </select>
             {errors.account_id && (
               <p className="mt-1 text-sm text-red-600">{errors.account_id.message}</p>
             )}
@@ -411,13 +376,13 @@ export default function UserForm({
         {/* Supervisor (para operator) */}
         {watchedRole === 'operator' && watchedAccountId && (
           <div>
-            <Label htmlFor="supervisor_id">
-              Supervisor <span className="text-red-500">*</span>
-            </Label>
-            <Select
+            <label htmlFor="supervisor_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Supervisor *
+            </label>
+            <select
               id="supervisor_id"
               {...register('supervisor_id')}
-              className={errors.supervisor_id ? 'border-red-500' : ''}
+              className={inputClass(!!errors.supervisor_id)}
             >
               <option value="">Selecione um supervisor</option>
               {availableSupervisors.map((supervisor) => (
@@ -425,66 +390,75 @@ export default function UserForm({
                   {supervisor.name}
                 </option>
               ))}
-            </Select>
+            </select>
             {errors.supervisor_id && (
               <p className="mt-1 text-sm text-red-600">{errors.supervisor_id.message}</p>
             )}
             {availableSupervisors.length === 0 && watchedAccountId && (
               <p className="text-xs text-amber-600 mt-1">
-                ⚠️ Nenhum supervisor encontrado para esta empresa. Crie um supervisor primeiro.
+                Nenhum supervisor encontrado para esta empresa. Crie um supervisor primeiro.
               </p>
             )}
           </div>
         )}
 
-        {/* Telefone e CPF */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="phone">Telefone</Label>
-            <Input
-              id="phone"
-              type="tel"
-              {...register('phone')}
-              onChange={handlePhoneChange}
-              placeholder="(11) 99999-9999"
-              className={errors.phone ? 'border-red-500' : ''}
-            />
-            {errors.phone && (
-              <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
-            )}
-          </div>
+        {/* Informações Adicionais */}
+        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Informações Adicionais (Opcionais)</h3>
 
-          <div>
-            <Label htmlFor="cpf">CPF</Label>
-            <Input
-              id="cpf"
-              {...register('cpf')}
-              onChange={handleCpfChange}
-              placeholder="000.000.000-00"
-              className={errors.cpf ? 'border-red-500' : ''}
-            />
-            {errors.cpf && (
-              <p className="mt-1 text-sm text-red-600">{errors.cpf.message}</p>
-            )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                Telefone
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                {...register('phone')}
+                onChange={handlePhoneChange}
+                placeholder="(11) 99999-9999"
+                className={inputClass(!!errors.phone)}
+              />
+              {errors.phone && (
+                <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="cpf" className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                CPF
+              </label>
+              <input
+                id="cpf"
+                {...register('cpf')}
+                onChange={handleCpfChange}
+                placeholder="000.000.000-00"
+                className={inputClass(!!errors.cpf)}
+              />
+              {errors.cpf && (
+                <p className="mt-1 text-sm text-red-600">{errors.cpf.message}</p>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Botões */}
-        <div className="flex justify-end space-x-4 pt-4">
-          <Button
+        <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button
             type="button"
-            variant="outline"
             onClick={handleCancel}
             disabled={isSubmitting || isLoading}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium transition-colors disabled:opacity-50"
           >
             Cancelar
-          </Button>
-          <Button
+          </button>
+          <button
             type="submit"
             disabled={isSubmitting || isLoading}
+            className="px-4 py-2 rounded-md font-medium text-white bg-green-600 hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting || isLoading ? 'Salvando...' : user ? 'Atualizar' : 'Criar Usuário'}
-          </Button>
+            {isSubmitting || isLoading ? 'Salvando...' : user ? 'Atualizar' : 'Criar'}
+          </button>
         </div>
       </form>
     </div>

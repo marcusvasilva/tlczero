@@ -1,8 +1,8 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
-import { supabase, supabaseAdmin } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import type { User } from '@/types'
 import { useAuthContext } from '@/contexts/AuthContext'
-import { generateTemporaryPassword, isValidEmail } from '@/lib/utils'
+import { isValidEmail } from '@/lib/utils'
 
 interface CreateUserData {
   name: string
@@ -71,7 +71,7 @@ export const useUsers = (): UseUsersReturn => {
     setError(null)
     
     try {
-      console.log('🔍 Buscando usuários...')
+      // Buscar usuários
       
       let query = supabase
         .from('users')
@@ -82,12 +82,10 @@ export const useUsers = (): UseUsersReturn => {
       // Baseado na documentação do Supabase sobre security definer functions
       
       if (!user?.id) {
-        console.log('❌ Usuário não autenticado')
+
         setUsers([])
         return
       }
-      
-      console.log(`🔍 Usando função RPC otimizada para ${userType}`)
       
       const { data, error } = await supabase.rpc('get_users_by_context', {
         requesting_user_id: user.id,
@@ -96,9 +94,7 @@ export const useUsers = (): UseUsersReturn => {
       })
 
       if (error) {
-        console.error('❌ Erro ao carregar usuários via RPC:', error)
         // Fallback para query tradicional em caso de erro na RPC
-        console.log('🔄 Tentando fallback para query tradicional...')
         
         let fallbackQuery = supabase
           .from('users')
@@ -108,7 +104,7 @@ export const useUsers = (): UseUsersReturn => {
         // Aplicar filtros baseados no tipo de usuário
         if (userType === 'admin') {
           // Admin vê todos
-          console.log('👑 Admin fallback - todos os usuários')
+
         } else if (userType === 'distributor' && user?.id) {
           fallbackQuery = fallbackQuery.eq('account_id', 
             supabase.from('accounts')
@@ -127,21 +123,17 @@ export const useUsers = (): UseUsersReturn => {
         
         const fallbackResult = await fallbackQuery
         if (fallbackResult.error) {
-          console.error('❌ Erro no fallback também:', fallbackResult.error)
           throw fallbackResult.error
         }
         
-        console.log('✅ Fallback bem-sucedido:', fallbackResult.data?.length, 'usuários')
         setUsers(fallbackResult.data || [])
         return
       }
 
-      console.log('✅ Usuários carregados:', data?.length || 0)
       setUsers(data || [])
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar usuários'
       setError(errorMessage)
-      console.error('Erro ao buscar usuários:', err)
     } finally {
       setIsLoading(false)
     }
@@ -159,7 +151,6 @@ export const useUsers = (): UseUsersReturn => {
 
   // Criar usuário
   const createUser = useCallback(async (data: CreateUserData): Promise<UserCreationResult> => {
-    console.log('🎯 Iniciando criação de usuário:', data)
     setIsCreating(true)
     setError(null)
     
@@ -202,21 +193,13 @@ export const useUsers = (): UseUsersReturn => {
         } else if (userType === 'distributor') {
           // Distribuidor deve verificar se a conta é sua
           // Será validado no backend via RLS
-          console.log('🔍 Distribuidor criando supervisor para conta:', data.account_id)
         }
       } else if (data.role === 'operator') {
-        // Operator precisa de account_id e supervisor_id
         if (!data.account_id) {
           throw new Error('Operador deve ser associado a uma empresa')
         }
         if (!data.supervisor_id) {
           throw new Error('Operador deve ter um supervisor')
-        }
-        
-        // Validar se distribuidor pode criar operador para esta conta
-        if (userType === 'distributor') {
-          console.log('🔍 Distribuidor criando operador para conta:', data.account_id)
-          // Validação será feita no backend via RLS
         }
       }
 
@@ -235,85 +218,57 @@ export const useUsers = (): UseUsersReturn => {
         throw new Error('Email já está em uso por outro usuário')
       }
 
-      // Gerar senha se não fornecida
-      const password = data.password || generateTemporaryPassword(12)
-      
-      console.log('📧 Email:', data.email)
-      console.log('🔐 Senha gerada:', !data.password ? 'Sim' : 'Não')
+      if (!data.password) {
+        throw new Error('Senha é obrigatória')
+      }
+      const password = data.password
 
-      // Criar usuário no Supabase Auth primeiro
-      let authResult: any = null
-      let credentials: UserCreationResult['credentials'] = undefined
+      // Obter token da sessão atual para autenticar a Edge Function
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData?.session?.access_token
+      if (!accessToken) {
+        throw new Error('Sessão expirada. Faça login novamente.')
+      }
 
-      try {
-        console.log('🔐 Criando usuário no Supabase Auth...')
-        
-        if (!supabaseAdmin.auth.admin) {
-          throw new Error('Supabase Auth Admin não está disponível')
-        }
-
-        const authPayload = {
-          email: data.email,
-          password: password,
-          user_metadata: {
+      // Chamar Edge Function para criar o usuário (service_role fica no servidor)
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            email: data.email,
+            password,
             name: data.name,
             role: data.role,
-            phone: data.phone || null,
             account_id: data.account_id || null,
-            supervisor_id: data.supervisor_id || null
-          },
-          email_confirm: true
+            phone: data.phone || null,
+            cpf: data.cpf || null,
+            supervisor_id: data.supervisor_id || null,
+          }),
         }
+      )
 
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser(authPayload)
+      const result = await response.json()
 
-        if (authError) {
-          console.error('❌ Erro ao criar usuário no Auth:', authError)
-          throw new Error(`Erro ao criar usuário: ${authError.message}`)
-        }
-
-        console.log('✅ Usuário criado no Supabase Auth:', authData.user?.id)
-        authResult = authData
-        credentials = {
-          email: data.email,
-          password: password,
-          userCreated: true
-        }
-
-      } catch (authErr) {
-        console.error('💥 Erro na criação do usuário Auth:', authErr)
-        throw authErr
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao criar usuário')
       }
-
-      // O trigger handle_new_user deve criar o usuário em public.users automaticamente
-      // Aguardar um pouco para o trigger processar
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      // Buscar o usuário criado
-      const { data: newUser, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authResult.user.id)
-        .single()
-
-      if (userError) {
-        console.error('❌ Erro ao buscar usuário criado:', userError)
-        throw new Error('Usuário foi criado mas não foi possível recuperar os dados')
-      }
-
-      console.log('✅ Usuário criado com sucesso:', newUser)
 
       // Atualizar lista de usuários
       await fetchUsers()
 
       return {
-        user: newUser,
-        credentials
+        user: result.user,
+        credentials: result.credentials,
       }
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao criar usuário'
-      console.error('💥 Erro geral ao criar usuário:', err)
       setError(errorMessage)
       throw new Error(errorMessage)
     } finally {
@@ -327,7 +282,6 @@ export const useUsers = (): UseUsersReturn => {
     setError(null)
     
     try {
-      console.log('🔄 Atualizando usuário:', id, data)
 
       // Validações específicas por role se role está sendo alterada
       if (data.role) {
@@ -350,11 +304,9 @@ export const useUsers = (): UseUsersReturn => {
         .single()
 
       if (error) {
-        console.error('❌ Erro ao atualizar usuário:', error)
         throw error
       }
 
-      console.log('✅ Usuário atualizado:', updatedUser)
       await fetchUsers()
       return updatedUser
 
@@ -373,15 +325,9 @@ export const useUsers = (): UseUsersReturn => {
     setError(null)
     
     try {
-      console.log('🗑️ Deletando usuário:', id)
 
-      // Primeiro, deletar do Supabase Auth
-      try {
-        await supabaseAdmin.auth.admin.deleteUser(id)
-        console.log('✅ Usuário deletado do Supabase Auth')
-      } catch (authErr) {
-        console.warn('⚠️ Erro ao deletar do Auth (continuando):', authErr)
-      }
+      // Soft-delete: desativar o usuário na tabela users
+      // A exclusão do Auth não é feita pelo frontend por segurança
 
       // Deletar da tabela users
       const { error } = await supabase
@@ -390,11 +336,9 @@ export const useUsers = (): UseUsersReturn => {
         .eq('id', id)
 
       if (error) {
-        console.error('❌ Erro ao deletar usuário:', error)
         throw error
       }
 
-      console.log('✅ Usuário deletado com sucesso')
       await fetchUsers()
 
     } catch (err) {

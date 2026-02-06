@@ -68,6 +68,7 @@ export const useSimpleOperators = (options: UseSimpleOperatorsOptions = {}): Use
         .from('users')
         .select('*')
         .in('role', ['supervisor', 'operator'])
+        .eq('status', 'active')
       
       // Apply automatic account filtering based on user context
       const targetAccountId = accountContext || user?.account_id

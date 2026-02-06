@@ -223,9 +223,6 @@ export const useClients = (options: UseClientsOptions = {}): UseClientsReturn =>
       if (!data.company_name?.trim()) {
         throw new Error('Nome da empresa é obrigatório')
       }
-      if (!data.contact_person?.trim()) {
-        throw new Error('Pessoa de contato é obrigatória')
-      }
       if (!data.phone?.trim()) {
         throw new Error('Telefone é obrigatório')
       }

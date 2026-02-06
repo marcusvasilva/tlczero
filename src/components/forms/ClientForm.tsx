@@ -1,5 +1,6 @@
 import { useForm } from '@/hooks'
 import { validatePhone } from '@/lib/validations'
+import { formatPhone } from '@/lib/formatters'
 import type { Account } from '@/types'
 import { X } from 'lucide-react'
 
@@ -39,10 +40,6 @@ export function ClientForm({ client, onSubmit, onCancel, isLoading = false }: Cl
       errors.company_name = 'Nome da empresa é obrigatório'
     } else if (values.company_name.length < 2) {
       errors.company_name = 'Nome deve ter pelo menos 2 caracteres'
-    }
-
-    if (!values.contact_person.trim()) {
-      errors.contact_person = 'Responsável é obrigatório'
     }
 
     if (!values.phone.trim()) {
@@ -113,31 +110,6 @@ export function ClientForm({ client, onSubmit, onCancel, isLoading = false }: Cl
             )}
           </div>
 
-          {/* Responsável */}
-          <div>
-            <label htmlFor="contact_person" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Responsável *
-            </label>
-            <input
-              type="text"
-              id="contact_person"
-              name="contact_person"
-              value={form.values.contact_person}
-              onChange={form.handleChange}
-              onBlur={form.handleBlur}
-              className={`input-responsive ${
-                form.errors.contact_person && form.touched.contact_person
-                  ? 'border-red-500 focus:ring-red-500'
-                  : ''
-              }`}
-              placeholder="Nome da pessoa responsável"
-              disabled={isLoading}
-            />
-            {form.errors.contact_person && form.touched.contact_person && (
-              <p className="mt-1 text-sm text-red-600">{form.errors.contact_person}</p>
-            )}
-          </div>
-
           {/* Telefone */}
           <div>
             <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -148,7 +120,7 @@ export function ClientForm({ client, onSubmit, onCancel, isLoading = false }: Cl
               id="phone"
               name="phone"
               value={form.values.phone}
-              onChange={form.handleChange}
+              onChange={(e) => form.setFieldValue('phone', formatPhone(e.target.value))}
               onBlur={form.handleBlur}
               className={`input-responsive ${
                 form.errors.phone && form.touched.phone
@@ -168,6 +140,24 @@ export function ClientForm({ client, onSubmit, onCancel, isLoading = false }: Cl
             <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Informações Adicionais (Opcionais)</h3>
             
             <div className="space-y-4">
+              {/* Contato */}
+              <div>
+                <label htmlFor="contact_person" className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                  Pessoa de Contato
+                </label>
+                <input
+                  type="text"
+                  id="contact_person"
+                  name="contact_person"
+                  value={form.values.contact_person}
+                  onChange={form.handleChange}
+                  onBlur={form.handleBlur}
+                  className="input-responsive"
+                  placeholder="Nome da pessoa de contato"
+                  disabled={isLoading}
+                />
+              </div>
+
               {/* Email */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">

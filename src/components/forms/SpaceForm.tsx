@@ -20,6 +20,7 @@ interface SpaceFormProps {
   onSubmit: (data: CreateSpaceData) => Promise<void>
   initialData?: Space
   clients: Array<{ id: string; company_name: string; cnpj?: string; contact_person?: string; phone?: string; address?: string; status: string }>
+  defaultClientId?: string
   isLoading?: boolean
 }
 
@@ -29,10 +30,11 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({
   onSubmit,
   initialData,
   clients,
+  defaultClientId,
   isLoading = false
 }) => {
   const previousInitialDataRef = useRef<Space | null>(null)
-  
+
   const {
     values,
     errors,
@@ -43,7 +45,7 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({
     reset
   } = useForm<CreateSpaceData>({
     initialValues: {
-      clientId: '',
+      clientId: defaultClientId || '',
       name: '',
       description: '',
       areaSize: undefined,
@@ -255,7 +257,7 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({
           </div>
 
           {/* QR Code */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div>
             <label className="flex items-center space-x-3 cursor-pointer">
               <input
                 type="checkbox"
@@ -263,14 +265,9 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({
                 onChange={(e) => handleInputChange('qrCodeEnabled', e.target.checked)}
                 className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
               />
-              <div className="flex-1">
-                <span className="text-sm font-medium text-gray-700">
-                  Habilitar QR Code para Coleta Anônima
-                </span>
-                <p className="text-xs text-gray-500 mt-1">
-                  Permite que operadores façam coletas sem login através de QR Code
-                </p>
-              </div>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Habilitar QR Code para Coleta Anônima
+              </span>
             </label>
           </div>
 

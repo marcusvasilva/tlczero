@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useSpaces } from '@/hooks/useSpaces'
 import { useClients } from '@/hooks/useClients'
 import { useAuthContext } from '@/contexts/AuthContext'
@@ -25,20 +26,29 @@ import type { Space, UpdateSpaceData } from '@/types'
 
 export default function Spaces() {
   const { user, userType } = useAuthContext()
-  const { 
-    filteredSpaces, 
-    isLoading, 
-    error, 
-    createSpace, 
-    updateSpace, 
+  const [searchParams, setSearchParams] = useSearchParams()
+  const {
+    filteredSpaces,
+    isLoading,
+    error,
+    createSpace,
+    updateSpace,
     deleteSpace,
     totalSpaces,
-    activeSpaces 
+    activeSpaces
   } = useSpaces()
   const { filteredClients } = useClients()
-  
+
   // Estados
   const [showSpaceForm, setShowSpaceForm] = useState(false)
+
+  // Auto-open create form from FAB navigation
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setShowSpaceForm(true)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
   const [editingSpace, setEditingSpace] = useState<Space | null>(null)
   const [deletingSpace, setDeletingSpace] = useState<Space | null>(null)
   const [searchTerm, setSearchTerm] = useState('')

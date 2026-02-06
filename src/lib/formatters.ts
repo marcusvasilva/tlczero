@@ -48,21 +48,17 @@ export const formatStringWithLimit = (str: string, limit: number): string => {
   return str.length > limit ? str.substring(0, limit) + '...' : str
 }
 
-// Formatação de telefone brasileiro
+// Formatação de telefone brasileiro (progressiva — aplica máscara enquanto digita)
 export const formatPhoneNumber = (phone: string): string => {
   if (!phone) return ''
-  
-  // Remove todos os caracteres não numéricos
-  const cleanPhone = phone.replace(/\D/g, '')
-  
-  // Verifica se tem 11 dígitos (celular) ou 10 dígitos (fixo)
-  if (cleanPhone.length === 11) {
-    return cleanPhone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
-  } else if (cleanPhone.length === 10) {
-    return cleanPhone.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
-  }
-  
-  return phone
+
+  const digits = phone.replace(/\D/g, '').slice(0, 11)
+
+  if (digits.length === 0) return ''
+  if (digits.length <= 2) return `(${digits}`
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
 }
 
 // Formatação de CEP

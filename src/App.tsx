@@ -13,6 +13,7 @@ import { Register } from './pages/Register'
 
 // Importações não-lazy para componentes sem export default
 import { Clients } from './pages/Clients'
+import ClientDetail from './pages/ClientDetail'
 import Spaces from './pages/Spaces'
 import Collections from './pages/Collections'
 import { Collect } from './pages/Collect'
@@ -73,6 +74,7 @@ function App() {
               
               {/* Clientes - admin e supervisor podem criar/editar, operador só visualiza */}
               <Route path="clients" element={<Clients />} />
+              <Route path="clients/:id" element={<ClientDetail />} />
               
               {/* Espaços - admin e supervisor podem criar/editar, operador só visualiza */}
               <Route path="spaces" element={<Spaces />} />

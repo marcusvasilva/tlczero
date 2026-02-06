@@ -535,12 +535,6 @@ export function UserManagement() {
               </div>
             </div>
           </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-            <p className="text-amber-800 text-sm">
-              <strong>Importante:</strong> Anote essas credenciais pois a senha não será exibida novamente. 
-              O usuário deve alterar a senha no primeiro login.
-            </p>
-          </div>
           <div className="flex justify-end">
             <Button
               variant="secondary"

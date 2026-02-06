@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Search, Building2, Users, MapPin, Plus, Edit, Phone, Mail, Rocket } from 'lucide-react'
 import { useClients } from '@/hooks/useClients'
 import { formatPhone } from '@/lib/formatters'
@@ -15,6 +16,7 @@ export function Clients() {
   const { toast } = useToast()
   const isMobile = useMobile()
   const { userType } = useAuthContext()
+  const navigate = useNavigate()
   
   // Estados locais
   const [searchTerm, setSearchTerm] = useState('')
@@ -58,11 +60,13 @@ export function Clients() {
       if (editingClient) {
         await updateClient(editingClient.id, data)
         toast({ title: 'Cliente atualizado com sucesso!', variant: 'success' })
+        closeForm()
       } else {
-        await createClient(data as Omit<Account, 'id' | 'created_at' | 'updated_at'>)
+        const newClient = await createClient(data as Omit<Account, 'id' | 'created_at' | 'updated_at'>)
         toast({ title: 'Cliente criado com sucesso!', variant: 'success' })
+        closeForm()
+        navigate(`/clients/${newClient.id}`)
       }
-      closeForm()
     } catch (error) {
       console.error('Erro ao salvar cliente:', error)
       toast({ title: 'Erro ao salvar cliente', variant: 'destructive' })
@@ -171,7 +175,7 @@ export function Clients() {
           // Visualização em Cards para Mobile
           <div className="grid grid-cols-1 gap-3">
             {filteredClients.map((client) => (
-              <div key={client.id} className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4">
+              <div key={client.id} onClick={() => navigate(`/clients/${client.id}`)} className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4 cursor-pointer hover:border-green-300 dark:hover:border-green-700 transition-colors">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="w-10 h-10 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -212,7 +216,7 @@ export function Clients() {
                 
                 <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                   <Button
-                    onClick={() => openEditForm(client)}
+                    onClick={(e: React.MouseEvent) => { e.stopPropagation(); openEditForm(client) }}
                     variant="secondary"
                     className="w-full"
                   >
@@ -249,7 +253,7 @@ export function Clients() {
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredClients.map((client) => (
-                    <tr key={client.id}>
+                    <tr key={client.id} onClick={() => navigate(`/clients/${client.id}`)} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center">
                           <div className="w-10 h-10 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center mr-3">
@@ -284,7 +288,7 @@ export function Clients() {
                       </td>
                       <td className="px-6 py-4">
                         <Button
-                          onClick={() => openEditForm(client)}
+                          onClick={(e: React.MouseEvent) => { e.stopPropagation(); openEditForm(client) }}
                           variant="ghost"
                           size="sm"
                         >
