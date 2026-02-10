@@ -109,7 +109,7 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
   // Derived state
   const selectedClient = clients.find(c => c.id === values.clientId)
   const filteredSpaces = selectedClient ? spaces.filter(s => s.clientId === selectedClient.id) : []
-  const filteredOperators = selectedClient ? operators.filter(o => o.account_id === targetAccountId) : []
+  const filteredOperators = selectedClient ? operators.filter(o => o.account_id === selectedClient.id) : (targetAccountId ? operators.filter(o => o.account_id === targetAccountId) : [])
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault()
@@ -274,11 +274,11 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
             )}
           </div>
 
-          {/* Seleção de Operador */}
+          {/* Seleção de Responsável */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               <User className="inline w-4 h-4 mr-1" />
-              Operador *
+              Responsável *
             </label>
             <select
               value={values.operatorId}
@@ -287,10 +287,10 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
               required
               disabled={userType === 'operator'}
             >
-              <option value="">Selecione um operador</option>
+              <option value="">Selecione um responsável</option>
               {filteredOperators.map((operator) => (
                 <option key={operator.id} value={operator.id}>
-                  {operator.name}
+                  {operator.name} ({operator.role === 'supervisor' ? 'Supervisor' : 'Operador'})
                 </option>
               ))}
             </select>
