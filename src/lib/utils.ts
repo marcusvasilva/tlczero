@@ -25,7 +25,7 @@ export function formatDateTime(date: Date | string): string {
 export function formatWeight(weight: number): string {
   // Converter gramas para kg
   const weightInKg = weight / 1000
-  return `${weightInKg.toFixed(3)}kg`
+  return `${weightInKg.toFixed(1)}kg`
 }
 
 export function capitalizeFirst(str: string): string {
