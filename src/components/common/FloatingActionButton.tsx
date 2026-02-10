@@ -10,8 +10,23 @@ const actions = [
 
 export function FloatingActionButton() {
   const [open, setOpen] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
+
+  // Detect when modals are open by observing DOM changes
+  useEffect(() => {
+    const checkForModals = () => {
+      const hasModal = document.querySelector('[role="dialog"], [data-radix-portal], .fixed.inset-0.bg-black') !== null
+      setModalOpen(hasModal)
+    }
+
+    const observer = new MutationObserver(checkForModals)
+    observer.observe(document.body, { childList: true, subtree: true })
+    checkForModals()
+
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -24,6 +39,8 @@ export function FloatingActionButton() {
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open])
+
+  if (modalOpen) return null
 
   function handleAction(to: string) {
     setOpen(false)
