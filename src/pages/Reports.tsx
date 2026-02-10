@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Download, RefreshCw, Filter, FileText, Calendar, MapPin, TrendingUp } from 'lucide-react'
+import { Download, RefreshCw, FileText, Calendar, MapPin, TrendingUp, SlidersHorizontal, X } from 'lucide-react'
+import * as Dialog from '@radix-ui/react-dialog'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { generateCollectionsReportPdf, type ReportData } from '@/lib/reportPdf'
@@ -57,6 +58,7 @@ export default function Reports() {
   const [isLoading, setIsLoading] = useState(true)
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
   const [activeView, setActiveView] = useState<'charts' | 'table'>('charts')
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   // Filtros
   const [selectedAccount, setSelectedAccount] = useState<string>('')
@@ -277,110 +279,108 @@ export default function Reports() {
   return (
     <div className="space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+      <div className="flex items-start sm:items-center justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             Relatório de Coletas
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             Análise consolidada das coletas realizadas
           </p>
         </div>
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={loadCollections}
-            disabled={isLoading}
-          >
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Dialog.Root open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <Dialog.Trigger asChild>
+              <Button variant="outline" size="icon">
+                <SlidersHorizontal className="h-4 w-4" />
+              </Button>
+            </Dialog.Trigger>
+            <Dialog.Portal>
+              <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
+              <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90vw] max-w-lg bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Filtros
+                  </Dialog.Title>
+                  <Dialog.Close asChild>
+                    <button className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
+                      <X className="h-5 w-5 text-gray-500" />
+                    </button>
+                  </Dialog.Close>
+                </div>
+                <div className="space-y-4">
+                  {userType === 'admin' && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Cliente</label>
+                      <select
+                        value={selectedAccount}
+                        onChange={(e) => {
+                          setSelectedAccount(e.target.value)
+                          setSelectedSpace('')
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                      >
+                        <option value="">Todos os clientes</option>
+                        {accounts.map(account => (
+                          <option key={account.id} value={account.id}>
+                            {account.company_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Espaço</label>
+                    <select
+                      value={selectedSpace}
+                      onChange={(e) => setSelectedSpace(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    >
+                      <option value="">Todos os espaços</option>
+                      {filteredSpaces.map(space => (
+                        <option key={space.id} value={space.id}>
+                          {space.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Data Início</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Data Fim</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <Dialog.Close asChild>
+                    <Button>Aplicar</Button>
+                  </Dialog.Close>
+                </div>
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
+          <Button onClick={loadCollections} disabled={isLoading} size="icon">
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Atualizar
           </Button>
           <Button
             onClick={handleGeneratePDF}
             disabled={isGeneratingPDF || collections.length === 0}
+            size="icon"
           >
             <Download className="h-4 w-4" />
-            {isGeneratingPDF ? 'Gerando...' : 'Exportar PDF'}
           </Button>
-        </div>
-      </div>
-
-      {/* Filtros */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Filter className="h-5 w-5 text-gray-500" />
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Filtros</h2>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Cliente */}
-          {userType === 'admin' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Cliente
-              </label>
-              <select
-                value={selectedAccount}
-                onChange={(e) => {
-                  setSelectedAccount(e.target.value)
-                  setSelectedSpace('')
-                }}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-              >
-                <option value="">Todos os clientes</option>
-                {accounts.map(account => (
-                  <option key={account.id} value={account.id}>
-                    {account.company_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Espaço */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Espaço
-            </label>
-            <select
-              value={selectedSpace}
-              onChange={(e) => setSelectedSpace(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-            >
-              <option value="">Todos os espaços</option>
-              {filteredSpaces.map(space => (
-                <option key={space.id} value={space.id}>
-                  {space.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Data Início */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Data Início
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
-
-          {/* Data Fim */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Data Fim
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-            />
-          </div>
         </div>
       </div>
 
