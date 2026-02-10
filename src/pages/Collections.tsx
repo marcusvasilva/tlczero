@@ -344,7 +344,7 @@ export default function Collections() {
       </div>
 
       {/* Estatísticas */}
-      <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 xs:gap-4 sm:gap-5 mb-4 xs:mb-5 sm:mb-6">
+      <div className="grid grid-cols-3 gap-3 xs:gap-4 sm:gap-5 mb-4 xs:mb-5 sm:mb-6">
         <div className="mobile-card">
           <div className="flex items-center">
             <div className="p-2 xs:p-2.5 bg-green-100 dark:bg-green-900/20 rounded-lg flex-shrink-0">
