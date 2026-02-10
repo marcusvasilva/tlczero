@@ -8,8 +8,11 @@ import {
   MapPin,
   Scale,
   Info,
-  ChevronDown
+  ChevronDown,
+  SlidersHorizontal,
+  X
 } from 'lucide-react'
+import * as Dialog from '@radix-ui/react-dialog'
 import {
   LineChart,
   Line,
@@ -33,6 +36,11 @@ import { Button } from '@/components/ui/button'
 
 // Constantes
 const FLY_WEIGHT_GRAMS = 0.002 // Uma mosca pesa aproximadamente 2mg
+
+function formatWeightKg(grams: number): string {
+  const kg = grams / 1000
+  return kg.toFixed(3)
+}
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316']
 
 interface DashboardFilters {
@@ -167,6 +175,7 @@ function SimpleSelect({ value, onValueChange, options, placeholder }: {
 
 export default function Dashboard() {
   const { user, userType } = useAuthContext()
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [filters, setFilters] = useState<DashboardFilters>({
     startDate: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd'),
@@ -302,48 +311,72 @@ export default function Dashboard() {
             Bem-vindo, {user?.name}! Monitore a eficácia do mata-moscas TLC Agro.
           </p>
         </div>
-        <Button
-          onClick={refreshAllData}
-        >
-          <RefreshCw className="h-4 w-4" />
-          <span className="hidden xs:inline">Atualizar</span>
-        </Button>
-      </div>
-
-      {/* Filtros */}
-      <SimpleCard title="Filtros">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 xs:gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Data Inicial</label>
-            <input
-              type="date"
-              value={filters.startDate}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
-              className="input-responsive"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Data Final</label>
-            <input
-              type="date"
-              value={filters.endDate}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-              className="input-responsive"
-            />
-          </div>
-          {userType === 'admin' && (
-            <div>
-              <label className="block text-sm font-medium mb-2">Cliente</label>
-              <SimpleSelect
-                value={filters.clientId || ''}
-                onValueChange={(value) => setFilters(prev => ({ ...prev, clientId: value || undefined }))}
-                options={clientOptions}
-                placeholder="Selecione um cliente"
-              />
-            </div>
-          )}
+        <div className="flex items-center gap-2">
+          <Dialog.Root open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <Dialog.Trigger asChild>
+              <Button variant="outline">
+                <SlidersHorizontal className="h-4 w-4" />
+                <span className="hidden xs:inline">Filtros</span>
+              </Button>
+            </Dialog.Trigger>
+            <Dialog.Portal>
+              <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
+              <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90vw] max-w-lg bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Filtros
+                  </Dialog.Title>
+                  <Dialog.Close asChild>
+                    <button className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
+                      <X className="h-5 w-5 text-gray-500" />
+                    </button>
+                  </Dialog.Close>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Data Inicial</label>
+                    <input
+                      type="date"
+                      value={filters.startDate}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                      className="input-responsive"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Data Final</label>
+                    <input
+                      type="date"
+                      value={filters.endDate}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                      className="input-responsive"
+                    />
+                  </div>
+                  {userType === 'admin' && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Cliente</label>
+                      <SimpleSelect
+                        value={filters.clientId || ''}
+                        onValueChange={(value) => setFilters(prev => ({ ...prev, clientId: value || undefined }))}
+                        options={clientOptions}
+                        placeholder="Selecione um cliente"
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <Dialog.Close asChild>
+                    <Button>Aplicar</Button>
+                  </Dialog.Close>
+                </div>
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
+          <Button onClick={refreshAllData}>
+            <RefreshCw className="h-4 w-4" />
+            <span className="hidden xs:inline">Atualizar</span>
+          </Button>
         </div>
-      </SimpleCard>
+      </div>
 
       {/* Cards de métricas */}
       <div className="stats-grid">
@@ -353,12 +386,12 @@ export default function Dashboard() {
           subtitle="Estimativa baseada no peso coletado"
           icon={Bug}
           color="bg-green-600"
-          info={`Cálculo baseado no peso total coletado (${metrics.totalWeight.toFixed(2)}g) dividido pelo peso médio de uma mosca (${FLY_WEIGHT_GRAMS}g)`}
+          info={`Cálculo baseado no peso total coletado (${formatWeightKg(metrics.totalWeight)} kg) dividido pelo peso médio de uma mosca (${FLY_WEIGHT_GRAMS}g)`}
           isLoading={isLoading}
         />
         <MetricCard
           title="Peso Coletado"
-          value={`${metrics.totalWeight.toFixed(2)}g`}
+          value={`${formatWeightKg(metrics.totalWeight)} kg`}
           subtitle="Total no período selecionado"
           icon={Scale}
           color="bg-blue-600"
@@ -392,9 +425,9 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
-                <Tooltip 
+                <Tooltip
                   formatter={(value, name) => [
-                    name === 'weight' ? `${value}g` : value,
+                    name === 'weight' ? `${formatWeightKg(Number(value))} kg` : value,
                     name === 'weight' ? 'Peso' : 'Coletas'
                   ]}
                 />
@@ -404,7 +437,7 @@ export default function Dashboard() {
                   dataKey="weight" 
                   stroke="#3b82f6" 
                   strokeWidth={2}
-                  name="Peso (g)"
+                  name="Peso (kg)"
                 />
                 <Line 
                   type="monotone" 
@@ -437,7 +470,7 @@ export default function Dashboard() {
                     <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [`${value}g`, 'Peso coletado']} />
+                <Tooltip formatter={(value) => [`${formatWeightKg(Number(value))} kg`, 'Peso coletado']} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -455,7 +488,7 @@ export default function Dashboard() {
           </div>
           <div className="text-center p-3 xs:p-4">
             <p className="text-2xl xs:text-3xl font-bold text-blue-600 dark:text-blue-400">
-              {metrics.totalWeight.toFixed(2)}g
+              {formatWeightKg(metrics.totalWeight)} kg
             </p>
             <p className="text-xs xs:text-sm text-gray-500 dark:text-gray-400 mt-1">Peso Total Coletado</p>
           </div>
