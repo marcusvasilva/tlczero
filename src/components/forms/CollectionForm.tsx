@@ -31,6 +31,7 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
 }) => {
   const { user, userType, accountContext } = useAuthContext()
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [weightText, setWeightText] = useState('')
   const previousSelectedSpaceRef = useRef<string | undefined>(undefined)
   const initialDataRef = useRef<Collection | null>(null)
 
@@ -54,7 +55,7 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
       spaceId: selectedSpaceId || '',
       operatorId: userType === 'operator' ? (user?.id || '') : '',
       clientId: clientId,
-      weight: 0.01, // Iniciar com valor mínimo válido
+      weight: 0, // Valor inicial vazio
       photoUrl: '',
       observations: '',
       collectedAt: getCurrentBrazilDate()
@@ -80,7 +81,9 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
       setFieldValue('spaceId', initialData.spaceId)
       setFieldValue('operatorId', initialData.operatorId)
       // Converter peso de gramas para kg para exibição
-      setFieldValue('weight', initialData.weight / 1000)
+      const weightKg = initialData.weight / 1000
+      setFieldValue('weight', weightKg)
+      setWeightText(weightKg > 0 ? String(weightKg).replace('.', ',') : '')
       setFieldValue('photoUrl', initialData.photoUrl || '')
       setFieldValue('observations', initialData.observations || '')
       setFieldValue('collectedAt', initialData.collectedAt)
@@ -305,15 +308,25 @@ export const CollectionForm: React.FC<CollectionFormProps> = ({
               <Scale className="inline w-4 h-4 mr-1" />
               Peso Coletado (kg) *
             </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              value={values.weight}
-              onChange={(e) => handleInputChange('weight', parseFloat(e.target.value) || 0)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-              required
-            />
+            <div className="relative">
+              <input
+                type="text"
+                inputMode="decimal"
+                value={weightText}
+                onChange={(e) => {
+                  const raw = e.target.value
+                  // Permitir apenas números, vírgula e ponto
+                  if (raw !== '' && !/^[0-9]*[.,]?[0-9]*$/.test(raw)) return
+                  setWeightText(raw)
+                  const parsed = parseFloat(raw.replace(',', '.'))
+                  setFieldValue('weight', isNaN(parsed) ? 0 : parsed)
+                }}
+                placeholder="0,0"
+                className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                required
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm">kg</span>
+            </div>
             {errors.weight && touched.weight && (
               <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.weight}</p>
             )}

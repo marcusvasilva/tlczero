@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useCollections } from '@/hooks/useCollections'
 import { useSpaces } from '@/hooks/useSpaces'
 import { useSimpleOperators } from '@/hooks/useSimpleOperators'
@@ -26,6 +27,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import type { Collection, CreateCollectionData } from '@/types'
 
 export default function Collections() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const { userType } = useAuthContext()
   const { 
     filteredCollections,
@@ -45,6 +47,14 @@ export default function Collections() {
   
   // Estados
   const [showCollectionForm, setShowCollectionForm] = useState(false)
+
+  // Auto-open create form from FAB navigation
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setShowCollectionForm(true)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null)
   const [deletingCollection, setDeletingCollection] = useState<Collection | null>(null)
   const [searchTerm, setSearchTerm] = useState('')

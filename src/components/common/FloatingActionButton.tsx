@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Plus, PlusCircle, MapPin, Users } from 'lucide-react'
 
 const actions = [
-  { label: 'Nova Coleta', icon: PlusCircle, to: '/collect' },
+  { label: 'Nova Coleta', icon: PlusCircle, to: '/collections?new=true' },
   { label: 'Novo Espaço', icon: MapPin, to: '/spaces?new=true' },
   { label: 'Novo Operador', icon: Users, to: '/operators?new=true' },
 ]
