@@ -302,7 +302,7 @@ export default function Dashboard() {
   return (
     <div className="page-container space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-start sm:items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             Dashboard TLC Zero
@@ -311,12 +311,11 @@ export default function Dashboard() {
             Bem-vindo, {user?.name}! Monitore a eficácia do mata-moscas TLC Agro.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Dialog.Root open={filtersOpen} onOpenChange={setFiltersOpen}>
             <Dialog.Trigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" size="icon">
                 <SlidersHorizontal className="h-4 w-4" />
-                <span className="hidden xs:inline">Filtros</span>
               </Button>
             </Dialog.Trigger>
             <Dialog.Portal>
@@ -371,9 +370,8 @@ export default function Dashboard() {
               </Dialog.Content>
             </Dialog.Portal>
           </Dialog.Root>
-          <Button onClick={refreshAllData}>
+          <Button onClick={refreshAllData} size="icon">
             <RefreshCw className="h-4 w-4" />
-            <span className="hidden xs:inline">Atualizar</span>
           </Button>
         </div>
       </div>
