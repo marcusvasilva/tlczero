@@ -18,8 +18,11 @@ import {
   Eye,
   Scale,
   Calendar,
-  Download
+  Download,
+  SlidersHorizontal,
+  X
 } from 'lucide-react'
+import * as Dialog from '@radix-ui/react-dialog'
 import type { Collection, CreateCollectionData } from '@/types'
 
 export default function Collections() {
@@ -47,6 +50,7 @@ export default function Collections() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterPeriod, setFilterPeriod] = useState<'all' | 'today' | 'week' | 'month'>('all')
   const [filterSpace, setFilterSpace] = useState<string>('all')
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   // Permissões
   const canCreate = userType === 'admin' || userType === 'supervisor' || userType === 'operator'
@@ -241,19 +245,102 @@ export default function Collections() {
   return (
     <div className="mobile-container">
       {/* Header */}
-      <div className="responsive-flex mb-4 xs:mb-5 sm:mb-6">
-        <div className="flex items-center gap-3">
-          <ClipboardList className="h-5 w-5 xs:h-6 xs:w-6 text-gray-400 flex-shrink-0" />
-          <h1 className="mobile-header">
-            Coletas
-          </h1>
+      <div className="flex items-start sm:items-center justify-between gap-4 mb-4 xs:mb-5 sm:mb-6">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-3">
+            <ClipboardList className="h-5 w-5 xs:h-6 xs:w-6 text-gray-400 flex-shrink-0" />
+            <h1 className="mobile-header">
+              Coletas
+            </h1>
+          </div>
         </div>
-        {canCreate && (
-          <Button onClick={handleCreateCollection}>
-            <Plus className="h-4 w-4" />
-            Nova Coleta
-          </Button>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Dialog.Root open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <Dialog.Trigger asChild>
+              <Button variant="outline" size="icon">
+                <SlidersHorizontal className="h-4 w-4" />
+              </Button>
+            </Dialog.Trigger>
+            <Dialog.Portal>
+              <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
+              <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90vw] max-w-lg bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">Filtros</Dialog.Title>
+                  <Dialog.Close asChild>
+                    <button className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
+                      <X className="h-5 w-5 text-gray-500" />
+                    </button>
+                  </Dialog.Close>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Buscar</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Buscar coletas..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 input-responsive"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Período</label>
+                    <select
+                      value={filterPeriod}
+                      onChange={(e) => setFilterPeriod(e.target.value as any)}
+                      className="select-responsive w-full"
+                    >
+                      <option value="all">Todos os períodos</option>
+                      <option value="today">Hoje</option>
+                      <option value="week">Esta semana</option>
+                      <option value="month">Este mês</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Espaço</label>
+                    <select
+                      value={filterSpace}
+                      onChange={(e) => setFilterSpace(e.target.value)}
+                      className="select-responsive w-full"
+                    >
+                      <option value="all">Todos os espaços</option>
+                      {filteredSpaces.map((space) => (
+                        <option key={space.id} value={space.id}>
+                          {space.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        console.log('Exportar coletas')
+                      }}
+                      className="w-full"
+                    >
+                      <Download className="h-4 w-4" />
+                      Exportar
+                    </Button>
+                  </div>
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <Dialog.Close asChild>
+                    <Button>Aplicar</Button>
+                  </Dialog.Close>
+                </div>
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
+          {canCreate && (
+            <Button onClick={handleCreateCollection} size="icon">
+              <Plus className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Estatísticas */}
@@ -303,68 +390,6 @@ export default function Collections() {
                 {formatWeight(thisMonthWeight)}
               </p>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filtros */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-3 xs:p-4 mb-4 xs:mb-5 sm:mb-6 border border-gray-200 dark:border-gray-700">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 xs:gap-4">
-          {/* Busca */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar coletas..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 input-responsive"
-            />
-          </div>
-
-          {/* Filtro por período */}
-          <div>
-            <select
-              value={filterPeriod}
-              onChange={(e) => setFilterPeriod(e.target.value as any)}
-              className="select-responsive"
-            >
-              <option value="all">Todos os períodos</option>
-              <option value="today">Hoje</option>
-              <option value="week">Esta semana</option>
-              <option value="month">Este mês</option>
-            </select>
-          </div>
-
-          {/* Filtro por espaço */}
-          <div>
-            <select
-              value={filterSpace}
-              onChange={(e) => setFilterSpace(e.target.value)}
-              className="select-responsive"
-            >
-              <option value="all">Todos os espaços</option>
-              {filteredSpaces.map((space) => (
-                <option key={space.id} value={space.id}>
-                  {space.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Botão de exportação */}
-          <div>
-            <Button
-              variant="outline"
-              onClick={() => {
-                // TODO: Implementar exportação
-                console.log('Exportar coletas')
-              }}
-              className="w-full"
-            >
-              <Download className="h-4 w-4" />
-              Exportar
-            </Button>
           </div>
         </div>
       </div>

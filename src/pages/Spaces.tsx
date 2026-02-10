@@ -20,8 +20,11 @@ import {
   Activity,
   Home,
   Trees,
-  Building
+  Building,
+  SlidersHorizontal,
+  X
 } from 'lucide-react'
+import * as Dialog from '@radix-ui/react-dialog'
 import type { Space, UpdateSpaceData } from '@/types'
 
 export default function Spaces() {
@@ -54,6 +57,7 @@ export default function Spaces() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterEnvironment, setFilterEnvironment] = useState<'all' | 'indoor' | 'outdoor' | 'mixed'>('all')
   const [filterClient, setFilterClient] = useState<string>('all')
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [togglingSpaceId, setTogglingSpaceId] = useState<string | null>(null)
 
   // Permissões
@@ -173,22 +177,92 @@ export default function Spaces() {
   return (
     <div className="space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Espaços</h1>
+      <div className="flex items-start sm:items-center justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Espaços</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">Gerencie os locais de coleta</p>
         </div>
-        {canCreate && (
-          <Button
-            onClick={() => {
-              setEditingSpace(null)
-              setShowSpaceForm(true)
-            }}
-          >
-            <Plus className="w-5 h-5" />
-            Novo Espaço
-          </Button>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Dialog.Root open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <Dialog.Trigger asChild>
+              <Button variant="outline" size="icon">
+                <SlidersHorizontal className="h-4 w-4" />
+              </Button>
+            </Dialog.Trigger>
+            <Dialog.Portal>
+              <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
+              <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90vw] max-w-lg bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">Filtros</Dialog.Title>
+                  <Dialog.Close asChild>
+                    <button className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
+                      <X className="h-5 w-5 text-gray-500" />
+                    </button>
+                  </Dialog.Close>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Buscar</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                      <input
+                        type="text"
+                        placeholder="Buscar espaços..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Empresa</label>
+                    <select
+                      value={filterClient}
+                      onChange={(e) => setFilterClient(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                      <option value="all">Todas as Empresas</option>
+                      {filteredClients.map((client: Account) => (
+                        <option key={client.id} value={client.id}>
+                          {client.company_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Ambiente</label>
+                    <select
+                      value={filterEnvironment}
+                      onChange={(e) => setFilterEnvironment(e.target.value as any)}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                      <option value="all">Todos os Ambientes</option>
+                      <option value="indoor">Interno</option>
+                      <option value="outdoor">Externo</option>
+                      <option value="mixed">Misto</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <Dialog.Close asChild>
+                    <Button>Aplicar</Button>
+                  </Dialog.Close>
+                </div>
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
+          {canCreate && (
+            <Button
+              onClick={() => {
+                setEditingSpace(null)
+                setShowSpaceForm(true)
+              }}
+              size="icon"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Estatísticas */}
@@ -235,51 +309,6 @@ export default function Spaces() {
             </div>
             <QrCode className="w-10 h-10 text-orange-600 dark:text-orange-400" />
           </div>
-        </div>
-      </div>
-
-      {/* Filtros */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Busca */}
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Buscar espaços..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-            </div>
-          </div>
-
-          {/* Filtro de Cliente */}
-          <select
-            value={filterClient}
-            onChange={(e) => setFilterClient(e.target.value)}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          >
-            <option value="all">Todas as Empresas</option>
-            {filteredClients.map((client: Account) => (
-              <option key={client.id} value={client.id}>
-                {client.company_name}
-              </option>
-            ))}
-          </select>
-
-          {/* Filtro de Ambiente */}
-          <select
-            value={filterEnvironment}
-            onChange={(e) => setFilterEnvironment(e.target.value as any)}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          >
-            <option value="all">Todos os Ambientes</option>
-            <option value="indoor">Interno</option>
-            <option value="outdoor">Externo</option>
-            <option value="mixed">Misto</option>
-          </select>
         </div>
       </div>
 

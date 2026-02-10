@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Search, Edit2, Trash2, UserCheck, UserX, X, Phone, Calendar, Briefcase } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, UserCheck, UserX, X, Phone, Calendar, Briefcase, SlidersHorizontal } from 'lucide-react'
+import * as Dialog from '@radix-ui/react-dialog'
 import { useSimpleOperators } from '@/hooks/useSimpleOperators'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
@@ -82,6 +83,7 @@ export function Operators() {
 
   const [searchTerm, setSearchTerm] = useState('')
   const [showInactive, setShowInactive] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [operatorToDelete, setOperatorToDelete] = useState<SimpleOperator | undefined>(undefined)
   const [showForm, setShowForm] = useState(false)
@@ -255,20 +257,71 @@ export function Operators() {
   return (
     <div className="space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Operadores</h1>
+      <div className="flex items-start sm:items-center justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Operadores</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {userType === 'admin' 
+            {userType === 'admin'
               ? 'Gerencie todos os operadores do sistema'
               : 'Gerencie sua equipe de campo'
             }
           </p>
         </div>
-        <Button onClick={handleCreateOperator}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Operador
-        </Button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Dialog.Root open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <Dialog.Trigger asChild>
+              <Button variant="outline" size="icon">
+                <SlidersHorizontal className="h-4 w-4" />
+              </Button>
+            </Dialog.Trigger>
+            <Dialog.Portal>
+              <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
+              <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90vw] max-w-lg bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">Filtros</Dialog.Title>
+                  <Dialog.Close asChild>
+                    <button className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
+                      <X className="h-5 w-5 text-gray-500" />
+                    </button>
+                  </Dialog.Close>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Buscar</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Input
+                        placeholder="Buscar por nome ou email..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={showInactive}
+                        onChange={(e) => setShowInactive(e.target.checked)}
+                        className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                      />
+                      Incluir inativos
+                    </label>
+                  </div>
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <Dialog.Close asChild>
+                    <Button>Aplicar</Button>
+                  </Dialog.Close>
+                </div>
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
+          <Button onClick={handleCreateOperator} size="icon">
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -282,7 +335,7 @@ export function Operators() {
             <UserCheck className="h-8 w-8 text-blue-600 dark:text-blue-400" />
           </div>
         </Card>
-        
+
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -292,7 +345,7 @@ export function Operators() {
             <UserCheck className="h-8 w-8 text-green-600 dark:text-green-400" />
           </div>
         </Card>
-        
+
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -303,35 +356,6 @@ export function Operators() {
           </div>
         </Card>
       </div>
-
-      {/* Filters */}
-      <Card className="p-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Buscar por nome ou email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm text-gray-600">
-              <input
-                type="checkbox"
-                checked={showInactive}
-                onChange={(e) => setShowInactive(e.target.checked)}
-                className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-              />
-              Incluir inativos
-            </label>
-          </div>
-        </div>
-      </Card>
 
       {/* Error Message */}
       {error && (
