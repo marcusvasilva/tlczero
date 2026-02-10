@@ -305,11 +305,8 @@ export default function Dashboard() {
       <div className="flex items-start sm:items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Dashboard TLC Zero
+            Dashboard
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Bem-vindo, {user?.name}! Monitore a eficácia do mata-moscas TLC Agro.
-          </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <Dialog.Root open={filtersOpen} onOpenChange={setFiltersOpen}>
