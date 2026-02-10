@@ -2,12 +2,11 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { formatDate } from '@/lib/formatters'
-import { useOperators } from '@/hooks/useOperators'
-import { 
-  Scale, 
-  Camera, 
-  MessageSquare, 
-  Check, 
+import {
+  Scale,
+  Camera,
+  MessageSquare,
+  Check,
   Upload,
   AlertCircle,
   Building2,
@@ -21,6 +20,12 @@ interface SpaceInfo {
   accountName: string
   accountId: string
   qrEnabled: boolean
+}
+
+interface OperatorOption {
+  id: string
+  name: string
+  role: string
 }
 
 export function AnonymousCollect() {
@@ -41,17 +46,16 @@ export function AnonymousCollect() {
   const [photo, setPhoto] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [notes, setNotes] = useState('')
-  
+
+  // Operadores carregados via RPC (funciona sem login)
+  const [availableOperators, setAvailableOperators] = useState<OperatorOption[]>([])
+  const [isLoadingOperators, setIsLoadingOperators] = useState(false)
+
   // Validação
   const [validationErrors, setValidationErrors] = useState<{
     weight?: string
     operatorId?: string
   }>({})
-
-  // Hook para buscar operadores (com accountId do espaço quando disponível)
-  const { operators, isLoading: isLoadingOperators } = useOperators({
-    accountId: spaceInfo?.accountId
-  })
 
   // Buscar informações do espaço pelo token
   useEffect(() => {
@@ -97,17 +101,27 @@ export function AnonymousCollect() {
     fetchSpaceInfo()
   }, [token])
 
-  // Filtrar operadores pela conta do espaço (já filtrado no hook, mas garantindo)
-  const availableOperators = spaceInfo ? operators.filter(op => op.account_id === spaceInfo.accountId) : []
-  
-  // Debug: verificar se operadores foram carregados
+  // Buscar operadores via RPC quando o espaço carregar
   useEffect(() => {
-    if (spaceInfo && !isLoadingOperators) {
-      console.log('🔍 Operadores carregados para conta:', spaceInfo.accountId)
-      console.log('📋 Operadores disponíveis:', availableOperators)
-      console.log('🎯 Operador selecionado atual:', operatorId)
+    if (!spaceInfo?.accountId) return
+
+    const fetchOperators = async () => {
+      setIsLoadingOperators(true)
+      try {
+        const { data, error } = await supabase
+          .rpc('get_operators_by_account', { p_account_id: spaceInfo.accountId })
+
+        if (error) throw error
+        setAvailableOperators(data || [])
+      } catch (err) {
+        console.error('Erro ao buscar operadores:', err)
+      } finally {
+        setIsLoadingOperators(false)
+      }
     }
-  }, [spaceInfo, isLoadingOperators, availableOperators, operatorId])
+
+    fetchOperators()
+  }, [spaceInfo?.accountId])
 
   // Manipular upload de foto
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -350,7 +364,7 @@ export function AnonymousCollect() {
               </option>
               {availableOperators.map(operator => (
                 <option key={operator.id} value={operator.id}>
-                  {operator.name}
+                  {operator.name} ({operator.role === 'supervisor' ? 'Supervisor' : 'Operador'})
                 </option>
               ))}
               {!isLoadingOperators && availableOperators.length === 0 && (
