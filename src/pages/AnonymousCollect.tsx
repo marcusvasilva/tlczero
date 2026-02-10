@@ -338,15 +338,15 @@ export function AnonymousCollect() {
                 setOperatorId(selectedValue)
                 setValidationErrors({})
               }}
-              className={`w-full px-4 py-3 border rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white ${
-                validationErrors.operatorId 
-                  ? 'border-red-300 bg-red-50' 
+              className={`w-full px-4 py-3 border rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-gray-900 ${
+                validationErrors.operatorId
+                  ? 'border-red-300 bg-red-50'
                   : 'border-gray-300'
               }`}
               disabled={isSubmitting || isLoadingOperators}
             >
               <option value="">
-                {isLoadingOperators ? 'Carregando operadores...' : 'Selecionar operador'}
+                {isLoadingOperators ? 'Carregando...' : 'Selecionar responsável'}
               </option>
               {availableOperators.map(operator => (
                 <option key={operator.id} value={operator.id}>
@@ -355,7 +355,7 @@ export function AnonymousCollect() {
               ))}
               {!isLoadingOperators && availableOperators.length === 0 && (
                 <option value="" disabled>
-                  Nenhum operador disponível
+                  Nenhum responsável disponível
                 </option>
               )}
             </select>
