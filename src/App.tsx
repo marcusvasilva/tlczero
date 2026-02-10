@@ -72,9 +72,17 @@ function App() {
               {/* Dashboard - todos os usuários autenticados */}
               <Route path="dashboard" element={<Dashboard />} />
               
-              {/* Clientes - admin e supervisor podem criar/editar, operador só visualiza */}
-              <Route path="clients" element={<Clients />} />
-              <Route path="clients/:id" element={<ClientDetail />} />
+              {/* Clientes - apenas admin e distribuidor */}
+              <Route path="clients" element={
+                <ProtectedRoute allowedRoles={['admin', 'distributor']}>
+                  <Clients />
+                </ProtectedRoute>
+              } />
+              <Route path="clients/:id" element={
+                <ProtectedRoute allowedRoles={['admin', 'distributor']}>
+                  <ClientDetail />
+                </ProtectedRoute>
+              } />
               
               {/* Espaços - admin e supervisor podem criar/editar, operador só visualiza */}
               <Route path="spaces" element={<Spaces />} />

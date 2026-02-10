@@ -36,7 +36,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/clients', icon: Building2, label: 'Clientes' },
+  { to: '/clients', icon: Building2, label: 'Clientes', roles: ['admin', 'distributor'] },
   { to: '/spaces', icon: MapPin, label: 'Espaços' },
   { to: '/collections', icon: ClipboardList, label: 'Coletas' },
   { to: '/operators', icon: Users, label: 'Operadores', roles: ['admin', 'distributor', 'supervisor'] },
